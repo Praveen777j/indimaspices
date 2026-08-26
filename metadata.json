@@ -1,0 +1,6 @@
+{
+  "name": "Indima Spice Co.",
+  "description": "Premium Multilingual Spice E-Commerce Platform & Admin System for Indima Spice Co. with UPI payments, Pan-India delivery, live inventory, and WhatsApp ordering.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

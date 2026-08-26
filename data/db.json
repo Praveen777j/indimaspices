@@ -1,0 +1,1971 @@
+{
+  "products": [
+    {
+      "discount_percentage": 16,
+      "description_en": "",
+      "weight": "250g",
+      "shelf_life": "12 Months",
+      "price": 150,
+      "mrp": 180,
+      "created_at": "2026-08-25T19:43:31.666Z",
+      "rating": 5,
+      "sku": "IND-SP-756",
+      "stock": 25,
+      "traditional_info_kn": "ಸಾಂಪ್ರದಾಯಿಕ ಕಲ್ಲಿನ ಬೀಸುವ ವಿಧಾನ",
+      "review_count": 0,
+      "id": "indima-1787686896085",
+      "traditional_info_en": "Stone-ground heritage Karnataka method",
+      "name_kn": "Ghuj",
+      "updated_at": "2026-08-26T07:35:59.832Z",
+      "category_id": "cat-karnataka-specials",
+      "description_kn": "",
+      "storage_en": "Store in airtight container",
+      "storage_kn": "ಗಾಳಿಯಾಡದ ಡಬ್ಬದಲ್ಲಿ ಇರಿಸಿ",
+      "low_stock_threshold": 10,
+      "video": "/uploads/12261-1787686929020-638113.mp4",
+      "name_en": "6yyhj",
+      "badges": [
+        "homemade",
+        "natural"
+      ],
+      "active": true,
+      "images": [
+        "/uploads/12267-1787686922102-29666.jpg",
+        "/uploads/12266-1787686922104-987794.jpg",
+        "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=800&auto=format&fit=crop&q=80"
+      ],
+      "ingredients_en": "",
+      "ingredients_kn": ""
+    },
+    {
+      "ingredients_en": "Byadgi Chillies, Coriander Seeds, Chana Dal, Urad Dal, Cinnamon, Marathi Moggu, Cloves, Fenugreek, Cumin, Poppy Seeds, Copra, Curry Leaves.",
+      "ingredients_kn": "ಬ್ಯಾಡಗಿ ಮೆಣಸಿನಕಾಯಿ, ಕೊತ್ತಂಬರಿ ಬೀಜ, ಕಡಲೆಬೇಳೆ, ಉದ್ದಿನಬೇಳೆ, ದಾಲ್ಚಿನ್ನಿ, ಮರಾಠಿ ಮೊಗ್ಗು, ಲವಂಗ, ಮೆಂತ್ಯ, ಜೀರಿಗೆ, ಗಸಗಸೆ, ಒಣಕೊಬ್ಬರಿ, ಕರಿಬೇವಿನ ಎಲೆ.",
+      "weight": "200g",
+      "stock": 175,
+      "review_count": 142,
+      "price": 145,
+      "description_kn": "ಬ್ಯಾಡಗಿ ಮೆಣಸು, ಮರಾಠಿ ಮೊಗ್ಗು, ಕಲ್ಫಾಸಿ ಮತ್ತು ಸಾಂಪ್ರದಾಯಿಕ ಸಾಂಬಾರ ಪದಾರ್ಥಗಳನ್ನು ಮಂದ ಉರಿಯಲ್ಲಿ ಹುರಿದು ಸಿದ್ಧಪಡಿಸಿದ ಅಪ್ಪಟ ಮೈಸೂರು ಶೈಲಿಯ ಬಿಸಿಬೇಳೆಬಾತ್ ಪುಡಿ.",
+      "storage_kn": "ಗಾಳಿಯಾಡದ ಡಬ್ಬಿಯಲ್ಲಿ ತಂಪಾದ, ಒಣ ಸ್ಥಳದಲ್ಲಿ ಇರಿಸಿ. ನೇರ ಸೂರ್ಯನ ಬೆಳಕಿನಿಂದ ದೂರವಿಡಿ.",
+      "storage_en": "Store in an airtight container in a cool, dry place. Keep away from direct sunlight.",
+      "low_stock_threshold": 15,
+      "mrp": 180,
+      "sku": "IND-BBB-200",
+      "updated_at": "2026-08-25T19:48:47.732Z",
+      "traditional_info_en": "Stone-milled in small batches in Basavanagudi to preserve volatile essential oils.",
+      "rating": 4.9,
+      "traditional_info_kn": "ನೈಸರ್ಗಿಕ ಸುವಾಸನೆ ಮತ್ತು ತೈಲಾಂಶಗಳನ್ನು ಸಂರಕ್ಷಿಸಲು ಬಸವನಗುಡಿಯಲ್ಲಿ ಸಣ್ಣ ಪ್ರಮಾಣದಲ್ಲಿ ಕಲ್ಲಿನಿಂದ ಬೀಸಲಾಗುತ್ತದೆ.",
+      "name_en": "Traditional Mysuru Bisi Bele Bath Powder",
+      "created_at": "2026-08-23T06:46:14.492Z",
+      "id": "prod-bisibelebath",
+      "images": [
+        "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=800&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=800&auto=format&fit=crop&q=80"
+      ],
+      "category_id": "cat-karnataka-specials",
+      "shelf_life": "12 Months",
+      "discount_percentage": 19,
+      "name_kn": "ಸಾಂಪ್ರದಾಯಿಕ ಮೈಸೂರು ಬಿಸಿಬೇಳೆಬಾತ್ ಪುಡಿ",
+      "active": true,
+      "badges": [
+        "bestseller",
+        "homemade",
+        "natural"
+      ],
+      "description_en": "Authentic royal Mysore style Bisi Bele Bath masala made with slow-roasted Byadgi chillies, Marathi Moggu, stone flower (Kalpasi), and cinnamon in cold-pressed coconut oil touch."
+    },
+    {
+      "rating": 4.9,
+      "name_en": "Authentic Byadgi Whole Red Chillies (Karnataka GI Tagged)",
+      "traditional_info_kn": "ಹಾವೇರಿ ರೈತರಿಂದ ನೇರವಾಗಿ ಸಂಗ್ರಹಿಸಿ, ನೈಸರ್ಗಿಕ ಬಿಸಿಲಿನಲ್ಲಿ ಒಣಗಿಸಲಾಗಿದೆ.",
+      "description_kn": "ಅತ್ಯುತ್ತಮ ನೈಸರ್ಗಿಕ ಕೆಂಪು ಬಣ್ಣ ಮತ್ತು ಸುವಾಸನೆಯನ್ನು ನೀಡುವ, ಕಡಿಮೆ ಖಾರವಿರುವ ಅಪ್ಪಟ ಬ್ಯಾಡಗಿ ಮೆಣಸಿನಕಾಯಿ.",
+      "mrp": 220,
+      "sku": "IND-BYD-250",
+      "ingredients_kn": "100% ಅಪ್ಪಟ ತೊಟ್ಟು ಸಹಿತ ಬ್ಯಾಡಗಿ ಕೆಂಪು ಮೆಣಸಿನಕಾಯಿ.",
+      "name_kn": "ಅಪ್ಪಟ ಬ್ಯಾಡಗಿ ಕೆಂಪು ಮೆಣಸಿನಕಾಯಿ (ಕರ್ನಾಟಕ ಜಿಐ ಟ್ಯಾಗ್)",
+      "ingredients_en": "100% Pure Byadgi Whole Red Chillies with Stems Intact.",
+      "storage_en": "Sun-dry occasionally and store in moisture-proof container.",
+      "storage_kn": "ಆಗಾಗ ಬಿಸಿಲಿನಲ್ಲಿ ಒಣಗಿಸಿ ತೇವಾಂಶವಿಲ್ಲದ ಡಬ್ಬದಲ್ಲಿ ಇರಿಸಿ.",
+      "weight": "250g",
+      "category_id": "cat-whole-spices",
+      "discount_percentage": 18,
+      "updated_at": "2026-08-25T11:42:58.185Z",
+      "review_count": 65,
+      "active": true,
+      "badges": [
+        "natural",
+        "featured"
+      ],
+      "id": "prod-byadgi-chillies",
+      "price": 179,
+      "images": [
+        "https://images.unsplash.com/photo-1509358271058-acd22cc93898?w=800&auto=format&fit=crop&q=80"
+      ],
+      "description_en": "Deep crimson, naturally wrinkled, low pungency whole chillies famous for conferring breathtaking natural red color and smoky aroma without excessive heat.",
+      "created_at": "2026-08-23T06:46:14.492Z",
+      "low_stock_threshold": 10,
+      "shelf_life": "12 Months",
+      "traditional_info_en": "Directly sourced from Haveri farmers market, sun-dried on clean stone patios.",
+      "stock": 43
+    },
+    {
+      "rating": 5,
+      "shelf_life": "24 Months",
+      "ingredients_en": "100% Pure High Grade Coorg Peppercorns.",
+      "ingredients_kn": "100% ಶುದ್ಧ ಕೊಡಗಿನ ಕಾಳುಮೆಣಸು.",
+      "discount_percentage": 19,
+      "created_at": "2026-08-23T06:46:14.492Z",
+      "traditional_info_kn": "ಪಶ್ಚಿಮ ಘಟ್ಟಗಳ ಮಳೆಕಾಡುಗಳ ನೆರಳಿನಲ್ಲಿ ನೈಸರ್ಗಿಕವಾಗಿ ಬೆಳೆದದ್ದು.",
+      "description_kn": "ಕೊಡಗಿನ ಕಾಫಿ ತೋಟಗಳಲ್ಲಿ ಬೆಳೆದ, ಅಧಿಕ ಪೈಪರೀನ್ ಅಂಶವಿರುವ ಅಪ್ಪಟ ಘಾಟಿನ ಕಪ್ಪು ಕಾಳುಮೆಣಸು.",
+      "weight": "200g",
+      "name_en": "Coorg High-Altitude Black Pepper (Tellicherry Grade)",
+      "low_stock_threshold": 12,
+      "updated_at": "2026-08-25T12:38:44.509Z",
+      "id": "prod-coorg-pepper",
+      "active": true,
+      "price": 210,
+      "badges": [
+        "bestseller",
+        "natural"
+      ],
+      "sku": "IND-CRG-200",
+      "mrp": 260,
+      "storage_kn": "ಸಂಪೂರ್ಣ ಕಾಳುಗಳನ್ನೇ ಸಂಗ್ರಹಿಸಿ, ಅಡುಗೆ ಮಾಡುವಾಗ ತಾಜಾವಾಗಿ ಪುಡಿಮಾಡಿ.",
+      "storage_en": "Store whole and grind fresh right before cooking for maximum aroma.",
+      "images": [
+        "https://images.unsplash.com/photo-1509358271058-acd22cc93898?w=800&auto=format&fit=crop&q=80"
+      ],
+      "traditional_info_en": "Shade-grown under native rainforest canopies in Western Ghats.",
+      "name_kn": "ಕೊಡಗು ಬೆಟ್ಟದ ಅಪ್ಪಟ ಕಪ್ಪು ಕಾಳುಮೆಣಸು",
+      "category_id": "cat-whole-spices",
+      "stock": 55,
+      "description_en": "Bold, piperine-rich whole black peppercorns shade-grown alongside coffee bushes in the misty hills of Madikeri, Kodagu.",
+      "review_count": 73
+    },
+    {
+      "id": "prod-karnataka-combo-festive",
+      "ingredients_kn": "100% ಶುದ್ಧ ೬ ಸಾಂಪ್ರದಾಯಿಕ ಮಸಾಲೆಗಳ ಸಂಪೂರ್ಣ ಪೆಟ್ಟಿಗೆ.",
+      "review_count": 189,
+      "name_en": "Karnataka Grand Festive Spice Box (Set of 6 Essentials)",
+      "ingredients_en": "Pure 100% Traditional Multi-Spice Blends (6 Full Jars).",
+      "rating": 5,
+      "name_kn": "ಕರ್ನಾಟಕ ಗ್ರ್ಯಾಂಡ್ ಹಬ್ಬದ ಮಸಾಲೆ ಬಾಕ್ಸ್ (೬ ಪ್ರಮುಖ ಮಸಾಲೆಗಳು)",
+      "weight": "1100g",
+      "storage_en": "Store individual pouches in spice tins.",
+      "storage_kn": "ಪ್ರತಿಯೊಂದು ಪ್ಯಾಕೆಟ್‌ಗಳನ್ನು ಒಣ ಡಬ್ಬಿಗಳಲ್ಲಿ ಇರಿಸಿ.",
+      "description_kn": "ಸಂಪೂರ್ಣ ಸಾಂಪ್ರದಾಯಿಕ ಅಡುಗೆಮನೆ ಕಿಟ್: ಬಿಸಿಬೇಳೆಬಾತ್ (200g), ರಸಂ (250g), ಸಾಂಬಾರ್ (250g), ಪುಳಿಯೋಗರೆ (200g), ಕಾಳುಮೆಣಸು (100g) ಮತ್ತು ಗರಂ ಮಸಾಲೆ (100g).",
+      "traditional_info_en": "Packed in traditional craft gift packaging celebrating Karnataka heritage.",
+      "mrp": 1180,
+      "low_stock_threshold": 8,
+      "sku": "IND-BOX-FEST-6",
+      "updated_at": "2026-08-23T06:46:14.492Z",
+      "stock": 35,
+      "images": [
+        "https://images.unsplash.com/photo-1532336414038-cf19250c5757?w=800&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=800&auto=format&fit=crop&q=80"
+      ],
+      "traditional_info_kn": "ಕರ್ನಾಟಕದ ಸಂಸ್ಕೃತಿಯನ್ನು ಬಿಂಬಿಸುವ ಪರಿಸರಸ್ನೇಹಿ ಉಡುಗೊರೆ ಪೆಟ್ಟಿಗೆಯಲ್ಲಿ ಪ್ಯಾಕ್ ಮಾಡಲಾಗಿದೆ.",
+      "active": true,
+      "badges": [
+        "festival_special",
+        "bestseller"
+      ],
+      "created_at": "2026-08-23T06:46:14.492Z",
+      "price": 899,
+      "discount_percentage": 24,
+      "category_id": "cat-combo-packs",
+      "shelf_life": "12 Months",
+      "description_en": "The complete heritage kitchen collection: Mysuru Bisi Bele Bath (200g), Maniyara Rasam (250g), Udupi Sambar (250g), Melukote Puliyogare (200g), Coorg Black Pepper (100g), and Malnad Garam Masala (100g)."
+    },
+    {
+      "review_count": 54,
+      "ingredients_en": "Green Cardamom, Cloves, Cinnamon, Star Anise, Nutmeg, Mace, Black Pepper, Cumin, Bay Leaf, Shahi Jeera.",
+      "ingredients_kn": "ಹಸಿರು ಏಲಕ್ಕಿ, ಲವಂಗ, ದಾಲ್ಚಿನ್ನಿ, ಅನಾನಸ್ ಹೂ, ಜಾಯಿಕಾಯಿ, ಜಾವಿತ್ರಿ, ಕಾಳುಮೆಣಸು, ಜೀರಿಗೆ, ಪಲಾವ್ ಎಲೆ, ಶಾಹಿ ಜೀರಿಗೆ.",
+      "traditional_info_kn": "ಕಡಿಮೆ ವೇಗದ ಕಲ್ಲಿನ ಬೀಸುವಿಕೆಯಿಂದ ಸುವಾಸನೆಯ ತೈಲಗಳು ಆವಿಯಾಗದಂತೆ ರಕ್ಷಿಸಲಾಗಿದೆ.",
+      "images": [
+        "https://images.unsplash.com/photo-1599940824399-b87987ceb72a?w=800&auto=format&fit=crop&q=80"
+      ],
+      "category_id": "cat-traditional-blends",
+      "badges": [
+        "homemade",
+        "featured"
+      ],
+      "shelf_life": "12 Months",
+      "active": true,
+      "description_kn": "ಏಲಕ್ಕಿ, ಜಾವಿತ್ರಿ, ಜಾಯಿಕಾಯಿ, ಲವಂಗ, ಚಕ್ಕೆ ಮತ್ತು ಅನಾನಸ್ ಹೂವುಗಳ ಸುಗಂಧಭರಿತ ರಾಜಮನೆತನದ ಗರಂ ಮಸಾಲೆ.",
+      "id": "prod-malnad-garam-masala",
+      "created_at": "2026-08-23T06:46:14.492Z",
+      "discount_percentage": 19,
+      "updated_at": "2026-08-23T06:46:14.492Z",
+      "stock": 72,
+      "rating": 4.9,
+      "storage_en": "Keep sealed tightly to preserve volatile aromatic oils.",
+      "storage_kn": "ಸುವಾಸನೆ ಉಳಿಯಲು ಗಾಳಿಯಾಡದಂತೆ ಬಿಗಿಯಾಗಿ ಮುಚ್ಚಿಡಿ.",
+      "name_en": "Stone-Ground Malnad Garam Masala",
+      "price": 185,
+      "sku": "IND-GRM-150",
+      "mrp": 230,
+      "weight": "150g",
+      "low_stock_threshold": 15,
+      "traditional_info_en": "Cold-ground at low RPM to ensure essential aromatics never evaporate.",
+      "name_kn": "ಕಲ್ಲಿನಲ್ಲಿ ಬೀಸಿದ ಮಲೆನಾಡು ಗರಂ ಮಸಾಲೆ",
+      "description_en": "An intensely fragrant royal blend of green cardamom, star anise, nutmeg, mace, cinnamon quill, and cloves. Enhances curries and biryanis with a tiny pinch."
+    },
+    {
+      "description_kn": "ಮೇಲುಕೋಟೆಯ ದೇವಸ್ಥಾನದ ರುಚಿಯನ್ನು ನೆನಪಿಸುವ ಎಳ್ಳು, ಮೆಣಸು ಮತ್ತು ಹುಣಸೆ ರುಚಿಯ ಅದ್ಭುತ ಪುಳಿಯೋಗರೆ ಮಸಾಲೆ ಪುಡಿ.",
+      "traditional_info_kn": "ಐಯ್ಯಂಗಾರ್ ಪರಂಪರೆಯ ಸಾಂಪ್ರದಾಯಿಕ ಎಳ್ಳು ಹುರಿಯುವ ವಿಧಾನದಲ್ಲಿ ಸಿದ್ಧಪಡಿಸಲಾಗಿದೆ.",
+      "stock": 64,
+      "review_count": 110,
+      "ingredients_en": "Red Chillies, White Sesame, Coriander, Black Pepper, Fenugreek, Mustard, Cumin, Asafoetida, Turmeric, Curry Leaves.",
+      "id": "prod-puliyogare-mix",
+      "price": 129,
+      "ingredients_kn": "ಕೆಂಪು ಮೆಣಸು, ಬಿಳಿ ಎಳ್ಳು, ಕೊತ್ತಂಬರಿ, ಕಾಳುಮೆಣಸು, ಮೆಂತ್ಯ, ಸಾಸಿವೆ, ಜೀರಿಗೆ, ಇಂಗು, ಅರಿಶಿನ, ಕರಿಬೇವಿನ ಎಲೆ.",
+      "images": [
+        "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=800&auto=format&fit=crop&q=80"
+      ],
+      "storage_kn": "ತಂಪಾದ ಒಣ ಸ್ಥಳದಲ್ಲಿ ಶೇಖರಿಸಿ.",
+      "storage_en": "Store in a cool dry place.",
+      "updated_at": "2026-08-23T06:46:14.492Z",
+      "active": true,
+      "badges": [
+        "bestseller",
+        "festival_special"
+      ],
+      "discount_percentage": 19,
+      "weight": "200g",
+      "mrp": 160,
+      "sku": "IND-PLY-200",
+      "name_kn": "ಮೇಲುಕೋಟೆ ಶೈಲಿಯ ಸಾಂಪ್ರದಾಯಿಕ ಪುಳಿಯೋಗರೆ ಪುಡಿ",
+      "created_at": "2026-08-23T06:46:14.492Z",
+      "description_en": "Rich tamarind-spiced traditional dry blend packed with white sesame seeds, black pepper, and roasted spices for instant temple-style tamarind rice.",
+      "low_stock_threshold": 10,
+      "shelf_life": "9 Months",
+      "category_id": "cat-karnataka-specials",
+      "rating": 5,
+      "traditional_info_en": "Slow-roasted sesame seed technique inspired by Iyengar heritage.",
+      "name_en": "Melukote Style Puliyogare Gojju Mix"
+    },
+    {
+      "updated_at": "2026-08-23T06:46:14.492Z",
+      "weight": "250g",
+      "discount_percentage": 20,
+      "name_en": "Heritage Maniyara Rasam (Saaru) Powder",
+      "storage_kn": "ಒಣಗಿದ ಚಮಚ ಬಳಸಿ. ಡಬ್ಬದ ಮುಚ್ಚಳವನ್ನು ಬಿಗಿಯಾಗಿ ಮುಚ್ಚಿ.",
+      "storage_en": "Use a dry spoon. Keep lid sealed tightly.",
+      "id": "prod-rasam-powder",
+      "traditional_info_kn": "ದಕ್ಷಿಣ ಕರ್ನಾಟಕದ ಅಜ್ಜಿ ಮನೆಯ ಕೈರುಚಿಯ ಪುರಾತನ ವಿಧಾನದಂತೆ ತಯಾರಿಸಲಾಗಿದೆ.",
+      "category_id": "cat-karnataka-specials",
+      "name_kn": "ಪಾರಂಪರಿಕ ಮನೆಯ ರಸಂ (ಸಾರಿನ) ಪುಡಿ",
+      "sku": "IND-RSM-250",
+      "description_en": "A golden digestive broth masala slow-roasted with Salem turmeric, Malabar black pepper, cumin seeds, and mountain coriander. Warm, comforting, and soul-satisfying.",
+      "rating": 4.8,
+      "mrp": 195,
+      "ingredients_en": "Coriander, Cumin, Black Pepper, Red Chillies, Turmeric, Fenugreek, Mustard Seeds, Curry Leaves, Asafoetida (Hing).",
+      "ingredients_kn": "ಧನಿಯಾ, ಜೀರಿಗೆ, ಕಾಳುಮೆಣಸು, ಕೆಂಪು ಮೆಣಸು, ಅರಿಶಿನ, ಮೆಂತ್ಯ, ಸಾಸಿವೆ, ಕರಿಬೇವಿನ ಸೊಪ್ಪು, ಇಂಗು.",
+      "low_stock_threshold": 20,
+      "price": 155,
+      "traditional_info_en": "Prepared according to grandmother’s South Karnataka digestive recipe.",
+      "review_count": 98,
+      "shelf_life": "12 Months",
+      "description_kn": "ಸೇಲಂ ಅರಿಶಿನ, ಕಾಳುಮೆಣಸು, ಜೀರಿಗೆ ಮತ್ತು ಸುವಾಸನೆಯ ಕೊತ್ತಂಬರಿ ಬೀಜಗಳಿಂದ ತಯಾರಾದ, ಜೀರ್ಣಶಕ್ತಿಗೆ ಅತ್ಯುತ್ತಮವಾದ ಮನೆಯ ಸಾರಿನ ಪುಡಿ.",
+      "stock": 120,
+      "images": [
+        "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=800&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=800&auto=format&fit=crop&q=80"
+      ],
+      "created_at": "2026-08-23T06:46:14.492Z",
+      "active": true,
+      "badges": [
+        "bestseller",
+        "natural"
+      ]
+    },
+    {
+      "rating": 4.9,
+      "name_en": "Traditional Udupi Temple Sambar Masala",
+      "description_kn": "ಉಡುಪಿ ಶೈಲಿಯ ಕಾಯಿ ಹುರಿದ ಸುವಾಸನೆಯುಕ್ತ, ಇಂಗು ಮಿಶ್ರಿತ ರುಚಿಕರ ಸಾಂಬಾರ್ ಪುಡಿ.",
+      "category_id": "cat-masala-powders",
+      "stock": 94,
+      "name_kn": "ಸಾಂಪ್ರದಾಯಿಕ ಉಡುಪಿ ದೇವಸ್ಥಾನ ಶೈಲಿಯ ಸಾಂಬಾರ್ ಪುಡಿ",
+      "traditional_info_en": "Temple kitchen inspired formulation with zero onion or garlic.",
+      "updated_at": "2026-08-23T06:46:14.492Z",
+      "weight": "250g",
+      "price": 139,
+      "ingredients_en": "Coriander, Red Chillies, Chana Dal, Toor Dal, Fenugreek, Cumin, Mustard, Turmeric, Asafoetida.",
+      "sku": "IND-SMB-250",
+      "low_stock_threshold": 15,
+      "storage_en": "Keep in an airtight jar.",
+      "storage_kn": "ಗಾಳಿಯಾಡದ ಭರಣಿಯಲ್ಲಿ ಇರಿಸಿ.",
+      "ingredients_kn": "ಕೊತ್ತಂಬರಿ, ಕೆಂಪು ಮೆಣಸು, ಕಡಲೆಬೇಳೆ, ತೊಗರಿಬೇಳೆ, ಮೆಂತ್ಯ, ಜೀರಿಗೆ, ಸಾಸಿವೆ, ಅರಿಶಿನ, ಶುದ್ಧ ಇಂಗು.",
+      "mrp": 175,
+      "active": true,
+      "badges": [
+        "natural",
+        "homemade"
+      ],
+      "description_en": "Authentic mild sweet-spicy coconut roasted Udupi sambar masala with rich hing and whole fenugreek.",
+      "created_at": "2026-08-23T06:46:14.492Z",
+      "images": [
+        "https://images.unsplash.com/photo-1599940824399-b87987ceb72a?w=800&auto=format&fit=crop&q=80"
+      ],
+      "traditional_info_kn": "ದೇವಸ್ಥಾನದ ಮಡಿಯ ಶೈಲಿಯಲ್ಲಿ ಈರುಳ್ಳಿ-ಬೆಳ್ಳುಳ್ಳಿ ರಹಿತವಾಗಿ ತಯಾರಿಸಲಾಗಿದೆ.",
+      "review_count": 87,
+      "discount_percentage": 20,
+      "id": "prod-udupi-sambar",
+      "shelf_life": "12 Months"
+    }
+  ],
+  "categories": [
+    {
+      "image": "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=600&auto=format&fit=crop&q=80",
+      "description_en": "Authentic heritage blends crafted according to traditional regional recipes.",
+      "order": 1,
+      "name_en": "Karnataka Specials",
+      "enabled": true,
+      "name_kn": "ಕರ್ನಾಟಕದ ವಿಶೇಷಗಳು",
+      "id": "cat-karnataka-specials",
+      "description_kn": "ಕರ್ನಾಟಕದ ಸಾಂಪ್ರದಾಯಿಕ ಅಡುಗೆ ಮನೆಗಳಿಂದ ನೇರವಾಗಿ ಬಂದ ನೈಜ ಮಸಾಲೆಗಳು."
+    },
+    {
+      "description_kn": "ದೈನಂದಿನ ಅಡುಗೆಗೆ ಬೇಕಾದ ಶುದ್ಧ, ಕಲ್ಲಿನಲ್ಲಿ ಬೀಸಿದ ಮಸಾಲೆ ಪುಡಿಗಳು.",
+      "order": 2,
+      "id": "cat-masala-powders",
+      "description_en": "Daily kitchen essentials, stone-ground without chemicals or colorants.",
+      "name_en": "Masala Powders",
+      "image": "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=600&auto=format&fit=crop&q=80",
+      "name_kn": "ಮಸಾಲೆ ಪುಡಿಗಳು",
+      "enabled": true
+    },
+    {
+      "name_en": "Whole Spices",
+      "image": "https://images.unsplash.com/photo-1509358271058-acd22cc93898?w=600&auto=format&fit=crop&q=80",
+      "description_kn": "ತೋಟಗಳಿಂದ ನೇರವಾಗಿ ಆರಿಸಿದ, ಬಿಸಿಲಿನಲ್ಲಿ ಒಣಗಿಸಿದ ಕಾಳು ಮಸಾಲೆಗಳು.",
+      "name_kn": "ಕಾಳು ಮಸಾಲೆಗಳು",
+      "enabled": true,
+      "id": "cat-whole-spices",
+      "order": 3,
+      "description_en": "Sun-dried aromatic whole spices sourced from trusted plantations."
+    },
+    {
+      "name_en": "Traditional Blends",
+      "id": "cat-traditional-blends",
+      "order": 4,
+      "description_en": "Aromatic Garam Masalas, Curry Powders, and Rasam specialities.",
+      "enabled": true,
+      "name_kn": "ಸಾಂಪ್ರದಾಯಿಕ ಮಿಶ್ರಣಗಳು",
+      "image": "https://images.unsplash.com/photo-1599940824399-b87987ceb72a?w=600&auto=format&fit=crop&q=80",
+      "description_kn": "ಗರಂ ಮಸಾಲೆಗಳು, ಸಾಂಬಾರ್ ಮತ್ತು ರಸಂಗೆ ಬೇಕಾದ ಸುಗಂಧಯುಕ್ತ ಮಿಶ್ರಣಗಳು."
+    },
+    {
+      "description_kn": "ಹಬ್ಬದ ಉಡುಗೊರೆಗೆ ಮತ್ತು ಇಡೀ ತಿಂಗಳ ಅಡುಗೆಗೆ ಅನುಕೂಲಕರ ಕಾಂಬೋ ಪ್ಯಾಕ್‌ಗಳು.",
+      "order": 5,
+      "name_en": "Combo Value Packs",
+      "description_en": "Curated value bundles for festival gifting and complete kitchen pantries.",
+      "id": "cat-combo-packs",
+      "image": "https://images.unsplash.com/photo-1532336414038-cf19250c5757?w=600&auto=format&fit=crop&q=80",
+      "name_kn": "ಕಾಂಬೋ ಪ್ಯಾಕ್‌ಗಳು",
+      "enabled": true
+    }
+  ],
+  "orders": [
+    {
+      "address_snapshot": {
+        "district": "Bengaluru Urban",
+        "city": "Bengaluru",
+        "pincode": "560023",
+        "email": "popularbusiness09@gmail.com",
+        "area": "Locality (Pin 560023)",
+        "state": "Karnataka",
+        "houseFlat": "Jaiaka",
+        "street": "Vijaynagar",
+        "phone": "9663852326",
+        "fullName": "Praveen M E"
+      },
+      "payment_details": {
+        "razorpay_order_id": "order_mt8nik96mrusb2",
+        "razorpay_signature": "sim_sig_1787661525427",
+        "razorpay_payment_id": "pay_sim_mt8nikz7cnll",
+        "method": "Razorpay UPI/Online"
+      },
+      "expected_delivery": "29 Aug 2026",
+      "total_amount": 259,
+      "customer_id": "cust-1787661339478",
+      "whatsapp_notification_status": "Sent",
+      "paid_at": "2026-08-25T12:38:45.632Z",
+      "order_date": "2026-08-25T12:38:44.508Z",
+      "id": "IND-2608-8852",
+      "created_at": "2026-08-25T12:38:44.508Z",
+      "payment_method": "UPI / Razorpay",
+      "internal_order_id": "IND-2608-8852",
+      "payment_status": "Successful",
+      "currency": "INR",
+      "customer_phone": "9663852326",
+      "razorpay_signature": "sim_sig_1787661525427",
+      "shipping_fee": 49,
+      "status": "confirmed",
+      "updated_at": "2026-08-25T12:38:45.632Z",
+      "items": [
+        {
+          "image": "https://images.unsplash.com/photo-1509358271058-acd22cc93898?w=800&auto=format&fit=crop&q=80",
+          "mrp": 260,
+          "name_en": "Coorg High-Altitude Black Pepper (Tellicherry Grade)",
+          "name_kn": "ಕೊಡಗು ಬೆಟ್ಟದ ಅಪ್ಪಟ ಕಪ್ಪು ಕಾಳುಮೆಣಸು",
+          "sku": "IND-CRG-200",
+          "subtotal": 210,
+          "unit_price": 210,
+          "product_id": "prod-coorg-pepper",
+          "quantity": 1,
+          "discount": 50
+        }
+      ],
+      "order_status": "Payment Confirmed",
+      "amount": 259,
+      "razorpay_order_id": "order_mt8nik96mrusb2",
+      "customer_name": "Praveen M E",
+      "transaction_id": "pay_sim_mt8nikz7cnll",
+      "payment_timestamp": "2026-08-25T12:38:45.632Z",
+      "customer_email": "popularbusiness09@gmail.com",
+      "utr_reference": "pay_sim_mt8nikz7cnll",
+      "razorpay_payment_id": "pay_sim_mt8nikz7cnll",
+      "discount_amount": 0,
+      "subtotal": 210
+    },
+    {
+      "amount": 259,
+      "id": "IND-2608-9920",
+      "items": [
+        {
+          "subtotal": 210,
+          "name_kn": "ಕೊಡಗು ಬೆಟ್ಟದ ಅಪ್ಪಟ ಕಪ್ಪು ಕಾಳುಮೆಣಸು",
+          "discount": 50,
+          "quantity": 1,
+          "name_en": "Coorg High-Altitude Black Pepper (Tellicherry Grade)",
+          "image": "https://images.unsplash.com/photo-1509358271058-acd22cc93898?w=800&auto=format&fit=crop&q=80",
+          "sku": "IND-CRG-200",
+          "unit_price": 210,
+          "product_id": "prod-coorg-pepper",
+          "mrp": 260
+        }
+      ],
+      "internal_order_id": "IND-2608-9920",
+      "address_snapshot": {
+        "area": "Locality (Pin 560023)",
+        "phone": "9663852326",
+        "district": "Bengaluru Urban",
+        "state": "Karnataka",
+        "pincode": "560023",
+        "city": "Bengaluru",
+        "fullName": "Praveen M E",
+        "email": "popularbusiness09@gmail.com",
+        "street": "Vijaynagar",
+        "houseFlat": "Jaiaka"
+      },
+      "status": "placed",
+      "customer_name": "Praveen M E",
+      "discount_amount": 0,
+      "created_at": "2026-08-25T12:35:56.469Z",
+      "whatsapp_notification_status": "Pending",
+      "total_amount": 259,
+      "expected_delivery": "29 Aug 2026",
+      "payment_method": "UPI / Razorpay",
+      "order_date": "2026-08-25T12:35:56.469Z",
+      "customer_id": "cust-1787661339478",
+      "shipping_fee": 49,
+      "order_status": "Order Placed",
+      "updated_at": "2026-08-25T12:35:56.469Z",
+      "customer_phone": "9663852326",
+      "payment_status": "Pending",
+      "razorpay_order_id": "order_mt8neylxoqyehc",
+      "subtotal": 210,
+      "currency": "INR",
+      "customer_email": "popularbusiness09@gmail.com"
+    },
+    {
+      "id": "IND-2608-9867",
+      "address_snapshot": {
+        "email": "popularbusiness09@gmail.com",
+        "pincode": "560023",
+        "area": "Locality (Pin 560023)",
+        "district": "Bengaluru Urban",
+        "phone": "9663852326",
+        "fullName": "Praveen M E",
+        "state": "Karnataka",
+        "street": "Vijaynagar",
+        "city": "Bengaluru",
+        "houseFlat": "Jaiaka"
+      },
+      "order_date": "2026-08-25T12:35:39.730Z",
+      "customer_name": "Praveen M E",
+      "expected_delivery": "29 Aug 2026",
+      "updated_at": "2026-08-25T12:35:39.730Z",
+      "whatsapp_notification_status": "Pending",
+      "razorpay_order_id": "order_mt8nelofnx1lsh",
+      "subtotal": 210,
+      "currency": "INR",
+      "status": "placed",
+      "payment_method": "UPI / Razorpay",
+      "shipping_fee": 49,
+      "total_amount": 259,
+      "items": [
+        {
+          "subtotal": 210,
+          "product_id": "prod-coorg-pepper",
+          "unit_price": 210,
+          "sku": "IND-CRG-200",
+          "quantity": 1,
+          "mrp": 260,
+          "discount": 50,
+          "name_kn": "ಕೊಡಗು ಬೆಟ್ಟದ ಅಪ್ಪಟ ಕಪ್ಪು ಕಾಳುಮೆಣಸು",
+          "image": "https://images.unsplash.com/photo-1509358271058-acd22cc93898?w=800&auto=format&fit=crop&q=80",
+          "name_en": "Coorg High-Altitude Black Pepper (Tellicherry Grade)"
+        }
+      ],
+      "customer_id": "cust-1787661339478",
+      "discount_amount": 0,
+      "amount": 259,
+      "payment_status": "Pending",
+      "customer_phone": "9663852326",
+      "created_at": "2026-08-25T12:35:39.730Z",
+      "order_status": "Order Placed",
+      "internal_order_id": "IND-2608-9867",
+      "customer_email": "popularbusiness09@gmail.com"
+    },
+    {
+      "status": "delivered",
+      "shipping_fee": 49,
+      "id": "IND-2608-2846",
+      "razorpay_payment_id": "pay_sim_mt6yu5ket0d8",
+      "customer_id": "cust-1787471893911",
+      "payment_status": "Successful",
+      "customer_phone": "9663852435",
+      "amount": 194,
+      "payment_details": {
+        "razorpay_payment_id": "pay_sim_mt6yu5ket0d8",
+        "method": "Razorpay UPI/Online",
+        "razorpay_order_id": "order_mt6yu21j3hcknt",
+        "razorpay_signature": "sim_sig_1787559608750"
+      },
+      "created_at": "2026-08-24T08:20:04.200Z",
+      "payment_method": "UPI / Razorpay",
+      "razorpay_signature": "sim_sig_1787559608750",
+      "razorpay_order_id": "order_mt6yu21j3hcknt",
+      "order_status": "delivered",
+      "items": [
+        {
+          "image": "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=800&auto=format&fit=crop&q=80",
+          "discount": 35,
+          "name_en": "Traditional Mysuru Bisi Bele Bath Powder",
+          "name_kn": "ಸಾಂಪ್ರದಾಯಿಕ ಮೈಸೂರು ಬಿಸಿಬೇಳೆಬಾತ್ ಪುಡಿ",
+          "quantity": 1,
+          "unit_price": 145,
+          "product_id": "prod-bisibelebath",
+          "subtotal": 145,
+          "sku": "IND-BBB-200",
+          "mrp": 180
+        }
+      ],
+      "order_date": "2026-08-24T08:20:04.200Z",
+      "paid_at": "2026-08-24T08:20:08.987Z",
+      "currency": "INR",
+      "payment_timestamp": "2026-08-24T08:20:08.987Z",
+      "address_snapshot": {
+        "phone": "9663852435",
+        "district": "Bengaluru Urban",
+        "street": "Magadi Road",
+        "houseFlat": "Yy",
+        "state": "Karnataka",
+        "area": "Locality (Pin 560023)",
+        "email": "praveenmagagi600@gmail.com",
+        "pincode": "560023",
+        "fullName": "Praveen M E",
+        "city": "Bengaluru"
+      },
+      "customer_email": "praveenmagagi600@gmail.com",
+      "utr_reference": "pay_sim_mt6yu5ket0d8",
+      "transaction_id": "pay_sim_mt6yu5ket0d8",
+      "total_amount": 194,
+      "expected_delivery": "28 Aug 2026",
+      "whatsapp_notification_status": "Sent",
+      "customer_name": "Praveen M E",
+      "discount_amount": 0,
+      "subtotal": 145,
+      "updated_at": "2026-08-24T08:20:52.933Z",
+      "internal_order_id": "IND-2608-2846"
+    },
+    {
+      "status": "placed",
+      "internal_order_id": "IND-2608-8227",
+      "id": "IND-2608-8227",
+      "subtotal": 145,
+      "payment_status": "Pending",
+      "currency": "INR",
+      "shipping_fee": 49,
+      "customer_phone": "9663852435",
+      "total_amount": 194,
+      "order_date": "2026-08-24T08:17:31.143Z",
+      "whatsapp_notification_status": "Pending",
+      "customer_email": "praveenmagagi600@gmail.com",
+      "amount": 194,
+      "updated_at": "2026-08-24T08:17:31.143Z",
+      "payment_method": "UPI / Razorpay",
+      "order_status": "Order Placed",
+      "items": [
+        {
+          "mrp": 180,
+          "sku": "IND-BBB-200",
+          "discount": 35,
+          "unit_price": 145,
+          "product_id": "prod-bisibelebath",
+          "quantity": 1,
+          "name_kn": "ಸಾಂಪ್ರದಾಯಿಕ ಮೈಸೂರು ಬಿಸಿಬೇಳೆಬಾತ್ ಪುಡಿ",
+          "subtotal": 145,
+          "name_en": "Traditional Mysuru Bisi Bele Bath Powder",
+          "image": "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=800&auto=format&fit=crop&q=80"
+        }
+      ],
+      "razorpay_order_id": "order_mt6yqrxvlewsze",
+      "discount_amount": 0,
+      "customer_name": "Praveen M E",
+      "expected_delivery": "28 Aug 2026",
+      "created_at": "2026-08-24T08:17:31.143Z",
+      "customer_id": "cust-1787471893911",
+      "address_snapshot": {
+        "pincode": "560023",
+        "street": "Magadi Road",
+        "email": "praveenmagagi600@gmail.com",
+        "district": "Bengaluru Urban",
+        "city": "Bengaluru",
+        "houseFlat": "Yy",
+        "state": "Karnataka",
+        "fullName": "Praveen M E",
+        "phone": "9663852435",
+        "area": "Locality (Pin 560023)"
+      }
+    },
+    {
+      "total_amount": 194,
+      "status": "placed",
+      "items": [
+        {
+          "unit_price": 145,
+          "product_id": "prod-bisibelebath",
+          "image": "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=800&auto=format&fit=crop&q=80",
+          "mrp": 180,
+          "sku": "IND-BBB-200",
+          "subtotal": 145,
+          "discount": 35,
+          "name_en": "Traditional Mysuru Bisi Bele Bath Powder",
+          "quantity": 1,
+          "name_kn": "ಸಾಂಪ್ರದಾಯಿಕ ಮೈಸೂರು ಬಿಸಿಬೇಳೆಬಾತ್ ಪುಡಿ"
+        }
+      ],
+      "updated_at": "2026-08-24T08:13:24.952Z",
+      "payment_method": "UPI / Razorpay",
+      "internal_order_id": "IND-2608-7651",
+      "shipping_fee": 49,
+      "subtotal": 145,
+      "address_snapshot": {
+        "email": "praveenmagagi600@gmail.com",
+        "houseFlat": "Yy",
+        "area": "Locality (Pin 560023)",
+        "fullName": "Praveen M E",
+        "street": "Magadi Road",
+        "phone": "9663852435",
+        "district": "Bengaluru Urban",
+        "pincode": "560023",
+        "state": "Karnataka",
+        "city": "Bengaluru"
+      },
+      "currency": "INR",
+      "order_status": "Order Placed",
+      "customer_email": "praveenmagagi600@gmail.com",
+      "amount": 194,
+      "customer_id": "cust-1787471893911",
+      "payment_status": "Pending",
+      "customer_phone": "9663852435",
+      "whatsapp_notification_status": "Pending",
+      "order_date": "2026-08-24T08:13:24.952Z",
+      "customer_name": "Praveen M E",
+      "razorpay_order_id": "order_mt6ylhy3is7ko9",
+      "created_at": "2026-08-24T08:13:24.952Z",
+      "discount_amount": 0,
+      "expected_delivery": "28 Aug 2026",
+      "id": "IND-2608-7651"
+    },
+    {
+      "address_snapshot": {
+        "fullName": "Praveen M E",
+        "city": "Bengaluru",
+        "state": "Karnataka",
+        "phone": "9663852435",
+        "pincode": "560023",
+        "street": "Magadi Road",
+        "area": "Locality (Pin 560023)",
+        "email": "praveenmagagi600@gmail.com",
+        "district": "Bengaluru Urban",
+        "houseFlat": "Yy"
+      },
+      "subtotal": 145,
+      "items": [
+        {
+          "name_kn": "ಸಾಂಪ್ರದಾಯಿಕ ಮೈಸೂರು ಬಿಸಿಬೇಳೆಬಾತ್ ಪುಡಿ",
+          "name_en": "Traditional Mysuru Bisi Bele Bath Powder",
+          "product_id": "prod-bisibelebath",
+          "unit_price": 145,
+          "image": "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=800&auto=format&fit=crop&q=80",
+          "quantity": 1,
+          "sku": "IND-BBB-200",
+          "discount": 35,
+          "mrp": 180,
+          "subtotal": 145
+        }
+      ],
+      "status": "placed",
+      "created_at": "2026-08-23T08:03:56.476Z",
+      "total_amount": 194,
+      "payment_method": "UPI",
+      "id": "IND-2608-8437",
+      "customer_name": "Praveen M E",
+      "order_date": "2026-08-23T08:03:56.476Z",
+      "expected_delivery": "27 Aug 2026",
+      "whatsapp_notification_status": "Pending",
+      "shipping_fee": 49,
+      "discount_amount": 0,
+      "customer_phone": "9663852435",
+      "payment_status": "Pending",
+      "order_status": "Order Placed",
+      "updated_at": "2026-08-23T08:03:56.476Z",
+      "customer_id": "cust-1787471893911",
+      "customer_email": "praveenmagagi600@gmail.com"
+    },
+    {
+      "order_date": "2026-08-23T08:00:02.766Z",
+      "customer_email": "praveenmagagi600@gmail.com",
+      "order_status": "Order Placed",
+      "payment_status": "Pending",
+      "customer_phone": "9663852435",
+      "shipping_fee": 49,
+      "discount_amount": 0,
+      "status": "placed",
+      "payment_method": "UPI",
+      "total_amount": 194,
+      "customer_name": "Praveen M E",
+      "updated_at": "2026-08-23T08:00:02.766Z",
+      "whatsapp_notification_status": "Pending",
+      "customer_id": "cust-1787471893911",
+      "expected_delivery": "27 Aug 2026",
+      "subtotal": 145,
+      "created_at": "2026-08-23T08:00:02.766Z",
+      "items": [
+        {
+          "subtotal": 145,
+          "name_kn": "ಸಾಂಪ್ರದಾಯಿಕ ಮೈಸೂರು ಬಿಸಿಬೇಳೆಬಾತ್ ಪುಡಿ",
+          "name_en": "Traditional Mysuru Bisi Bele Bath Powder",
+          "unit_price": 145,
+          "product_id": "prod-bisibelebath",
+          "sku": "IND-BBB-200",
+          "quantity": 1,
+          "image": "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=800&auto=format&fit=crop&q=80",
+          "mrp": 180,
+          "discount": 35
+        }
+      ],
+      "address_snapshot": {
+        "phone": "9663852435",
+        "houseFlat": "Yy",
+        "state": "Karnataka",
+        "fullName": "Praveen M E",
+        "area": "Locality (Pin 560023)",
+        "email": "praveenmagagi600@gmail.com",
+        "district": "Bengaluru Urban",
+        "street": "Magadi Road",
+        "city": "Bengaluru",
+        "pincode": "560023"
+      },
+      "id": "IND-2608-9013"
+    },
+    {
+      "id": "IND-2608-1257",
+      "status": "placed",
+      "total_amount": 194,
+      "upi_reference_id": "UTR181974018176",
+      "shipping_fee": 49,
+      "whatsapp_notification_status": "Sent",
+      "address_snapshot": {
+        "district": "Bengaluru Urban",
+        "city": "Bengaluru",
+        "email": "praveenmagagi600@gmail.com",
+        "houseFlat": "Yy",
+        "state": "Karnataka",
+        "area": "Locality (Pin 560023)",
+        "pincode": "560023",
+        "street": "Magadi Road",
+        "phone": "9663852435",
+        "fullName": "Praveen M E"
+      },
+      "utr_reference": "UTR181974018176",
+      "created_at": "2026-08-23T07:58:13.935Z",
+      "discount_amount": 0,
+      "expected_delivery": "27 Aug 2026",
+      "order_status": "placed",
+      "payment_status": "Payment Pending",
+      "order_date": "2026-08-23T07:58:13.935Z",
+      "customer_phone": "9663852435",
+      "items": [
+        {
+          "mrp": 180,
+          "sku": "IND-BBB-200",
+          "product_id": "prod-bisibelebath",
+          "unit_price": 145,
+          "subtotal": 145,
+          "name_kn": "ಸಾಂಪ್ರದಾಯಿಕ ಮೈಸೂರು ಬಿಸಿಬೇಳೆಬಾತ್ ಪುಡಿ",
+          "name_en": "Traditional Mysuru Bisi Bele Bath Powder",
+          "quantity": 1,
+          "image": "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=800&auto=format&fit=crop&q=80",
+          "discount": 35
+        }
+      ],
+      "customer_email": "praveenmagagi600@gmail.com",
+      "payment_timestamp": "2026-08-23T07:58:29.019Z",
+      "transaction_id": "UPI-TXN-71909019",
+      "payment_method": "UPI",
+      "subtotal": 145,
+      "customer_name": "Praveen M E",
+      "updated_at": "2026-08-23T07:59:04.635Z",
+      "customer_id": "cust-1787471893911"
+    }
+  ],
+  "customers": [
+    {
+      "updated_at": "2026-08-24T08:20:04.200Z",
+      "phone": "9663852435",
+      "id": "cust-1787471893911",
+      "created_at": "2026-08-23T07:58:13.911Z",
+      "total_spent": 1164,
+      "email": "praveenmagagi600@gmail.com",
+      "total_orders": 6,
+      "saved_address": {
+        "pincode": "560023",
+        "city": "Bengaluru",
+        "district": "Bengaluru Urban",
+        "street": "Magadi Road",
+        "houseFlat": "Yy",
+        "email": "praveenmagagi600@gmail.com",
+        "fullName": "Praveen M E",
+        "area": "Locality (Pin 560023)",
+        "state": "Karnataka",
+        "phone": "9663852435"
+      },
+      "name": "Praveen M E"
+    },
+    {
+      "total_spent": 777,
+      "id": "cust-1787661339478",
+      "updated_at": "2026-08-25T12:38:44.508Z",
+      "name": "Praveen M E",
+      "total_orders": 3,
+      "phone": "9663852326",
+      "created_at": "2026-08-25T12:35:39.478Z",
+      "saved_address": {
+        "city": "Bengaluru",
+        "state": "Karnataka",
+        "fullName": "Praveen M E",
+        "pincode": "560023",
+        "phone": "9663852326",
+        "houseFlat": "Jaiaka",
+        "street": "Vijaynagar",
+        "area": "Locality (Pin 560023)",
+        "district": "Bengaluru Urban",
+        "email": "popularbusiness09@gmail.com"
+      },
+      "email": "popularbusiness09@gmail.com"
+    }
+  ],
+  "recipes": [
+    {
+      "featured_spice_ids": [
+        "prod-bisibelebath"
+      ],
+      "description_kn": "ಅಕ್ಕಿ, ತೊಗರಿಬೇಳೆ, ತರಕಾರಿಗಳು ಮತ್ತು ಇಂದಿಮಾ ಬಿಸಿಬೇಳೆಬಾತ್ ಪುಡಿಯೊಂದಿಗೆ ತುಪ್ಪದ ಒಗ್ಗರಣೆಯಲ್ಲಿ ತಯಾರಿಸುವ ರುಚಿಕರ ಅಡುಗೆ.",
+      "prep_time": "15 Mins",
+      "instructions_en": [
+        "Pressure cook rice and toor dal together with turmeric and 4 cups water until soft (4 whistles).",
+        "In a thick-bottomed brass or heavy pot, boil the diced vegetables in tamarind water with a pinch of turmeric and salt until tender.",
+        "Mix 3 tbsp of Indima Bisi Bele Bath Powder with 1/2 cup warm water into a smooth paste and add to the simmering vegetables.",
+        "Add the cooked rice-dal mash, mix well, and simmer on medium flame for 7-8 minutes.",
+        "Prepare hot tadka in 2 tbsp ghee with mustard seeds, crunchy cashews, hing, and fresh curry leaves. Pour over the bubbling Bisi Bele Bath and rest covered for 5 minutes before serving hot with boondi or potato chips."
+      ],
+      "title_en": "Authentic Mysuru Bisi Bele Bath with Ghee Tadka",
+      "title_kn": "ಅಪ್ಪಟ ಮೈಸೂರು ಶೈಲಿಯ ತುಪ್ಪದ ಒಗ್ಗರಣೆಯ ಬಿಸಿಬೇಳೆಬಾತ್",
+      "description_en": "A wholesome one-pot Karnataka classic made with rice, toor dal, seasonal vegetables, and freshly tempered Indima Bisi Bele Bath powder.",
+      "cook_time": "25 Mins",
+      "created_at": "2026-08-23T06:46:14.492Z",
+      "ingredients_kn": [
+        "೧ ಕಪ್ ಸೋನಾ ಮಸೂರಿ ಅಕ್ಕಿ",
+        "೩/೪ ಕಪ್ ತೊಗರಿಬೇಳೆ",
+        "೩ ಚಮಚ ಇಂದಿಮಾ ಸಾಂಪ್ರದಾಯಿಕ ಬಿಸಿಬೇಳೆಬಾತ್ ಪುಡಿ",
+        "೧.೫ ಕಪ್ ತರಕಾರಿಗಳು (ಕ್ಯಾರೆಟ್, ಬೀನ್ಸ್, ಬಟಾಣಿ, ಸಣ್ಣ ಈರುಳ್ಳಿ)",
+        "೧ ನಿಂಬೆಹಣ್ಣಿನ ಗಾತ್ರದ ಹುಣಸೆಹಣ್ಣಿನ ರಸ",
+        "೨ ಚಮಚ ಶುದ್ಧ ಹಸುವಿನ ತುಪ್ಪ + ೧ ಚಮಚ ಎಣ್ಣೆ",
+        "ಒಗ್ಗರಣೆಗೆ: ಸಾಸಿವೆ, ಗೋಡಂಬಿ, ಕರಿಬೇವಿನ ಸೊಪ್ಪು ಮತ್ತು ಇಂಗು",
+        "ರುಚಿಗೆ ತಕ್ಕಷ್ಟು ಉಪ್ಪು"
+      ],
+      "active": true,
+      "ingredients_en": [
+        "1 cup Sona Masoori Rice",
+        "3/4 cup Toor Dal",
+        "3 tbsp Indima Traditional Bisi Bele Bath Powder",
+        "1.5 cups diced vegetables (Carrot, Beans, Green Peas, Shallots)",
+        "1 small lemon sized Tamarind (extracted)",
+        "2 tbsp Ghee + 1 tbsp Oil",
+        "Mustard seeds, Cashews, Curry leaves & Hing for tempering",
+        "Salt to taste"
+      ],
+      "servings": "4 People",
+      "image": "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=800&auto=format&fit=crop&q=80",
+      "id": "rec-bisibelebath",
+      "instructions_kn": [
+        "ಅಕ್ಕಿ ಮತ್ತು ತೊಗರಿಬೇಳೆಯನ್ನು ಅರಿಶಿನ ಸೇರಿಸಿ ಮೆತ್ತಗೆ ಬೇಯಿಸಿಕೊಳ್ಳಿ (೪ ವಿಷಲ್).",
+        "ಒಂದು ಪಾತ್ರೆಯಲ್ಲಿ ತರಕಾರಿಗಳನ್ನು ಹುಣಸೆ ರಸ, ಸ್ವಲ್ಪ ಅರಿಶಿನ ಮತ್ತು ಉಪ್ಪಿನೊಂದಿಗೆ ಬೇಯಿಸಿ.",
+        "೩ ಚಮಚ ಇಂದಿಮಾ ಬಿಸಿಬೇಳೆಬಾತ್ ಪುಡಿಯನ್ನು ಸ್ವಲ್ಪ ನೀರಿನಲ್ಲಿ ಕಲಸಿ ತರಕಾರಿಯ ಪಾತ್ರೆಗೆ ಸೇರಿಸಿ ಕುದಿಸಿ.",
+        "ಬೇಯಿಸಿದ ಅನ್ನ ಮತ್ತು ಬೇಳೆ ಮಿಶ್ರಣವನ್ನು ಸೇರಿಸಿ, ೭-೮ ನಿಮಿಷಗಳ ಕಾಲ ಮಂದ ಉರಿಯಲ್ಲಿ ಚೆನ್ನಾಗಿ ಕುದಿಸಿ.",
+        "ಕೊನೆಯಲ್ಲಿ ಬಿಸಿ ತುಪ್ಪದಲ್ಲಿ ಸಾಸಿವೆ, ಗೋಡಂಬಿ, ಇಂಗು ಮತ್ತು ಕರಿಬೇವಿನ ಒಗ್ಗರಣೆ ಹಾಕಿ ಬಿಸಿಬಿಸಿಯಾಗಿ ಬೂಂದಿಯೊಂದಿಗೆ ಸವಿಯಿರಿ."
+      ]
+    },
+    {
+      "prep_time": "5 Mins",
+      "title_kn": "ಸಾಂಪ್ರದಾಯಿಕ ಕರ್ನಾಟಕ ಟೊಮೆಟೊ-ಮೆಣಸಿನ ಸಾರು",
+      "ingredients_kn": [
+        "೨ ನಾಟಿ ಟೊಮೆಟೊ (ಸಣ್ಣಗೆ ಹೆಚ್ಚಿದ್ದು)",
+        "೧.೫ ಚಮಚ ಇಂದಿಮಾ ಪಾರಂಪರಿಕ ರಸಂ ಪುಡಿ",
+        "೧ ಕಪ್ ಬೇಯಿಸಿದ ತೊಗರಿಬೇಳೆಯ ನೀರು (ಕಟ್ಟು)",
+        "ಸ್ವಲ್ಪ ಬೆಲ್ಲ",
+        "ಕರಿಬೇವು ಮತ್ತು ತಾಜಾ ಕೊತ್ತಂಬರಿ ಸೊಪ್ಪು",
+        "ಒಗ್ಗರಣೆಗೆ ತುಪ್ಪ, ಸಾಸಿವೆ ಮತ್ತು ಇಂಗು",
+        "ರುಚಿಗೆ ತಕ್ಕಷ್ಟು ಉಪ್ಪು"
+      ],
+      "id": "rec-maniyara-rasam",
+      "ingredients_en": [
+        "2 ripe country Tomatoes (finely chopped)",
+        "1.5 tbsp Indima Heritage Rasam Powder",
+        "1 cup cooked Toor Dal water",
+        "Small piece of Jaggery",
+        "Curry leaves and fresh Coriander",
+        "1 tsp Ghee for tempering with Mustard & Hing",
+        "Salt to taste"
+      ],
+      "instructions_en": [
+        "Boil chopped tomatoes in 2 cups water with turmeric, slit green chilli, and salt until mushy.",
+        "Add Indima Heritage Rasam Powder, jaggery, and cooked dal water. Bring to a gentle frothy boil.",
+        "Once frothy on top, turn off the flame immediately without over-boiling.",
+        "Temper with ghee, mustard seeds, and generous hing. Garnish with fresh coriander and serve hot."
+      ],
+      "cook_time": "12 Mins",
+      "image": "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=800&auto=format&fit=crop&q=80",
+      "title_en": "Traditional Karnataka Tomato-Pepper Saaru",
+      "servings": "4 People",
+      "featured_spice_ids": [
+        "prod-rasam-powder"
+      ],
+      "created_at": "2026-08-23T06:46:14.492Z",
+      "description_kn": "ನಾಟಿ ಟೊಮೆಟೊ, ಬೆಳ್ಳುಳ್ಳಿ/ಇಂಗು ಮತ್ತು ಇಂದಿಮಾ ರಸಂ ಪುಡಿಯಿಂದ ತಯಾರಿಸಿದ ಸಾಂಪ್ರದಾಯಿಕ ಸಾರು.",
+      "active": true,
+      "description_en": "A revitalizing digestive broth flavored with fresh country tomatoes, curry leaves, and Indima Heritage Rasam Powder.",
+      "instructions_kn": [
+        "ಟೊಮೆಟೊವನ್ನು ನೀರಿನಲ್ಲಿ ಅರಿಶಿನ ಮತ್ತು ಉಪ್ಪಿನೊಂದಿಗೆ ಚೆನ್ನಾಗಿ ಬೇಯಿಸಿ.",
+        "ಇಂದಿಮಾ ರಸಂ ಪುಡಿ, ಬೆಲ್ಲ ಮತ್ತು ಬೇಳೆ ನೀರು ಸೇರಿಸಿ ಮಂದ ಉರಿಯಲ್ಲಿ ನೊರೆ ಬರುವವರೆಗೆ ಕುದಿಸಿ.",
+        "ಮೇಲೆ ನೊರೆ ಬಂದ ತಕ್ಷಣ ಉರಿ ಆರಿಸಿ, ತುಪ್ಪದ ಒಗ್ಗರಣೆ ನೀಡಿ ಕೊತ್ತಂಬರಿ ಸೊಪ್ಪಿನಿಂದ ಅಲಂಕರಿಸಿ."
+      ]
+    }
+  ],
+  "banners": [
+    {
+      "id": "ban-hero-main",
+      "type": "hero",
+      "media_type": "image",
+      "media_url": "/uploads/13049-1787729710599-391309.jpg",
+      "fallback_image": "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=1600&auto=format&fit=crop&q=80",
+      "badge_en": "Festival of Flavours • ಹಬ್ಬದ ಸಂಭ್ರಮ",
+      "badge_kn": "ಸುವಾಸನೆಗಳ ಹಬ್ಬ • ಪಾರಂಪರಿಕ ಮಸಾಲೆ",
+      "festival_greeting_en": "Shubhashayagalu! Welcome to Authentic Karnataka Spices",
+      "festival_greeting_kn": "ಹಬ್ಬದ ಹಾರ್ದಿಕ ಶುಭಾಶಯಗಳು! ಅಪ್ಪಟ ಕರ್ನಾಟಕದ ಮಸಾಲೆಗಳಿಗೆ ಸ್ವಾಗತ",
+      "title_en": "From Nature to Your Kitchen — With Purity, Care & Tradition",
+      "title_kn": "ಪ್ರಕೃತಿಯಿಂದ ನಿಮ್ಮ ಅಡುಗೆಮನೆಗೆ — ಪರಿಶುದ್ಧತೆ, ಪ್ರೀತಿ ಮತ್ತು ಸಂಪ್ರದಾಯ",
+      "subtitle_en": "Handcrafted Karnataka spice blends, stone-ground with motherly love and authentic traditional recipes.",
+      "subtitle_kn": "ತಾಯಿಯ ಕೈರುಚಿಯಂತೆ, ಸಾಂಪ್ರದಾಯಿಕ ಕಲ್ಲಿನ ಬೀಸುವ ಪದ್ಧತಿಯಲ್ಲಿ ತಯಾರಿಸಲಾದ ಕರ್ನಾಟಕದ ಅಪ್ಪಟ ಮಸಾಲೆಗಳು.",
+      "offer_text_en": "Festive Special: FREE Delivery on orders above ₹499 + Up to 25% OFF",
+      "offer_text_kn": "ವಿಶೇಷ ಹಬ್ಬದ ಕೊಡುಗೆ: ₹೪೯೯ ಕ್ಕಿಂತ ಹೆಚ್ಚಿನ ಆರ್ಡರ್‌ಗಳಿಗೆ ಉಚಿತ ಡೆಲಿವರಿ + ೨೫% ವರೆಗೆ ರಿಯಾಯಿತಿ",
+      "primary_btn_text_en": "Shop Pure Spices",
+      "primary_btn_text_kn": "ಮಸಾಲೆಗಳನ್ನು ಖರೀದಿಸಿ",
+      "primary_btn_action": "#products-section",
+      "secondary_btn_text_en": "View Combos & Offers",
+      "secondary_btn_text_kn": "ಕೊಡುಗೆಗಳನ್ನು ನೋಡಿ",
+      "secondary_btn_action": "#offers-section",
+      "enabled": true
+    },
+    {
+      "id": "ban-fest-diwali",
+      "type": "festival",
+      "media_type": "image",
+      "media_url": "https://images.unsplash.com/photo-1532336414038-cf19250c5757?w=1200&auto=format&fit=crop&q=80",
+      "fallback_image": "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=1600&auto=format&fit=crop&q=80",
+      "badge_en": "Festive Heritage Sale",
+      "badge_kn": "ಹಬ್ಬದ ವಿಶೇಷ ಮಾರಾಟ",
+      "title_en": "Karnataka Grand Festive Gift Box",
+      "title_kn": "ಕರ್ನಾಟಕ ಗ್ರಾಂಡ್ ಹಬ್ಬದ ಉಡುಗೊರೆ ಬಾಕ್ಸ್",
+      "subtitle_en": "The auspicious gift of pure aroma and good health for family and loved ones.",
+      "subtitle_kn": "ಕುಟುಂಬ ಮತ್ತು ಬಂಧು-ಮಿತ್ರರಿಗೆ ಪರಿಶುದ್ಧ ಸುವಾಸನೆ ಮತ್ತು ಆರೋಗ್ಯದ ಶ್ರೇಷ್ಠ ಉಡುಗೊರೆ.",
+      "offer_text_en": "Special Flat ₹280 OFF on Grand Box • Code: INDIMA10",
+      "offer_text_kn": "ಗ್ರ್ಯಾಂಡ್ ಬಾಕ್ಸ್ ಮೇಲೆ ₹೨೮೦ ನೇರ ರಿಯಾಯಿತಿ • ಕೋಡ್: INDIMA10",
+      "primary_btn_text_en": "Order Gift Box",
+      "primary_btn_text_kn": "ಉಡುಗೊರೆ ಬಾಕ್ಸ್ ಖರೀದಿಸಿ",
+      "primary_btn_action": "#products-section",
+      "secondary_btn_text_en": "Chat on WhatsApp",
+      "secondary_btn_text_kn": "ವಾಟ್ಸಾಪ್‌ನಲ್ಲಿ ವಿಚಾರಿಸಿ",
+      "secondary_btn_action": "whatsapp",
+      "enabled": true
+    }
+  ],
+  "offers": [
+    {
+      "min_order_amount": 699,
+      "title_kn": "ಕಾಂಬೋ ಪ್ಯಾಕ್‌ಗಳ ಮೇಲೆ ₹50 ನೇರ ರಿಯಾಯಿತಿ",
+      "code": "FESTIVE50",
+      "description_kn": "₹೬೯೯ ಕ್ಕಿಂತ ಹೆಚ್ಚಿನ ಕಾಂಬೋ ಬಾಕ್ಸ್ ಖರೀದಿಯ ಮೇಲೆ ₹೫೦ ನೇರ ರಿಯಾಯಿತಿ.",
+      "active": true,
+      "id": "off-festive50",
+      "description_en": "Flat ₹50 OFF on any combo or value basket over ₹699.",
+      "discount_value": 50,
+      "title_en": "Flat ₹50 OFF on Combos",
+      "discount_type": "fixed"
+    },
+    {
+      "title_kn": "ಮೊದಲ ಖರೀದಿಯ ಮೇಲೆ 10% ರಿಯಾಯಿತಿ",
+      "id": "off-welcome10",
+      "active": true,
+      "max_discount_amount": 150,
+      "description_kn": "₹೩೯೯ ಕ್ಕಿಂತ ಹೆಚ್ಚಿನ ಎಲ್ಲಾ ಆರ್ಡರ್‌ಗಳ ಮೇಲೆ ತಕ್ಷಣದ 10% ಹಬ್ಬದ ರಿಯಾಯಿತಿ ಪಡೆಯಿರಿ.",
+      "code": "INDIMA10",
+      "discount_value": 10,
+      "min_order_amount": 399,
+      "description_en": "Get flat 10% instant festive discount on orders above ₹399 across all spice blends.",
+      "discount_type": "percentage",
+      "title_en": "10% Welcome Festive Discount"
+    }
+  ],
+  "reviews": [
+    {
+      "customer_name": "Sharada Ramamurthy",
+      "approved": true,
+      "comment_en": "The aroma of Marathi Moggu and stone flower in this Bisi Bele Bath powder took me straight back to my grandmother’s kitchen in Malleshwaram. Pure bliss!",
+      "date": "2026-08-15",
+      "product_id": "prod-bisibelebath",
+      "rating": 5,
+      "comment_kn": "ಈ ಬಿಸಿಬೇಳೆಬಾತ್ ಪುಡಿಯಲ್ಲಿರುವ ಮರಾಠಿ ಮೊಗ್ಗು ಮತ್ತು ಕಲ್ಫಾಸಿಯ ಸುವಾಸನೆ ನಮ್ಮ ಅಜ್ಜಿ ಮನೆಯ ಕೈರುಚಿಯನ್ನೇ ನೆನಪಿಸಿತು. ಅತ್ಯುತ್ತಮ ಗುಣಮಟ್ಟ!",
+      "customer_city": "Bengaluru (Jayanagar)",
+      "id": "rev-1"
+    },
+    {
+      "customer_name": "Venkatesh Prasad",
+      "product_id": "prod-rasam-powder",
+      "comment_en": "We tried the Maniyara Rasam powder. The pepper and cumin proportion is absolute perfection. My whole family loved the soothing warmth.",
+      "id": "rev-2",
+      "approved": true,
+      "comment_kn": "ಮನೆಯ ರಸಂ ಪುಡಿ ಅದ್ಭುತವಾಗಿದೆ. ಮೆಣಸು ಮತ್ತು ಜೀರಿಗೆಯ ಹದ ಬಹಳ ಚೆನ್ನಾಗಿದೆ. ಜೀರ್ಣಕ್ಕೂ ತುಂಬಾ ಹಿತಕರ.",
+      "rating": 5,
+      "date": "2026-08-18",
+      "customer_city": "Mysuru"
+    },
+    {
+      "id": "rev-3",
+      "approved": true,
+      "date": "2026-08-19",
+      "customer_name": "Ananya Hegde",
+      "rating": 5,
+      "comment_en": "Top grade Byadgi chillies. Gave my Kundapura style chicken curry a vibrant deep red colour without burning heat. Highly recommended!",
+      "product_id": "prod-byadgi-chillies",
+      "customer_city": "Mangaluru",
+      "comment_kn": "ಅಪ್ಪಟ ಬ್ಯಾಡಗಿ ಮೆಣಸು. ಅಡುಗೆಗೆ ಗಾಢವಾದ ಕೆಂಪು ಬಣ್ಣ ನೀಡುತ್ತದೆ. ಯಾವುದೇ ಕಲಬೆರಕೆ ಇಲ್ಲ."
+    }
+  ],
+  "settings": {
+    "business_name": "Indima Spice Co.",
+    "tagline_en": "Pure as mother's love",
+    "tagline_kn": "ತಾಯಿಯ ಪ್ರೀತಿಯಷ್ಟೇ ಪರಿಶುದ್ಧ",
+    "tagline_sa": "आयुर्वेदोऽमृतानाम् • शुद्धं सात्त्विकं दिव्यम्",
+    "logo_url": "/indima-logo.svg",
+    "phone": "+919663852435",
+    "whatsapp_number": "+919663852435",
+    "email": "care@indimaspice.com",
+    "address_line1": "#42, Traditional Kitchen Heritage Lane, Bull Temple Road",
+    "address_line2": "Basavanagudi",
+    "city": "Bengaluru",
+    "state": "Karnataka",
+    "pincode": "560004",
+    "upi_id": "praveenmagagi600@axl",
+    "upi_merchant_name": "Praveen M E",
+    "upi_qr_code_url": "/uploads/11918-1787471960096-744500.jpg",
+    "instagram_url": "https://www.instagram.com/indimaspicesco.in?igsi=MWoyc25uZGRkMGduYQ==",
+    "facebook_url": "https://facebook.com/indimaspiceco",
+    "youtube_url": "https://youtube.com/@indimaspiceco",
+    "twitter_url": "https://twitter.com/indimaspiceco",
+    "address": "#42, Traditional Kitchen Heritage Lane, Bull Temple Road, Basavanagudi, Bengaluru, Karnataka - 560004",
+    "free_delivery_threshold": 499,
+    "standard_shipping_fee": 49,
+    "floating_whatsapp_enabled": true,
+    "default_whatsapp_msg_en": "Namaskara Indima Spice Co! I would like to inquire about your traditional pure spices.",
+    "default_whatsapp_msg_kn": "ನಮಸ್ಕಾರ ಇಂದಿಮಾ ಸ್ಪೈಸ್ ಕಂ! ನಿಮ್ಮ ಸಾಂಪ್ರದಾಯಿಕ ಮಸಾಲೆಗಳ ಬಗ್ಗೆ ವಿಚಾರಿಸಬೇಕಾಗಿದೆ.",
+    "whatsapp_api_configured": false,
+    "admin_password": "indima@2026",
+    "policy_privacy_en": "At Indima Spice Co., we prioritize your privacy. We collect minimal customer contact and Pan-India delivery address information purely to process and safely fulfill your spice orders. We do not sell or trade your personal details with third parties.",
+    "policy_privacy_kn": "ಇಂದಿಮಾ ಸ್ಪೈಸ್ ಕಂ. ನಲ್ಲಿ ನಿಮ್ಮ ಗೌಪ್ಯತೆಗೆ ನಾವು ಮೊದಲ ಆದ್ಯತೆ ನೀಡುತ್ತೇವೆ. ನಿಮ್ಮ ಆರ್ಡರ್‌ಗಳನ್ನು ತಲುಪಿಸಲು ಮಾತ್ರ ನಾವು ಅಗತ್ಯ ವಿಳಾಸ ಮತ್ತು ಫೋನ್ ವಿವರಗಳನ್ನು ಬಳಸುತ್ತೇವೆ. ನಿಮ್ಮ ವಿವರಗಳನ್ನು ಬೇರೆಯವರಿಗೆ ಮಾರಾಟ ಮಾಡುವುದಿಲ್ಲ.",
+    "policy_terms_en": "All Indima Spice Co. products are crafted using 100% natural, farm-sourced whole spices and authentic traditional formulations. Prices are in Indian Rupees (INR) and include applicable taxes.",
+    "policy_terms_kn": "ಇಂದಿಮಾ ಸ್ಪೈಸ್ ಕಂ ಉತ್ಪನ್ನಗಳು 100% ನೈಸರ್ಗಿಕ ಮತ್ತು ಸಾಂಪ್ರದಾಯಿಕ ವಿಧಾನದಲ್ಲಿ ತಯಾರಿಸಲ್ಪಟ್ಟಿವೆ. ಎಲ್ಲಾ ಬೆಲೆಗಳು ಭಾರತೀಯ ರೂಪಾಯಿಗಳಲ್ಲಿವೆ (INR).",
+    "policy_refund_en": "Due to the consumable nature of food and spice products, returns are accepted within 48 hours of delivery only if the package arrived damaged, tampered with, or incorrect. Verified refunds will be credited via original UPI within 3-5 business days.",
+    "policy_refund_kn": "ಆಹಾರ ಉತ್ಪನ್ನಗಳಾದ ಕಾರಣ, ಪ್ಯಾಕೆಟ್ ಹಾನಿಯಾಗಿದ್ದರೆ ಅಥವಾ ತಪ್ಪಾಗಿ ಬಂದಿದ್ದರೆ ಮಾತ್ರ ವಿತರಣೆಯ 48 ಗಂಟೆಗಳ ಒಳಗೆ ಬದಲಿ ಅಥವಾ ಮರುಪಾವತಿ ನೀಡಲಾಗುತ್ತದೆ.",
+    "policy_shipping_en": "We ship across India via trusted express courier partners. Free shipping on all orders above ₹499. Orders are freshly ground and dispatched within 24 hours.",
+    "policy_shipping_kn": "ನಾವು ಭಾರತದಾದ್ಯಂತ ಎಕ್ಸ್‌ಪ್ರೆಸ್ ಕೊರಿಯರ್ ಮೂಲಕ ವಿತರಿಸುತ್ತೇವೆ. ₹499 ಕ್ಕಿಂತ ಹೆಚ್ಚಿನ ಆರ್ಡರ್‌ಗಳಿಗೆ ಉಚಿತ ವಿತರಣೆ."
+  },
+  "auditLogs": [
+    {
+      "id": "log-1787729759832-1tm",
+      "timestamp": "2026-08-26T07:35:59.832Z",
+      "admin_username": "Admin",
+      "action_type": "STOCK_CHANGED",
+      "target_id": "indima-1787686896085",
+      "details": "Stock adjusted from 0 to 25"
+    },
+    {
+      "id": "log-1787729749726-bha",
+      "timestamp": "2026-08-26T07:35:49.726Z",
+      "admin_username": "admin",
+      "action_type": "ADMIN_LOGIN",
+      "target_id": "auth",
+      "details": "Admin logged in successfully"
+    },
+    {
+      "id": "log-1787729720710-nvx",
+      "timestamp": "2026-08-26T07:35:20.710Z",
+      "admin_username": "Admin",
+      "action_type": "BANNER_CREATED",
+      "target_id": "ban-1787729720710",
+      "details": "Added banner From Nature to Your Kitchen — With Purity, Care & Tradition"
+    },
+    {
+      "id": "log-1787729719648-gkw",
+      "timestamp": "2026-08-26T07:35:19.648Z",
+      "admin_username": "Admin",
+      "action_type": "BANNER_CREATED",
+      "target_id": "ban-1787729719648",
+      "details": "Added banner From Nature to Your Kitchen — With Purity, Care & Tradition"
+    },
+    {
+      "id": "log-1787729718112-cnl",
+      "timestamp": "2026-08-26T07:35:18.112Z",
+      "admin_username": "Admin",
+      "action_type": "BANNER_CREATED",
+      "target_id": "ban-1787729718112",
+      "details": "Added banner From Nature to Your Kitchen — With Purity, Care & Tradition"
+    },
+    {
+      "id": "log-1787729701749-ltp",
+      "timestamp": "2026-08-26T07:35:01.749Z",
+      "admin_username": "Admin",
+      "action_type": "STOCK_CHANGED",
+      "target_id": "indima-1787686896085",
+      "details": "Stock adjusted from 53655 to 0"
+    },
+    {
+      "id": "log-1787729683652-196",
+      "timestamp": "2026-08-26T07:34:43.652Z",
+      "admin_username": "admin",
+      "action_type": "ADMIN_LOGIN",
+      "target_id": "auth",
+      "details": "Admin logged in successfully"
+    },
+    {
+      "id": "log-1787729630116-cb2",
+      "timestamp": "2026-08-26T07:33:50.116Z",
+      "admin_username": "Admin",
+      "action_type": "STOCK_CHANGED",
+      "target_id": "indima-1787686896085",
+      "details": "Stock adjusted from 5 to 53655"
+    },
+    {
+      "id": "log-1787729289808-u70",
+      "timestamp": "2026-08-26T07:28:09.808Z",
+      "admin_username": "Admin",
+      "action_type": "STOCK_CHANGED",
+      "target_id": "indima-1787686896085",
+      "details": "Stock adjusted from 50 to 5"
+    },
+    {
+      "id": "log-1787729265569-yn8",
+      "timestamp": "2026-08-26T07:27:45.569Z",
+      "admin_username": "admin",
+      "action_type": "ADMIN_LOGIN",
+      "target_id": "auth",
+      "details": "Admin logged in successfully"
+    },
+    {
+      "action_type": "ADMIN_LOGIN",
+      "id": "log-1787728454421-rkn",
+      "details": "Admin logged in successfully",
+      "target_id": "auth",
+      "admin_username": "admin",
+      "timestamp": "2026-08-26T07:14:14.421Z"
+    },
+    {
+      "action_type": "ADMIN_LOGIN",
+      "details": "Admin logged in successfully",
+      "admin_username": "admin",
+      "id": "log-1787728071684-4ys",
+      "timestamp": "2026-08-26T07:07:51.684Z",
+      "target_id": "auth"
+    },
+    {
+      "details": "Admin logged in successfully",
+      "timestamp": "2026-08-26T07:04:23.173Z",
+      "admin_username": "admin",
+      "action_type": "ADMIN_LOGIN",
+      "target_id": "auth",
+      "id": "log-1787727863173-9pd"
+    },
+    {
+      "admin_username": "Admin",
+      "action_type": "STOCK_CHANGED",
+      "target_id": "prod-bisibelebath",
+      "id": "log-1787687327732-apw",
+      "timestamp": "2026-08-25T19:48:47.732Z",
+      "details": "Stock adjusted from 0 to 175"
+    },
+    {
+      "timestamp": "2026-08-25T19:48:47.725Z",
+      "details": "Stock adjusted from 75 to 0",
+      "action_type": "STOCK_CHANGED",
+      "target_id": "prod-bisibelebath",
+      "id": "log-1787687327725-odw",
+      "admin_username": "Admin"
+    },
+    {
+      "action_type": "BANNER_CREATED",
+      "target_id": "ban-1787687243617",
+      "id": "log-1787687243617-rzl",
+      "admin_username": "Admin",
+      "timestamp": "2026-08-25T19:47:23.617Z",
+      "details": "Added banner From Nature to Your Kitchen — With Purity, Care & Tradition"
+    },
+    {
+      "details": "Added banner From Nature to Your Kitchen — With Purity, Care & Tradition",
+      "id": "log-1787687242931-k5o",
+      "timestamp": "2026-08-25T19:47:22.931Z",
+      "target_id": "ban-1787687242931",
+      "admin_username": "Admin",
+      "action_type": "BANNER_CREATED"
+    },
+    {
+      "action_type": "BANNER_CREATED",
+      "id": "log-1787687242742-v6h",
+      "target_id": "ban-1787687242742",
+      "details": "Added banner From Nature to Your Kitchen — With Purity, Care & Tradition",
+      "timestamp": "2026-08-25T19:47:22.742Z",
+      "admin_username": "Admin"
+    },
+    {
+      "target_id": "ban-1787687242519",
+      "id": "log-1787687242519-hef",
+      "action_type": "BANNER_CREATED",
+      "details": "Added banner From Nature to Your Kitchen — With Purity, Care & Tradition",
+      "timestamp": "2026-08-25T19:47:22.519Z",
+      "admin_username": "Admin"
+    },
+    {
+      "id": "log-1787687242305-swj",
+      "action_type": "BANNER_CREATED",
+      "details": "Added banner From Nature to Your Kitchen — With Purity, Care & Tradition",
+      "admin_username": "Admin",
+      "timestamp": "2026-08-25T19:47:22.305Z",
+      "target_id": "ban-1787687242305"
+    },
+    {
+      "admin_username": "Admin",
+      "target_id": "ban-1787687242135",
+      "timestamp": "2026-08-25T19:47:22.135Z",
+      "action_type": "BANNER_CREATED",
+      "id": "log-1787687242135-rbm",
+      "details": "Added banner From Nature to Your Kitchen — With Purity, Care & Tradition"
+    },
+    {
+      "id": "log-1787687241924-4oq",
+      "details": "Added banner From Nature to Your Kitchen — With Purity, Care & Tradition",
+      "timestamp": "2026-08-25T19:47:21.924Z",
+      "target_id": "ban-1787687241924",
+      "admin_username": "Admin",
+      "action_type": "BANNER_CREATED"
+    },
+    {
+      "id": "log-1787687241730-09o",
+      "action_type": "BANNER_CREATED",
+      "timestamp": "2026-08-25T19:47:21.730Z",
+      "admin_username": "Admin",
+      "details": "Added banner From Nature to Your Kitchen — With Purity, Care & Tradition",
+      "target_id": "ban-1787687241730"
+    },
+    {
+      "details": "Added banner From Nature to Your Kitchen — With Purity, Care & Tradition",
+      "admin_username": "Admin",
+      "timestamp": "2026-08-25T19:47:21.539Z",
+      "action_type": "BANNER_CREATED",
+      "target_id": "ban-1787687241539",
+      "id": "log-1787687241539-sot"
+    },
+    {
+      "target_id": "ban-1787687241288",
+      "details": "Added banner From Nature to Your Kitchen — With Purity, Care & Tradition",
+      "id": "log-1787687241288-rza",
+      "admin_username": "Admin",
+      "timestamp": "2026-08-25T19:47:21.288Z",
+      "action_type": "BANNER_CREATED"
+    },
+    {
+      "action_type": "BANNER_CREATED",
+      "details": "Added banner From Nature to Your Kitchen — With Purity, Care & Tradition",
+      "id": "log-1787687240639-hud",
+      "timestamp": "2026-08-25T19:47:20.639Z",
+      "admin_username": "Admin",
+      "target_id": "ban-1787687240639"
+    },
+    {
+      "action_type": "BANNER_CREATED",
+      "id": "log-1787687239519-pjn",
+      "details": "Added banner From Nature to Your Kitchen — With Purity, Care & Tradition",
+      "admin_username": "Admin",
+      "timestamp": "2026-08-25T19:47:19.519Z",
+      "target_id": "ban-1787687239519"
+    },
+    {
+      "details": "Admin logged in successfully",
+      "id": "log-1787687105303-xx0",
+      "admin_username": "admin",
+      "target_id": "auth",
+      "timestamp": "2026-08-25T19:45:05.303Z",
+      "action_type": "ADMIN_LOGIN"
+    },
+    {
+      "details": "Created product 6yyhj",
+      "id": "log-1787687011666-fwl",
+      "action_type": "PRODUCT_CREATED",
+      "admin_username": "Admin",
+      "target_id": "indima-1787686896085",
+      "timestamp": "2026-08-25T19:43:31.666Z"
+    },
+    {
+      "action_type": "SETTINGS_UPDATED",
+      "timestamp": "2026-08-25T19:31:07.426Z",
+      "details": "Business settings updated",
+      "id": "log-1787686267426-j4p",
+      "admin_username": "Admin",
+      "target_id": "settings"
+    },
+    {
+      "timestamp": "2026-08-25T19:31:02.150Z",
+      "action_type": "SETTINGS_UPDATED",
+      "target_id": "settings",
+      "admin_username": "Admin",
+      "id": "log-1787686262150-gko",
+      "details": "Business settings updated"
+    },
+    {
+      "target_id": "auth",
+      "id": "log-1787686212398-k8l",
+      "timestamp": "2026-08-25T19:30:12.398Z",
+      "details": "Admin logged in successfully",
+      "admin_username": "admin",
+      "action_type": "ADMIN_LOGIN"
+    },
+    {
+      "admin_username": "admin",
+      "id": "log-1787661875903-i8k",
+      "action_type": "ADMIN_LOGIN",
+      "target_id": "auth",
+      "details": "Admin logged in successfully",
+      "timestamp": "2026-08-25T12:44:35.903Z"
+    },
+    {
+      "timestamp": "2026-08-25T12:38:45.633Z",
+      "id": "log-1787661525633-vto",
+      "target_id": "IND-2608-8852",
+      "details": "Razorpay payment of ₹259 verified (Payment ID: pay_sim_mt8nikz7cnll, Order ID: order_mt8nik96mrusb2)",
+      "admin_username": "System",
+      "action_type": "PAYMENT_VERIFIED"
+    },
+    {
+      "timestamp": "2026-08-25T12:38:44.509Z",
+      "action_type": "ORDER_CREATED",
+      "target_id": "IND-2608-8852",
+      "details": "Order of ₹259 placed by Praveen M E",
+      "id": "log-1787661524509-8vc",
+      "admin_username": "System"
+    },
+    {
+      "admin_username": "Admin",
+      "action_type": "CUSTOMER_DELETED",
+      "details": "Deleted customer cust-1787661482809",
+      "id": "log-1787661483149-t65",
+      "timestamp": "2026-08-25T12:38:03.149Z",
+      "target_id": "cust-1787661482809"
+    },
+    {
+      "id": "log-1787661483134-xh1",
+      "admin_username": "Admin",
+      "action_type": "ORDER_DELETED",
+      "target_id": "IND-2608-2738",
+      "timestamp": "2026-08-25T12:38:03.134Z",
+      "details": "Deleted test order IND-2608-2738"
+    },
+    {
+      "admin_username": "admin",
+      "target_id": "auth",
+      "timestamp": "2026-08-25T12:38:03.127Z",
+      "action_type": "ADMIN_LOGIN",
+      "id": "log-1787661483127-t6t",
+      "details": "Admin logged in successfully"
+    },
+    {
+      "target_id": "IND-2608-2738",
+      "id": "log-1787661483116-14u",
+      "details": "Razorpay payment of ₹194 verified (Payment ID: pay_sim_mt8nhobo, Order ID: order_mt8nhoainnpf19)",
+      "timestamp": "2026-08-25T12:38:03.116Z",
+      "action_type": "PAYMENT_VERIFIED",
+      "admin_username": "System"
+    },
+    {
+      "action_type": "ORDER_CREATED",
+      "details": "Order of ₹194 placed by Issue Check User",
+      "admin_username": "System",
+      "target_id": "IND-2608-2738",
+      "id": "log-1787661483093-h8t",
+      "timestamp": "2026-08-25T12:38:03.093Z"
+    },
+    {
+      "timestamp": "2026-08-25T12:35:58.343Z",
+      "admin_username": "System",
+      "target_id": "IND-2608-9920",
+      "details": "Invalid signature for payment pay_sim_mt8nezy072ok",
+      "id": "log-1787661358343-ptr",
+      "action_type": "PAYMENT_VERIFICATION_FAILED"
+    },
+    {
+      "details": "Invalid signature for payment pay_sim_mt8neztw4hrn",
+      "timestamp": "2026-08-25T12:35:58.197Z",
+      "target_id": "IND-2608-9920",
+      "admin_username": "System",
+      "action_type": "PAYMENT_VERIFICATION_FAILED",
+      "id": "log-1787661358197-8t9"
+    },
+    {
+      "target_id": "IND-2608-9920",
+      "details": "Invalid signature for payment pay_sim_mt8nez7wmlgn",
+      "action_type": "PAYMENT_VERIFICATION_FAILED",
+      "id": "log-1787661357435-5ab",
+      "timestamp": "2026-08-25T12:35:57.435Z",
+      "admin_username": "System"
+    },
+    {
+      "admin_username": "System",
+      "id": "log-1787661356469-8h3",
+      "details": "Order of ₹259 placed by Praveen M E",
+      "action_type": "ORDER_CREATED",
+      "target_id": "IND-2608-9920",
+      "timestamp": "2026-08-25T12:35:56.469Z"
+    },
+    {
+      "admin_username": "System",
+      "id": "log-1787661349145-wud",
+      "action_type": "PAYMENT_VERIFICATION_FAILED",
+      "target_id": "IND-2608-9867",
+      "details": "Invalid signature for payment pay_sim_mt8nestvf9sf",
+      "timestamp": "2026-08-25T12:35:49.145Z"
+    },
+    {
+      "target_id": "IND-2608-9867",
+      "details": "Invalid signature for payment pay_sim_mt8neryn3c5z",
+      "timestamp": "2026-08-25T12:35:48.018Z",
+      "id": "log-1787661348018-7ac",
+      "admin_username": "System",
+      "action_type": "PAYMENT_VERIFICATION_FAILED"
+    },
+    {
+      "admin_username": "System",
+      "target_id": "IND-2608-9867",
+      "timestamp": "2026-08-25T12:35:47.045Z",
+      "action_type": "PAYMENT_VERIFICATION_FAILED",
+      "id": "log-1787661347045-nhh",
+      "details": "Invalid signature for payment pay_sim_mt8ner7l1kvu"
+    },
+    {
+      "timestamp": "2026-08-25T12:35:46.002Z",
+      "id": "log-1787661346002-js9",
+      "target_id": "IND-2608-9867",
+      "admin_username": "System",
+      "details": "Invalid signature for payment pay_sim_mt8neqf22gyh",
+      "action_type": "PAYMENT_VERIFICATION_FAILED"
+    },
+    {
+      "details": "Invalid signature for payment pay_sim_mt8neqaevjhd",
+      "timestamp": "2026-08-25T12:35:45.832Z",
+      "action_type": "PAYMENT_VERIFICATION_FAILED",
+      "target_id": "IND-2608-9867",
+      "id": "log-1787661345832-zq8",
+      "admin_username": "System"
+    },
+    {
+      "admin_username": "System",
+      "action_type": "PAYMENT_VERIFICATION_FAILED",
+      "details": "Invalid signature for payment pay_sim_mt8neq69t6zq",
+      "id": "log-1787661345683-a65",
+      "timestamp": "2026-08-25T12:35:45.683Z",
+      "target_id": "IND-2608-9867"
+    },
+    {
+      "admin_username": "System",
+      "id": "log-1787661345517-z4f",
+      "timestamp": "2026-08-25T12:35:45.517Z",
+      "action_type": "PAYMENT_VERIFICATION_FAILED",
+      "target_id": "IND-2608-9867",
+      "details": "Invalid signature for payment pay_sim_mt8neq13hwqx"
+    },
+    {
+      "timestamp": "2026-08-25T12:35:44.918Z",
+      "target_id": "IND-2608-9867",
+      "action_type": "PAYMENT_VERIFICATION_FAILED",
+      "id": "log-1787661344918-mu9",
+      "details": "Invalid signature for payment pay_sim_mt8nepkzsxu8",
+      "admin_username": "System"
+    },
+    {
+      "id": "log-1787661344204-oty",
+      "target_id": "IND-2608-9867",
+      "action_type": "PAYMENT_VERIFICATION_FAILED",
+      "details": "Invalid signature for payment pay_sim_mt8neozvavnl",
+      "timestamp": "2026-08-25T12:35:44.204Z",
+      "admin_username": "System"
+    },
+    {
+      "target_id": "IND-2608-9867",
+      "id": "log-1787661342341-xuy",
+      "timestamp": "2026-08-25T12:35:42.341Z",
+      "admin_username": "System",
+      "details": "Invalid signature for payment pay_sim_mt8nenl0lyqo",
+      "action_type": "PAYMENT_VERIFICATION_FAILED"
+    },
+    {
+      "action_type": "ORDER_CREATED",
+      "timestamp": "2026-08-25T12:35:39.730Z",
+      "id": "log-1787661339730-iy1",
+      "target_id": "IND-2608-9867",
+      "details": "Order of ₹259 placed by Praveen M E",
+      "admin_username": "System"
+    },
+    {
+      "target_id": "settings",
+      "timestamp": "2026-08-25T12:34:29.838Z",
+      "admin_username": "Admin",
+      "id": "log-1787661269838-pko",
+      "details": "Business settings updated",
+      "action_type": "SETTINGS_UPDATED"
+    },
+    {
+      "timestamp": "2026-08-25T12:34:26.933Z",
+      "action_type": "SETTINGS_UPDATED",
+      "admin_username": "Admin",
+      "id": "log-1787661266933-cuu",
+      "details": "Business settings updated",
+      "target_id": "settings"
+    },
+    {
+      "target_id": "settings",
+      "id": "log-1787661246957-qco",
+      "timestamp": "2026-08-25T12:34:06.957Z",
+      "action_type": "SETTINGS_UPDATED",
+      "admin_username": "Admin",
+      "details": "Business settings updated"
+    },
+    {
+      "details": "Business settings updated",
+      "action_type": "SETTINGS_UPDATED",
+      "admin_username": "Admin",
+      "timestamp": "2026-08-25T12:33:57.696Z",
+      "id": "log-1787661237695-xbp",
+      "target_id": "settings"
+    },
+    {
+      "timestamp": "2026-08-25T12:33:21.643Z",
+      "id": "log-1787661201643-wxb",
+      "target_id": "auth",
+      "action_type": "ADMIN_LOGIN",
+      "details": "Admin logged in successfully",
+      "admin_username": "admin"
+    },
+    {
+      "id": "log-1787660755893-s50",
+      "details": "Deleted customer cust-1787660739574",
+      "timestamp": "2026-08-25T12:25:55.893Z",
+      "action_type": "CUSTOMER_DELETED",
+      "admin_username": "Admin",
+      "target_id": "cust-1787660739574"
+    },
+    {
+      "timestamp": "2026-08-25T12:25:55.887Z",
+      "admin_username": "Admin",
+      "action_type": "ORDER_DELETED",
+      "id": "log-1787660755887-a4m",
+      "details": "Deleted test order IND-2608-9662",
+      "target_id": "IND-2608-9662"
+    },
+    {
+      "target_id": "auth",
+      "action_type": "ADMIN_LOGIN",
+      "details": "Admin logged in successfully",
+      "timestamp": "2026-08-25T12:25:55.864Z",
+      "id": "log-1787660755864-2s1",
+      "admin_username": "admin"
+    },
+    {
+      "target_id": "IND-2608-9662",
+      "admin_username": "System",
+      "action_type": "PAYMENT_VERIFIED",
+      "timestamp": "2026-08-25T12:25:39.840Z",
+      "details": "Razorpay payment of ₹194 verified (Payment ID: pay_rzp_test_mt8n1qt78iwq, Order ID: order_mt8n1qsessnfs0)",
+      "id": "log-1787660739840-vze"
+    },
+    {
+      "action_type": "PAYMENT_VERIFICATION_FAILED",
+      "timestamp": "2026-08-25T12:25:39.833Z",
+      "id": "log-1787660739833-hgj",
+      "target_id": "IND-2608-9662",
+      "admin_username": "System",
+      "details": "Invalid signature for payment pay_fake_test_mt8n1qsz"
+    },
+    {
+      "admin_username": "System",
+      "target_id": "IND-2608-9662",
+      "details": "Order of ₹194 placed by TEST Razorpay Customer (Verification Sandbox)",
+      "timestamp": "2026-08-25T12:25:39.823Z",
+      "id": "log-1787660739823-zmu",
+      "action_type": "ORDER_CREATED"
+    },
+    {
+      "timestamp": "2026-08-25T12:24:21.118Z",
+      "admin_username": "Admin",
+      "target_id": "cust-1787660636767",
+      "details": "Deleted customer cust-1787660636767",
+      "id": "log-1787660661118-pvv",
+      "action_type": "CUSTOMER_DELETED"
+    },
+    {
+      "target_id": "IND-2608-6680",
+      "id": "log-1787660661114-tlj",
+      "admin_username": "Admin",
+      "action_type": "ORDER_DELETED",
+      "timestamp": "2026-08-25T12:24:21.114Z",
+      "details": "Deleted test order IND-2608-6680"
+    },
+    {
+      "admin_username": "admin",
+      "timestamp": "2026-08-25T12:24:21.089Z",
+      "details": "Admin logged in successfully",
+      "action_type": "ADMIN_LOGIN",
+      "id": "log-1787660661089-fve",
+      "target_id": "auth"
+    },
+    {
+      "action_type": "PAYMENT_VERIFIED",
+      "details": "Razorpay payment of ₹194 verified (Payment ID: pay_test_rzp_mt8mzji1i50g, Order ID: order_mt8mzjgxmy92jq)",
+      "id": "log-1787660637057-ksi",
+      "target_id": "IND-2608-6680",
+      "admin_username": "System",
+      "timestamp": "2026-08-25T12:23:57.057Z"
+    },
+    {
+      "admin_username": "System",
+      "action_type": "PAYMENT_VERIFICATION_FAILED",
+      "timestamp": "2026-08-25T12:23:57.042Z",
+      "id": "log-1787660637042-zt3",
+      "details": "Invalid signature for payment pay_fake_sandbox_mt8mzjhl",
+      "target_id": "IND-2608-6680"
+    },
+    {
+      "action_type": "ORDER_CREATED",
+      "target_id": "IND-2608-6680",
+      "timestamp": "2026-08-25T12:23:57.026Z",
+      "id": "log-1787660637026-wjy",
+      "admin_username": "System",
+      "details": "Order of ₹194 placed by TEST Razorpay Customer (E2E Sandbox)"
+    },
+    {
+      "target_id": "cust-1787660523637",
+      "action_type": "CUSTOMER_DELETED",
+      "timestamp": "2026-08-25T12:23:43.409Z",
+      "details": "Deleted customer cust-1787660523637",
+      "id": "log-1787660623409-yfe",
+      "admin_username": "Admin"
+    },
+    {
+      "id": "log-1787660623404-4g7",
+      "timestamp": "2026-08-25T12:23:43.404Z",
+      "admin_username": "Admin",
+      "details": "Deleted test order IND-2608-1439",
+      "action_type": "ORDER_DELETED",
+      "target_id": "IND-2608-1439"
+    },
+    {
+      "admin_username": "admin",
+      "timestamp": "2026-08-25T12:23:43.392Z",
+      "id": "log-1787660623392-ruz",
+      "target_id": "auth",
+      "action_type": "ADMIN_LOGIN",
+      "details": "Admin logged in successfully"
+    },
+    {
+      "id": "log-1787660523933-fkd",
+      "timestamp": "2026-08-25T12:22:03.933Z",
+      "action_type": "ADMIN_LOGIN",
+      "target_id": "auth",
+      "details": "Admin logged in successfully",
+      "admin_username": "admin"
+    },
+    {
+      "admin_username": "System",
+      "action_type": "PAYMENT_VERIFIED",
+      "target_id": "IND-2608-1439",
+      "timestamp": "2026-08-25T12:22:03.926Z",
+      "details": "Razorpay payment of ₹194 verified (Payment ID: pay_fake_1luuoti6, Order ID: order_mt8mx471k8gvir)",
+      "id": "log-1787660523926-kdz"
+    },
+    {
+      "admin_username": "System",
+      "details": "Order of ₹194 placed by TEST Razorpay Sandbox Customer",
+      "timestamp": "2026-08-25T12:22:03.918Z",
+      "id": "log-1787660523918-i69",
+      "target_id": "IND-2608-1439",
+      "action_type": "ORDER_CREATED"
+    },
+    {
+      "id": "log-1787659834105-wpr",
+      "details": "Admin logged in successfully",
+      "target_id": "auth",
+      "timestamp": "2026-08-25T12:10:34.105Z",
+      "admin_username": "admin",
+      "action_type": "ADMIN_LOGIN"
+    },
+    {
+      "id": "log-1787659667904-uq6",
+      "timestamp": "2026-08-25T12:07:47.904Z",
+      "admin_username": "Admin",
+      "details": "Deleted customer cust-test-firestore-01",
+      "target_id": "cust-test-firestore-01",
+      "action_type": "CUSTOMER_DELETED"
+    },
+    {
+      "admin_username": "Admin",
+      "details": "Deleted test order IND-TEST-2608-001",
+      "target_id": "IND-TEST-2608-001",
+      "id": "log-1787659660442-6o9",
+      "action_type": "ORDER_DELETED",
+      "timestamp": "2026-08-25T12:07:40.442Z"
+    },
+    {
+      "id": "log-1787659658517-5ca",
+      "details": "Admin logged in successfully",
+      "admin_username": "admin",
+      "action_type": "ADMIN_LOGIN",
+      "timestamp": "2026-08-25T12:07:38.517Z",
+      "target_id": "auth"
+    },
+    {
+      "details": "Admin logged in successfully",
+      "admin_username": "admin",
+      "id": "log-1787659553256-vi9",
+      "target_id": "auth",
+      "action_type": "ADMIN_LOGIN",
+      "timestamp": "2026-08-25T12:05:53.256Z"
+    },
+    {
+      "target_id": "auth",
+      "timestamp": "2026-08-25T12:02:18.443Z",
+      "action_type": "ADMIN_LOGIN",
+      "details": "Admin logged in successfully",
+      "id": "log-1787659338443-vvt",
+      "admin_username": "admin"
+    },
+    {
+      "timestamp": "2026-08-25T11:42:58.185Z",
+      "id": "log-1787658178185-qe8",
+      "target_id": "IND-2608-5022",
+      "admin_username": "System",
+      "action_type": "ORDER_CREATED",
+      "details": "Order of ₹228 placed by TEST Customer (Firestore Verification)"
+    },
+    {
+      "admin_username": "System",
+      "details": "Order of ₹228 placed by TEST Customer (Firestore Verification)",
+      "action_type": "ORDER_CREATED",
+      "timestamp": "2026-08-25T11:41:59.189Z",
+      "target_id": "IND-2608-9081",
+      "id": "log-1787658119189-can"
+    },
+    {
+      "details": "Deleted product Ysjsj",
+      "target_id": "indima-1787560929785",
+      "id": "log-1787561415757-x9n",
+      "action_type": "PRODUCT_DELETED",
+      "timestamp": "2026-08-24T08:50:15.757Z",
+      "admin_username": "Admin"
+    },
+    {
+      "details": "Admin logged in successfully",
+      "target_id": "auth",
+      "action_type": "ADMIN_LOGIN",
+      "timestamp": "2026-08-24T08:50:00.908Z",
+      "id": "log-1787561400908-oex",
+      "admin_username": "admin"
+    },
+    {
+      "id": "log-1787560991706-fg0",
+      "admin_username": "Admin",
+      "action_type": "PRODUCT_CREATED",
+      "target_id": "indima-1787560929785",
+      "timestamp": "2026-08-24T08:43:11.706Z",
+      "details": "Created product Ysjsj"
+    },
+    {
+      "details": "Admin logged in successfully",
+      "target_id": "auth",
+      "admin_username": "admin",
+      "id": "log-1787560920191-96g",
+      "action_type": "ADMIN_LOGIN",
+      "timestamp": "2026-08-24T08:42:00.191Z"
+    },
+    {
+      "action_type": "ORDER_STATUS_CHANGED",
+      "details": "Status updated: delivered ",
+      "admin_username": "Admin",
+      "id": "log-1787559652933-ef5",
+      "target_id": "IND-2608-2846",
+      "timestamp": "2026-08-24T08:20:52.933Z"
+    },
+    {
+      "id": "log-1787559645587-rg9",
+      "details": "Status updated: processing ",
+      "timestamp": "2026-08-24T08:20:45.587Z",
+      "admin_username": "Admin",
+      "target_id": "IND-2608-2846",
+      "action_type": "ORDER_STATUS_CHANGED"
+    },
+    {
+      "id": "log-1787559608990-p21",
+      "action_type": "PAYMENT_VERIFIED",
+      "admin_username": "System",
+      "details": "Razorpay payment of ₹194 verified (Payment ID: pay_sim_mt6yu5ket0d8, Order ID: order_mt6yu21j3hcknt)",
+      "timestamp": "2026-08-24T08:20:08.990Z",
+      "target_id": "IND-2608-2846"
+    },
+    {
+      "id": "log-1787559604200-ee4",
+      "details": "Order of ₹194 placed by Praveen M E",
+      "admin_username": "System",
+      "timestamp": "2026-08-24T08:20:04.200Z",
+      "target_id": "IND-2608-2846",
+      "action_type": "ORDER_CREATED"
+    },
+    {
+      "admin_username": "System",
+      "target_id": "IND-2608-8227",
+      "details": "Order of ₹194 placed by Praveen M E",
+      "timestamp": "2026-08-24T08:17:31.143Z",
+      "action_type": "ORDER_CREATED",
+      "id": "log-1787559451143-eob"
+    },
+    {
+      "action_type": "ORDER_CREATED",
+      "details": "Order of ₹194 placed by Praveen M E",
+      "id": "log-1787559204953-wqr",
+      "admin_username": "System",
+      "timestamp": "2026-08-24T08:13:24.953Z",
+      "target_id": "IND-2608-7651"
+    },
+    {
+      "action_type": "ORDER_CREATED",
+      "admin_username": "System",
+      "timestamp": "2026-08-23T08:03:56.476Z",
+      "target_id": "IND-2608-8437",
+      "id": "log-1787472236476-y33",
+      "details": "Order of ₹194 placed by Praveen M E"
+    },
+    {
+      "target_id": "settings",
+      "admin_username": "Admin",
+      "timestamp": "2026-08-23T08:03:26.648Z",
+      "id": "log-1787472206648-eov",
+      "details": "Business settings updated",
+      "action_type": "SETTINGS_UPDATED"
+    },
+    {
+      "admin_username": "System",
+      "details": "Order of ₹194 placed by Praveen M E",
+      "id": "log-1787472002766-ltz",
+      "timestamp": "2026-08-23T08:00:02.766Z",
+      "target_id": "IND-2608-9013",
+      "action_type": "ORDER_CREATED"
+    },
+    {
+      "details": "Business settings updated",
+      "id": "log-1787471986514-ly2",
+      "action_type": "SETTINGS_UPDATED",
+      "timestamp": "2026-08-23T07:59:46.514Z",
+      "target_id": "settings",
+      "admin_username": "Admin"
+    },
+    {
+      "id": "log-1787471984692-rcd",
+      "action_type": "SETTINGS_UPDATED",
+      "details": "Business settings updated",
+      "timestamp": "2026-08-23T07:59:44.692Z",
+      "admin_username": "Admin",
+      "target_id": "settings"
+    },
+    {
+      "admin_username": "Admin",
+      "action_type": "SETTINGS_UPDATED",
+      "details": "Business settings updated",
+      "timestamp": "2026-08-23T07:59:20.204Z",
+      "target_id": "settings",
+      "id": "log-1787471960204-3c6"
+    },
+    {
+      "details": "Status updated: placed ",
+      "admin_username": "Admin",
+      "id": "log-1787471944635-uhw",
+      "target_id": "IND-2608-1257",
+      "action_type": "ORDER_STATUS_CHANGED",
+      "timestamp": "2026-08-23T07:59:04.635Z"
+    },
+    {
+      "id": "log-1787471909020-0xe",
+      "action_type": "PAYMENT_PROOF_SUBMITTED",
+      "timestamp": "2026-08-23T07:58:29.020Z",
+      "admin_username": "Customer",
+      "details": "UPI payment proof submitted for ₹194 (UTR: UTR181974018176)",
+      "target_id": "IND-2608-1257"
+    },
+    {
+      "action_type": "ORDER_CREATED",
+      "details": "Order of ₹194 placed by Praveen M E",
+      "timestamp": "2026-08-23T07:58:13.936Z",
+      "admin_username": "System",
+      "target_id": "IND-2608-1257",
+      "id": "log-1787471893936-5xo"
+    }
+  ],
+  "leads": []
+}

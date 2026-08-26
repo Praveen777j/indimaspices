@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    background-color: #FAF6EE;
+    color: #2C1810;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  input, textarea, select {
+    color: #1C120C;
+  }
+
+  input::placeholder, textarea::placeholder {
+    color: #8C7A6B;
+  }
+}
+
+/* Sacred Heritage custom scrollbars */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+::-webkit-scrollbar-track {
+  background: #FAF6EE;
+}
+::-webkit-scrollbar-thumb {
+  background: #D9C4A2;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #B48A54;
+}

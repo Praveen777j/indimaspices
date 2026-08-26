@@ -1,0 +1,13 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Indima Spice Co. - Full-Stack Security Configuration
+    // All application operations (catalog browsing, customer management, orders,
+    // inventory, settings, and audit logs) are securely mediated server-side by the Express backend.
+    // Direct browser/client SDK access to all collections is strictly denied.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
