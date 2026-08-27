@@ -19,13 +19,19 @@ async function safeFetchJson<T>(url: string, options?: RequestInit, fallback?: T
     if (!contentType.includes('application/json')) {
       const text = await res.text();
       console.warn(`[API] Expected JSON from ${url}, got ${contentType || 'text'}:`, text.substring(0, 100));
+      if (!res.ok) {
+        return { error: `HTTP ${res.status}: ${res.statusText || text.substring(0, 80)}` } as unknown as T;
+      }
       return fallback !== undefined ? fallback : ({} as T);
     }
     const data = await res.json();
+    if (!res.ok && !data.error) {
+      data.error = `HTTP ${res.status}: Request failed`;
+    }
     return data;
-  } catch (err) {
+  } catch (err: any) {
     console.error(`[API] Fetch error for ${url}:`, err);
-    return fallback !== undefined ? fallback : ({} as T);
+    return (fallback !== undefined ? fallback : { error: err?.message || 'Network request failed' }) as T;
   }
 }
 
@@ -435,6 +441,20 @@ export const api = {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` }
     }, { error: 'Failed to delete offer' });
+  },
+
+  deleteCustomer: async (token: string, id: string): Promise<any> => {
+    return safeFetchJson<any>(`/api/admin/customers/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` }
+    }, { error: 'Failed to delete customer' });
+  },
+
+  deleteOrder: async (token: string, id: string): Promise<any> => {
+    return safeFetchJson<any>(`/api/admin/orders/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` }
+    }, { error: 'Failed to delete order' });
   },
 
   getAdminSettings: async (token: string): Promise<BusinessSettings> => {

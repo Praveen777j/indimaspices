@@ -450,8 +450,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
     try {
       if (deleteTarget.type === 'product') {
         const res = await api.deleteProduct(token, deleteTarget.id);
-        if (res && (res.success || !res.error)) {
+        if (res && res.error) {
+          showSuccess('Delete failed: ' + res.error);
+        } else {
           showSuccess(`Product deleted successfully`);
+        }
+      } else if (deleteTarget.type === 'category') {
+        const res = await api.deleteCategory(token, deleteTarget.id);
+        if (res && res.error) {
+          showSuccess('Delete failed: ' + res.error);
+        } else {
+          showSuccess(`Category deleted successfully`);
         }
       } else if (deleteTarget.type === 'recipe') {
         await api.deleteRecipe(token, deleteTarget.id);
@@ -459,6 +468,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
       } else if (deleteTarget.type === 'offer') {
         await api.deleteOffer(token, deleteTarget.id);
         showSuccess(`Offer deleted successfully`);
+      } else if (deleteTarget.type === 'banner') {
+        await api.deleteBanner(token, deleteTarget.id);
+        showSuccess(`Banner deleted successfully`);
+      } else if (deleteTarget.type === 'customer') {
+        await api.deleteCustomer(token, deleteTarget.id);
+        showSuccess(`Customer deleted successfully`);
+      } else if (deleteTarget.type === 'order') {
+        await api.deleteOrder(token, deleteTarget.id);
+        showSuccess(`Order deleted successfully`);
       }
       setDeleteTarget(null);
       await loadAllData();

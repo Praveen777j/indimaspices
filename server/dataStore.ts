@@ -616,9 +616,10 @@ class DataStore {
       }
       const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
       const app = getApps().length > 0 ? getApp() : initializeApp(config);
-      this.firestore = getFirestore(app, config.firestoreDatabaseId || '(default)');
+      const dbId = process.env.FIRESTORE_DATABASE_ID || process.env.FIREBASE_DATABASE_ID || config.firestoreDatabaseId || '(default)';
+      this.firestore = getFirestore(app, dbId);
       
-      console.log(`[Firestore] Initialized connection to Firestore db: ${config.firestoreDatabaseId || '(default)'}`);
+      console.log(`[Firestore] Initialized connection to Firestore db: ${dbId}`);
       await this.reloadFromFirestore();
       this.isFirestoreReady = true;
       console.log(`[Firestore] Sync complete. Active Firestore records: ${this.data.products.length} products, ${this.data.customers.length} customers, ${this.data.orders.length} orders.`);
@@ -636,90 +637,99 @@ class DataStore {
   public async reloadFromFirestore(): Promise<void> {
     if (!this.firestore) return;
     try {
-      // 1. Products
-      const prodSnap = await getDocs(collection(this.firestore, 'products'));
-      if (!prodSnap.empty) {
+      // 0. Check if Firestore has been seeded
+      const metaRef = doc(this.firestore, 'settings', 'db_metadata');
+      const metaSnap = await getDoc(metaRef);
+      
+      if (!metaSnap.exists()) {
+        console.log('[Firestore] First time database connection: Seeding initial catalog to Firestore collections...');
+        for (const prod of this.data.products) {
+          await this.setFirestoreDoc('products', prod.id, prod);
+        }
+        for (const cat of this.data.categories) {
+          await this.setFirestoreDoc('categories', cat.id, cat);
+        }
+        for (const rec of this.data.recipes) {
+          await this.setFirestoreDoc('recipes', rec.id, rec);
+        }
+        for (const ban of this.data.banners) {
+          await this.setFirestoreDoc('banners', ban.id, ban);
+        }
+        for (const off of this.data.offers) {
+          await this.setFirestoreDoc('offers', off.id, off);
+        }
+        for (const rev of this.data.reviews) {
+          await this.setFirestoreDoc('reviews', rev.id, rev);
+        }
+        await this.setFirestoreDoc('settings', 'store_settings', this.data.settings);
+        await setDoc(metaRef, { initialized: true, seeded_at: new Date().toISOString() });
+        console.log('[Firestore] Initial seeding completed successfully.');
+      } else {
+        // 1. Products
+        const prodSnap = await getDocs(collection(this.firestore, 'products'));
         const prods: Product[] = [];
         prodSnap.forEach(d => prods.push(d.data() as Product));
         this.data.products = prods;
-      }
 
-      // 2. Categories
-      const catSnap = await getDocs(collection(this.firestore, 'categories'));
-      if (!catSnap.empty) {
+        // 2. Categories
+        const catSnap = await getDocs(collection(this.firestore, 'categories'));
         const cats: Category[] = [];
         catSnap.forEach(d => cats.push(d.data() as Category));
         this.data.categories = cats.sort((a, b) => (a.order || 0) - (b.order || 0));
-      }
 
-      // 3. Orders
-      const orderSnap = await getDocs(collection(this.firestore, 'orders'));
-      if (!orderSnap.empty) {
+        // 3. Orders
+        const orderSnap = await getDocs(collection(this.firestore, 'orders'));
         const ords: Order[] = [];
         orderSnap.forEach(d => ords.push(d.data() as Order));
         this.data.orders = ords.sort((a, b) => new Date(b.order_date).getTime() - new Date(a.order_date).getTime());
-      }
 
-      // 4. Customers
-      const custSnap = await getDocs(collection(this.firestore, 'customers'));
-      if (!custSnap.empty) {
+        // 4. Customers
+        const custSnap = await getDocs(collection(this.firestore, 'customers'));
         const custs: Customer[] = [];
         custSnap.forEach(d => custs.push(d.data() as Customer));
         this.data.customers = custs;
-      }
 
-      // 5. Recipes
-      const recSnap = await getDocs(collection(this.firestore, 'recipes'));
-      if (!recSnap.empty) {
+        // 5. Recipes
+        const recSnap = await getDocs(collection(this.firestore, 'recipes'));
         const recs: Recipe[] = [];
         recSnap.forEach(d => recs.push(d.data() as Recipe));
         this.data.recipes = recs;
-      }
 
-      // 6. Banners
-      const banSnap = await getDocs(collection(this.firestore, 'banners'));
-      if (!banSnap.empty) {
+        // 6. Banners
+        const banSnap = await getDocs(collection(this.firestore, 'banners'));
         const bans: Banner[] = [];
         banSnap.forEach(d => bans.push(d.data() as Banner));
         this.data.banners = bans;
-      }
 
-      // 7. Offers
-      const offSnap = await getDocs(collection(this.firestore, 'offers'));
-      if (!offSnap.empty) {
+        // 7. Offers
+        const offSnap = await getDocs(collection(this.firestore, 'offers'));
         const offs: Offer[] = [];
         offSnap.forEach(d => offs.push(d.data() as Offer));
         this.data.offers = offs;
-      }
 
-      // 8. Reviews
-      const revSnap = await getDocs(collection(this.firestore, 'reviews'));
-      if (!revSnap.empty) {
+        // 8. Reviews
+        const revSnap = await getDocs(collection(this.firestore, 'reviews'));
         const revs: Review[] = [];
         revSnap.forEach(d => revs.push(d.data() as Review));
         this.data.reviews = revs;
-      }
 
-      // 9. Audit Logs
-      const auditSnap = await getDocs(collection(this.firestore, 'audit_logs'));
-      if (!auditSnap.empty) {
+        // 9. Audit Logs
+        const auditSnap = await getDocs(collection(this.firestore, 'audit_logs'));
         const logs: AdminAuditLog[] = [];
         auditSnap.forEach(d => logs.push(d.data() as AdminAuditLog));
         this.data.auditLogs = logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      }
 
-      // 10. Leads
-      const leadSnap = await getDocs(collection(this.firestore, 'leads'));
-      if (!leadSnap.empty) {
+        // 10. Leads
+        const leadSnap = await getDocs(collection(this.firestore, 'leads'));
         const lds: Lead[] = [];
         leadSnap.forEach(d => lds.push(d.data() as Lead));
         this.data.leads = lds;
-      }
 
-      // 11. Settings
-      const setDocSnap = await getDoc(doc(this.firestore, 'settings', 'store_settings'));
-      if (setDocSnap.exists()) {
-        this.data.settings = { ...INITIAL_SETTINGS, ...(setDocSnap.data() as BusinessSettings) };
+        // 11. Settings
+        const setDocSnap = await getDoc(doc(this.firestore, 'settings', 'store_settings'));
+        if (setDocSnap.exists()) {
+          this.data.settings = { ...INITIAL_SETTINGS, ...(setDocSnap.data() as BusinessSettings) };
+        }
       }
 
       // Sync updated memory cache to local offline fallback file
@@ -917,13 +927,13 @@ class DataStore {
     return updatedProd;
   }
 
-  public deleteProduct(id: string, admin = 'Admin'): boolean {
+  public async deleteProduct(id: string, admin = 'Admin'): Promise<boolean> {
     const idx = this.data.products.findIndex(p => p.id === id);
     if (idx === -1) return false;
     const name = this.data.products[idx].name_en;
     this.data.products.splice(idx, 1);
     this.logAudit(admin, 'PRODUCT_DELETED', id, `Deleted product ${name}`);
-    this.deleteFirestoreDoc('products', id);
+    await this.deleteFirestoreDoc('products', id);
     this.save();
     return true;
   }
@@ -956,12 +966,12 @@ class DataStore {
     return updated;
   }
 
-  public deleteCategory(id: string, admin = 'Admin'): boolean {
+  public async deleteCategory(id: string, admin = 'Admin'): Promise<boolean> {
     const idx = this.data.categories.findIndex(c => c.id === id);
     if (idx === -1) return false;
     this.data.categories.splice(idx, 1);
     this.logAudit(admin, 'CATEGORY_DELETED', id, 'Deleted category');
-    this.deleteFirestoreDoc('categories', id);
+    await this.deleteFirestoreDoc('categories', id);
     this.save();
     return true;
   }
@@ -1020,12 +1030,12 @@ class DataStore {
     return customer;
   }
 
-  public deleteCustomer(id: string, admin = 'Admin'): boolean {
+  public async deleteCustomer(id: string, admin = 'Admin'): Promise<boolean> {
     const idx = this.data.customers.findIndex(c => c.id === id);
     if (idx === -1) return false;
     this.data.customers.splice(idx, 1);
     this.logAudit(admin, 'CUSTOMER_DELETED', id, `Deleted customer ${id}`);
-    this.deleteFirestoreDoc('customers', id);
+    await this.deleteFirestoreDoc('customers', id);
     this.save();
     return true;
   }
@@ -1160,12 +1170,12 @@ class DataStore {
     return order;
   }
 
-  public deleteOrder(orderId: string, admin = 'Admin'): boolean {
+  public async deleteOrder(orderId: string, admin = 'Admin'): Promise<boolean> {
     const idx = this.data.orders.findIndex(o => o.id === orderId);
     if (idx === -1) return false;
     this.data.orders.splice(idx, 1);
     this.logAudit(admin, 'ORDER_DELETED', orderId, `Deleted test order ${orderId}`);
-    this.deleteFirestoreDoc('orders', orderId);
+    await this.deleteFirestoreDoc('orders', orderId);
     this.save();
     return true;
   }
@@ -1195,12 +1205,12 @@ class DataStore {
     return newBanner;
   }
 
-  public deleteBanner(id: string, admin = 'Admin'): boolean {
+  public async deleteBanner(id: string, admin = 'Admin'): Promise<boolean> {
     const idx = this.data.banners.findIndex(b => b.id === id);
     if (idx === -1) return false;
     this.data.banners.splice(idx, 1);
     this.logAudit(admin, 'BANNER_DELETED', id, 'Deleted banner');
-    this.deleteFirestoreDoc('banners', id);
+    await this.deleteFirestoreDoc('banners', id);
     this.save();
     return true;
   }
@@ -1234,12 +1244,12 @@ class DataStore {
     return updated;
   }
 
-  public deleteRecipe(id: string, admin = 'Admin'): boolean {
+  public async deleteRecipe(id: string, admin = 'Admin'): Promise<boolean> {
     const idx = this.data.recipes.findIndex(r => r.id === id);
     if (idx === -1) return false;
     this.data.recipes.splice(idx, 1);
     this.logAudit(admin, 'RECIPE_DELETED', id, 'Deleted recipe');
-    this.deleteFirestoreDoc('recipes', id);
+    await this.deleteFirestoreDoc('recipes', id);
     this.save();
     return true;
   }
@@ -1269,12 +1279,12 @@ class DataStore {
     return updated;
   }
 
-  public deleteOffer(id: string, admin = 'Admin'): boolean {
+  public async deleteOffer(id: string, admin = 'Admin'): Promise<boolean> {
     const idx = this.data.offers.findIndex(o => o.id === id);
     if (idx === -1) return false;
     this.data.offers.splice(idx, 1);
     this.logAudit(admin, 'OFFER_DELETED', id, 'Deleted offer');
-    this.deleteFirestoreDoc('offers', id);
+    await this.deleteFirestoreDoc('offers', id);
     this.save();
     return true;
   }
@@ -1307,12 +1317,12 @@ class DataStore {
     return true;
   }
 
-  public deleteReview(id: string, admin = 'Admin'): boolean {
+  public async deleteReview(id: string, admin = 'Admin'): Promise<boolean> {
     const idx = this.data.reviews.findIndex(r => r.id === id);
     if (idx === -1) return false;
     this.data.reviews.splice(idx, 1);
     this.logAudit(admin, 'REVIEW_DELETED', id, 'Deleted review');
-    this.deleteFirestoreDoc('reviews', id);
+    await this.deleteFirestoreDoc('reviews', id);
     this.save();
     return true;
   }
