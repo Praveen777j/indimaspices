@@ -10,8 +10,7 @@ import {
   Check,
   X,
   ExternalLink,
-  ShieldCheck,
-  Share2
+  ShieldCheck
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Order, BusinessSettings } from '../types';
@@ -21,7 +20,6 @@ import {
   downloadReceiptFile,
   printReceiptDirectly,
   getAdminWhatsAppUrl,
-  getCustomerWhatsAppUrl,
   normalizeWhatsAppNumber
 } from '../utils/receiptGenerator';
 
@@ -79,7 +77,6 @@ export const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
   };
 
   const adminWhatsAppUrl = getAdminWhatsAppUrl(order, settings);
-  const customerWhatsAppUrl = getCustomerWhatsAppUrl(order, settings);
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
@@ -169,35 +166,20 @@ export const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+            <div className="pt-1">
               {/* Direct Store Admin WhatsApp */}
               <a
                 href={adminWhatsAppUrl}
                 target="_blank"
                 rel="noreferrer"
                 id="send-to-admin-whatsapp-btn"
-                className="px-3 py-2 bg-[#25D366] hover:bg-[#1EBE5D] text-white font-bold rounded-lg text-xs flex items-center justify-center space-x-1.5 shadow-xs transition-colors"
+                className="w-full px-4 py-2.5 bg-[#25D366] hover:bg-[#1EBE5D] text-white font-bold rounded-lg text-xs sm:text-sm flex items-center justify-center space-x-2 shadow-xs transition-colors"
                 title={`Send order to WhatsApp +${adminWhatsAppClean}`}
               >
-                <MessageCircle className="w-3.5 h-3.5 fill-white" />
+                <MessageCircle className="w-4 h-4 fill-white shrink-0" />
                 <span className="truncate">{t('sendToAdminWhatsApp')}</span>
-                <ExternalLink className="w-3 h-3 shrink-0" />
+                <ExternalLink className="w-3.5 h-3.5 shrink-0" />
               </a>
-
-              {/* Direct Customer WhatsApp */}
-              {order.customer_phone && (
-                <a
-                  href={customerWhatsAppUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  id="send-to-customer-whatsapp-btn"
-                  className="px-3 py-2 bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-300 font-bold rounded-lg text-xs flex items-center justify-center space-x-1.5 shadow-xs transition-colors"
-                >
-                  <Share2 className="w-3.5 h-3.5 text-emerald-600" />
-                  <span className="truncate">{t('sendToCustomerWhatsApp')}</span>
-                  <ExternalLink className="w-3 h-3 shrink-0" />
-                </a>
-              )}
             </div>
             <p className="text-[10px] text-emerald-700 font-mono">
               Store WhatsApp: +{adminWhatsAppClean}
