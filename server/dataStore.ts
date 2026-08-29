@@ -1,16 +1,18 @@
 import fs from 'fs';
 import path from 'path';
-import { initializeApp, getApps, getApp } from 'firebase/app';
+import { initializeApp as initFirebaseClientApp, getApps as getClientApps, getApp as getClientApp, FirebaseApp as ClientFirebaseApp } from 'firebase/app';
 import {
-  getFirestore,
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  setDoc,
-  deleteDoc,
-  Firestore
+  getFirestore as getClientFirestore,
+  Firestore as ClientFirestore,
+  collection as fsCollection,
+  doc as fsDoc,
+  getDoc as fsGetDoc,
+  getDocs as fsGetDocs,
+  setDoc as fsSetDoc,
+  deleteDoc as fsDeleteDoc
 } from 'firebase/firestore';
+import { getApps as getAdminApps, initializeApp as initializeAdminApp, cert, App as AdminApp } from 'firebase-admin/app';
+import { getStorage } from 'firebase-admin/storage';
 import {
   Product,
   Category,
@@ -46,7 +48,7 @@ const INITIAL_SETTINGS: BusinessSettings = {
   business_name: 'Indima Spice Co.',
   tagline_en: "Pure as mother's love",
   tagline_kn: 'ತಾಯಿಯ ಪ್ರೀತಿಯಷ್ಟೇ ಪರಿಶುದ್ಧ',
-  tagline_sa: 'आयुर्वेदोऽमृतानाम् • शुद्धं सात्त्विकं दिव्यम्',
+  tagline_sa: 'ಆಯುರ್ವೇದೋಽಮೃತಾನಾಮ್ • ಶುದ್ಧಂ ಸಾತ್ತ್ವಿಕಂ ದಿವ್ಯಮ್',
   logo_url: '/logo.png',
   phone: '+91 98450 12345',
   whatsapp_number: '919845012345',
@@ -200,189 +202,189 @@ const INITIAL_PRODUCTS: Product[] = [
     updated_at: new Date().toISOString()
   },
   {
-    id: 'prod-udupi-sambar',
+    id: 'prod-sambar-powder',
     sku: 'IND-SMB-250',
-    name_en: 'Traditional Udupi Temple Sambar Masala',
-    name_kn: 'ಸಾಂಪ್ರದಾಯಿಕ ಉಡುಪಿ ದೇವಸ್ಥಾನ ಶೈಲಿಯ ಸಾಂಬಾರ್ ಪುಡಿ',
-    description_en: 'Authentic mild sweet-spicy coconut roasted Udupi sambar masala with rich hing and whole fenugreek.',
-    description_kn: 'ಉಡುಪಿ ಶೈಲಿಯ ಕಾಯಿ ಹುರಿದ ಸುವಾಸನೆಯುಕ್ತ, ಇಂಗು ಮಿಶ್ರಿತ ರುಚಿಕರ ಸಾಂಬಾರ್ ಪುಡಿ.',
-    ingredients_en: 'Coriander, Red Chillies, Chana Dal, Toor Dal, Fenugreek, Cumin, Mustard, Turmeric, Asafoetida.',
-    ingredients_kn: 'ಕೊತ್ತಂಬರಿ, ಕೆಂಪು ಮೆಣಸು, ಕಡಲೆಬೇಳೆ, ತೊಗರಿಬೇಳೆ, ಮೆಂತ್ಯ, ಜೀರಿಗೆ, ಸಾಸಿವೆ, ಅರಿಶಿನ, ಶುದ್ಧ ಇಂಗು.',
+    name_en: 'Karnataka Brahmin Style Sambar Powder',
+    name_kn: 'ಕರ್ನಾಟಕ ಬ್ರಾಹ್ಮಣ ಶೈಲಿಯ ಸಾಂಬಾರ್ ಪುಡಿ',
+    description_en: 'Traditional Udupi/Brahmin kitchen sambar masala with zero onion/garlic, richly perfumed with freshly roasted fenugreek, coriander, roasted chana dal, and Salem turmeric.',
+    description_kn: 'ಈರುಳ್ಳಿ-ಬೆಳ್ಳುಳ್ಳಿ ರಹಿತ, ಮೆಂತ್ಯ, ಕೊತ್ತಂಬರಿ ಮತ್ತು ಶುದ್ಧ ಅರಿಶಿನದ ಸಾಂಪ್ರದಾಯಿಕ ಉಡುಪಿ/ಬ್ರಾಹ್ಮಣ ಶೈಲಿಯ ಸಾಂಬಾರ್ ಪುಡಿ.',
+    ingredients_en: 'Coriander Seeds, Byadgi Chillies, Chana Dal, Toor Dal, Fenugreek, Cumin, Mustard, Turmeric, Asafoetida, Curry Leaves.',
+    ingredients_kn: 'ಕೊತ್ತಂಬರಿ, ಬ್ಯಾಡಗಿ ಮೆಣಸಿನಕಾಯಿ, ಕಡಲೆಬೇಳೆ, ತೊಗರಿಬೇಳೆ, ಮೆಂತ್ಯ, ಜೀರಿಗೆ, ಸಾಸಿವೆ, ಅರಿಶಿನ, ಇಂಗು, ಕರಿಬೇವು.',
     category_id: 'cat-masala-powders',
     weight: '250g',
     shelf_life: '12 Months',
-    storage_en: 'Keep in an airtight jar.',
-    storage_kn: 'ಗಾಳಿಯಾಡದ ಭರಣಿಯಲ್ಲಿ ಇರಿಸಿ.',
-    traditional_info_en: 'Temple kitchen inspired formulation with zero onion or garlic.',
-    traditional_info_kn: 'ದೇವಸ್ಥಾನದ ಮಡಿಯ ಶೈಲಿಯಲ್ಲಿ ಈರುಳ್ಳಿ-ಬೆಳ್ಳುಳ್ಳಿ ರಹಿತವಾಗಿ ತಯಾರಿಸಲಾಗಿದೆ.',
-    mrp: 175,
-    price: 139,
-    discount_percentage: 20,
-    stock: 94,
+    storage_en: 'Keep away from humidity. Reseal packet tightly.',
+    storage_kn: 'ತೇವಾಂಶದಿಂದ ದೂರವಿಡಿ. ಪ್ಯಾಕೆಟ್ ಅನ್ನು ಬಿಗಿಯಾಗಿ ಮುಚ್ಚಿ.',
+    traditional_info_en: 'Stone pounded in wood-fired roasted spice blends.',
+    traditional_info_kn: 'ಸೌದೆ ಒಲೆಯಲ್ಲಿ ಹುರಿದು ಕಲ್ಲಿನಿಂದ ಕುಟ್ಟಿದ ಮಸಾಲೆ.',
+    mrp: 190,
+    price: 150,
+    discount_percentage: 21,
+    stock: 95,
     low_stock_threshold: 15,
-    images: [
-      'https://images.unsplash.com/photo-1599940824399-b87987ceb72a?w=800&auto=format&fit=crop&q=80'
-    ],
-    badges: ['natural', 'homemade'],
-    active: true,
-    rating: 4.9,
-    review_count: 87,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  },
-  {
-    id: 'prod-puliyogare-mix',
-    sku: 'IND-PLY-200',
-    name_en: 'Melukote Style Puliyogare Gojju Mix',
-    name_kn: 'ಮೇಲುಕೋಟೆ ಶೈಲಿಯ ಸಾಂಪ್ರದಾಯಿಕ ಪುಳಿಯೋಗರೆ ಪುಡಿ',
-    description_en: 'Rich tamarind-spiced traditional dry blend packed with white sesame seeds, black pepper, and roasted spices for instant temple-style tamarind rice.',
-    description_kn: 'ಮೇಲುಕೋಟೆಯ ದೇವಸ್ಥಾನದ ರುಚಿಯನ್ನು ನೆನಪಿಸುವ ಎಳ್ಳು, ಮೆಣಸು ಮತ್ತು ಹುಣಸೆ ರುಚಿಯ ಅದ್ಭುತ ಪುಳಿಯೋಗರೆ ಮಸಾಲೆ ಪುಡಿ.',
-    ingredients_en: 'Red Chillies, White Sesame, Coriander, Black Pepper, Fenugreek, Mustard, Cumin, Asafoetida, Turmeric, Curry Leaves.',
-    ingredients_kn: 'ಕೆಂಪು ಮೆಣಸು, ಬಿಳಿ ಎಳ್ಳು, ಕೊತ್ತಂಬರಿ, ಕಾಳುಮೆಣಸು, ಮೆಂತ್ಯ, ಸಾಸಿವೆ, ಜೀರಿಗೆ, ಇಂಗು, ಅರಿಶಿನ, ಕರಿಬೇವಿನ ಎಲೆ.',
-    category_id: 'cat-karnataka-specials',
-    weight: '200g',
-    shelf_life: '9 Months',
-    storage_en: 'Store in a cool dry place.',
-    storage_kn: 'ತಂಪಾದ ಒಣ ಸ್ಥಳದಲ್ಲಿ ಶೇಖರಿಸಿ.',
-    traditional_info_en: 'Slow-roasted sesame seed technique inspired by Iyengar heritage.',
-    traditional_info_kn: 'ಐಯ್ಯಂಗಾರ್ ಪರಂಪರೆಯ ಸಾಂಪ್ರದಾಯಿಕ ಎಳ್ಳು ಹುರಿಯುವ ವಿಧಾನದಲ್ಲಿ ಸಿದ್ಧಪಡಿಸಲಾಗಿದೆ.',
-    mrp: 160,
-    price: 129,
-    discount_percentage: 19,
-    stock: 64,
-    low_stock_threshold: 10,
     images: [
       'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=800&auto=format&fit=crop&q=80'
     ],
-    badges: ['bestseller', 'festival_special'],
+    badges: ['bestseller', 'homemade'],
     active: true,
-    rating: 5.0,
-    review_count: 110,
+    rating: 4.9,
+    review_count: 115,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   },
   {
     id: 'prod-byadgi-chillies',
     sku: 'IND-BYD-250',
-    name_en: 'Authentic Byadgi Whole Red Chillies (Karnataka GI Tagged)',
-    name_kn: 'ಅಪ್ಪಟ ಬ್ಯಾಡಗಿ ಕೆಂಪು ಮೆಣಸಿನಕಾಯಿ (ಕರ್ನಾಟಕ ಜಿಐ ಟ್ಯಾಗ್)',
-    description_en: 'Deep crimson, naturally wrinkled, low pungency whole chillies famous for conferring breathtaking natural red color and smoky aroma without excessive heat.',
-    description_kn: 'ಅತ್ಯುತ್ತಮ ನೈಸರ್ಗಿಕ ಕೆಂಪು ಬಣ್ಣ ಮತ್ತು ಸುವಾಸನೆಯನ್ನು ನೀಡುವ, ಕಡಿಮೆ ಖಾರವಿರುವ ಅಪ್ಪಟ ಬ್ಯಾಡಗಿ ಮೆಣಸಿನಕಾಯಿ.',
-    ingredients_en: '100% Pure Byadgi Whole Red Chillies with Stems Intact.',
-    ingredients_kn: '100% ಅಪ್ಪಟ ತೊಟ್ಟು ಸಹಿತ ಬ್ಯಾಡಗಿ ಕೆಂಪು ಮೆಣಸಿನಕಾಯಿ.',
+    name_en: 'Stemless Premium Byadgi Red Chillies (Kaddi)',
+    name_kn: 'ಕಾಂಡ ರಹಿತ ಪ್ರೀಮಿಯಂ ಬ್ಯಾಡಗಿ ಒಣ ಮೆಣಸಿನಕಾಯಿ',
+    description_en: 'Sun-dried wrinkled red chillies from Haveri district of Karnataka. Known globally for its brilliant deep red oil colour and mild, flavourful pungency.',
+    description_kn: 'ಹಾವೇರಿ ಜಿಲ್ಲೆಯ ಬ್ಯಾಡಗಿಯಿಂದ ನೇರವಾಗಿ ತಂದ, ಕಾಂಡ ರಹಿತ ನೈಸರ್ಗಿಕ ಕೆಂಪು ಬಣ್ಣ ಮತ್ತು ಹಿತಕರ ಖಾರ ನೀಡುವ ಮೆಣಸಿನಕಾಯಿ.',
+    ingredients_en: '100% Pure Byadgi Red Chillies (Stemless).',
+    ingredients_kn: '೧೦೦% ಶುದ್ಧ ಬ್ಯಾಡಗಿ ಒಣ ಮೆಣಸಿನಕಾಯಿ (ತೊಟ್ಟು ತೆಗೆದದ್ದು).',
     category_id: 'cat-whole-spices',
     weight: '250g',
     shelf_life: '12 Months',
-    storage_en: 'Sun-dry occasionally and store in moisture-proof container.',
-    storage_kn: 'ಆಗಾಗ ಬಿಸಿಲಿನಲ್ಲಿ ಒಣಗಿಸಿ ತೇವಾಂಶವಿಲ್ಲದ ಡಬ್ಬದಲ್ಲಿ ಇರಿಸಿ.',
-    traditional_info_en: 'Directly sourced from Haveri farmers market, sun-dried on clean stone patios.',
-    traditional_info_kn: 'ಹಾವೇರಿ ರೈತರಿಂದ ನೇರವಾಗಿ ಸಂಗ್ರಹಿಸಿ, ನೈಸರ್ಗಿಕ ಬಿಸಿಲಿನಲ್ಲಿ ಒಣಗಿಸಲಾಗಿದೆ.',
-    mrp: 220,
-    price: 179,
-    discount_percentage: 18,
-    stock: 45,
+    storage_en: 'Store in airtight container. Sun-dry occasionally.',
+    storage_kn: 'ಗಾಳಿಯಾಡದ ಡಬ್ಬದಲ್ಲಿಡಿ. ಆಗಾಗ ಬಿಸಿಲಿನಲ್ಲಿ ಒಣಗಿಸಿ.',
+    traditional_info_en: 'Direct plantation harvest from Byadgi APMC certified farms.',
+    traditional_info_kn: 'ಬ್ಯಾಡಗಿಯ ಪ್ರಮಾಣೀಕೃತ ಕೃಷಿಕರಿಂದ ನೇರ ಸಂಗ್ರಹ.',
+    mrp: 230,
+    price: 185,
+    discount_percentage: 20,
+    stock: 60,
     low_stock_threshold: 10,
     images: [
-      'https://images.unsplash.com/photo-1509358271058-acd22cc93898?w=800&auto=format&fit=crop&q=80'
-    ],
-    badges: ['natural', 'featured'],
-    active: true,
-    rating: 4.9,
-    review_count: 65,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  },
-  {
-    id: 'prod-coorg-pepper',
-    sku: 'IND-CRG-200',
-    name_en: 'Coorg High-Altitude Black Pepper (Tellicherry Grade)',
-    name_kn: 'ಕೊಡಗು ಬೆಟ್ಟದ ಅಪ್ಪಟ ಕಪ್ಪು ಕಾಳುಮೆಣಸು',
-    description_en: 'Bold, piperine-rich whole black peppercorns shade-grown alongside coffee bushes in the misty hills of Madikeri, Kodagu.',
-    description_kn: 'ಕೊಡಗಿನ ಕಾಫಿ ತೋಟಗಳಲ್ಲಿ ಬೆಳೆದ, ಅಧಿಕ ಪೈಪರೀನ್ ಅಂಶವಿರುವ ಅಪ್ಪಟ ಘಾಟಿನ ಕಪ್ಪು ಕಾಳುಮೆಣಸು.',
-    ingredients_en: '100% Pure High Grade Coorg Peppercorns.',
-    ingredients_kn: '100% ಶುದ್ಧ ಕೊಡಗಿನ ಕಾಳುಮೆಣಸು.',
-    category_id: 'cat-whole-spices',
-    weight: '200g',
-    shelf_life: '24 Months',
-    storage_en: 'Store whole and grind fresh right before cooking for maximum aroma.',
-    storage_kn: 'ಸಂಪೂರ್ಣ ಕಾಳುಗಳನ್ನೇ ಸಂಗ್ರಹಿಸಿ, ಅಡುಗೆ ಮಾಡುವಾಗ ತಾಜಾವಾಗಿ ಪುಡಿಮಾಡಿ.',
-    traditional_info_en: 'Shade-grown under native rainforest canopies in Western Ghats.',
-    traditional_info_kn: 'ಪಶ್ಚಿಮ ಘಟ್ಟಗಳ ಮಳೆಕಾಡುಗಳ ನೆರಳಿನಲ್ಲಿ ನೈಸರ್ಗಿಕವಾಗಿ ಬೆಳೆದದ್ದು.',
-    mrp: 260,
-    price: 210,
-    discount_percentage: 19,
-    stock: 58,
-    low_stock_threshold: 12,
-    images: [
-      'https://images.unsplash.com/photo-1509358271058-acd22cc93898?w=800&auto=format&fit=crop&q=80'
+      'https://images.unsplash.com/photo-1588165171080-c89acfa5ee83?w=800&auto=format&fit=crop&q=80'
     ],
     badges: ['bestseller', 'natural'],
     active: true,
     rating: 5.0,
-    review_count: 73,
+    review_count: 76,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   },
   {
-    id: 'prod-malnad-garam-masala',
-    sku: 'IND-GRM-150',
-    name_en: 'Stone-Ground Malnad Garam Masala',
-    name_kn: 'ಕಲ್ಲಿನಲ್ಲಿ ಬೀಸಿದ ಮಲೆನಾಡು ಗರಂ ಮಸಾಲೆ',
-    description_en: 'An intensely fragrant royal blend of green cardamom, star anise, nutmeg, mace, cinnamon quill, and cloves. Enhances curries and biryanis with a tiny pinch.',
-    description_kn: 'ಏಲಕ್ಕಿ, ಜಾವಿತ್ರಿ, ಜಾಯಿಕಾಯಿ, ಲವಂಗ, ಚಕ್ಕೆ ಮತ್ತು ಅನಾನಸ್ ಹೂವುಗಳ ಸುಗಂಧಭರಿತ ರಾಜಮನೆತನದ ಗರಂ ಮಸಾಲೆ.',
-    ingredients_en: 'Green Cardamom, Cloves, Cinnamon, Star Anise, Nutmeg, Mace, Black Pepper, Cumin, Bay Leaf, Shahi Jeera.',
-    ingredients_kn: 'ಹಸಿರು ಏಲಕ್ಕಿ, ಲವಂಗ, ದಾಲ್ಚಿನ್ನಿ, ಅನಾನಸ್ ಹೂ, ಜಾಯಿಕಾಯಿ, ಜಾವಿತ್ರಿ, ಕಾಳುಮೆಣಸು, ಜೀರಿಗೆ, ಪಲಾವ್ ಎಲೆ, ಶಾಹಿ ಜೀರಿಗೆ.',
-    category_id: 'cat-traditional-blends',
-    weight: '150g',
+    id: 'prod-vangibath-powder',
+    sku: 'IND-VGB-200',
+    name_en: 'Traditional Vangi Bath Powder (Brinjal Rice)',
+    name_kn: 'ಸಾಂಪ್ರದಾಯಿಕ ವಾಂಗೀಬಾತ್ ಪುಡಿ',
+    description_en: 'Classic Karnataka formulation with roasted dry coconut (kopra), cloves, cinnamon, and Byadgi chillies. Perfect for spicy brinjal or capsicum rice.',
+    description_kn: 'ಒಣಕೊಬ್ಬರಿ, ಲವಂಗ ಮತ್ತು ದಾಲ್ಚಿನ್ನಿಯ ಹದವಾದ ಮಿಶ್ರಣ. ಬದನೆಕಾಯಿ ಅಥವಾ ಕ್ಯಾಪ್ಸಿಕಂ ಬಾತ್‌ಗೆ ಅತ್ಯುತ್ತಮ.',
+    ingredients_en: 'Coriander, Byadgi Chillies, Chana Dal, Urad Dal, Dry Coconut, Cloves, Cinnamon, Cumin, Fenugreek, Cardamom.',
+    ingredients_kn: 'ಕೊತ್ತಂಬರಿ, ಬ್ಯಾಡಗಿ ಮೆಣಸು, ಕಡಲೆಬೇಳೆ, ಉದ್ದಿನಬೇಳೆ, ಒಣಕೊಬ್ಬರಿ, ಲವಂಗ, ದಾಲ್ಚಿನ್ನಿ, ಜೀರಿಗೆ, ಮೆಂತ್ಯ, ಏಲಕ್ಕಿ.',
+    category_id: 'cat-karnataka-specials',
+    weight: '200g',
     shelf_life: '12 Months',
-    storage_en: 'Keep sealed tightly to preserve volatile aromatic oils.',
-    storage_kn: 'ಸುವಾಸನೆ ಉಳಿಯಲು ಗಾಳಿಯಾಡದಂತೆ ಬಿಗಿಯಾಗಿ ಮುಚ್ಚಿಡಿ.',
-    traditional_info_en: 'Cold-ground at low RPM to ensure essential aromatics never evaporate.',
-    traditional_info_kn: 'ಕಡಿಮೆ ವೇಗದ ಕಲ್ಲಿನ ಬೀಸುವಿಕೆಯಿಂದ ಸುವಾಸನೆಯ ತೈಲಗಳು ಆವಿಯಾಗದಂತೆ ರಕ್ಷಿಸಲಾಗಿದೆ.',
-    mrp: 230,
-    price: 185,
-    discount_percentage: 19,
-    stock: 72,
+    storage_en: 'Keep sealed in cool place.',
+    storage_kn: 'ತಂಪಾದ ಜಾಗದಲ್ಲಿ ಬಿಗಿಯಾಗಿ ಮುಚ್ಚಿಡಿ.',
+    traditional_info_en: 'Traditional recipe with slow roasted copra.',
+    traditional_info_kn: 'ಕೊಬ್ಬರಿಯನ್ನು ಹದವಾಗಿ ಹುರಿದು ತಯಾರಿಸಿದ ವಿಧಾನ.',
+    mrp: 175,
+    price: 140,
+    discount_percentage: 20,
+    stock: 75,
     low_stock_threshold: 15,
+    images: [
+      'https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=800&auto=format&fit=crop&q=80'
+    ],
+    badges: ['homemade', 'natural'],
+    active: true,
+    rating: 4.8,
+    review_count: 64,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: 'prod-chutney-pudi',
+    sku: 'IND-CHP-200',
+    name_en: 'Shenga (Peanut) Chutney Pudi',
+    name_kn: 'ಉತ್ತರ ಕರ್ನಾಟಕದ ಶೇಂಗಾ ಚಟ್ನಿ ಪುಡಿ',
+    description_en: 'North Karnataka style crunchy roasted peanut chutney powder with garlic, red chilli, and cumin. The soulmate for piping hot Jolada Rotti, dosas, and idlis.',
+    description_kn: 'ಉತ್ತರ ಕರ್ನಾಟಕ ಶೈಲಿಯ ಗರಿಗರಿ ಶೇಂಗಾ, ಬೆಳ್ಳುಳ್ಳಿ, ಜೀರಿಗೆ ಮತ್ತು ಕೆಂಪು ಮೆಣಸಿನ ಚಟ್ನಿ ಪುಡಿ. ಜೋಳದ ರೊಟ್ಟಿ ಮತ್ತು ದೋಸೆಗೆ ಹೇಳಿಮಾಡಿಸಿದ ರುಚಿ.',
+    ingredients_en: 'Roasted Peanuts, Garlic, Byadgi Chilli, Cumin Seeds, Tamarind, Jaggery, Curry Leaves, Salt.',
+    ingredients_kn: 'ಹುರಿದ ಶೇಂಗಾ, ಬೆಳ್ಳುಳ್ಳಿ, ಬ್ಯಾಡಗಿ ಮೆಣಸಿನಕಾಯಿ, ಜೀರಿಗೆ, ಹುಣಸೆಹಣ್ಣು, ಬೆಲ್ಲ, ಕರಿಬೇವು, ಉಪ್ಪು.',
+    category_id: 'cat-traditional-blends',
+    weight: '200g',
+    shelf_life: '6 Months',
+    storage_en: 'Airtight container. Do not expose to moisture.',
+    storage_kn: 'ಗಾಳಿಯಾಡದ ಡಬ್ಬದಲ್ಲಿಡಿ. ತೇವಾಂಶ ತಾಗದಂತೆ ನೋಡಿಕೊಳ್ಳಿ.',
+    traditional_info_en: 'Stone pounded rustic texture from Dharwad region.',
+    traditional_info_kn: 'ಧಾರವಾಡ ಶೈಲಿಯಲ್ಲಿ ಕುಟ್ಟಿದ ಗರಿಗರಿ ಚಟ್ನಿ ಪುಡಿ.',
+    mrp: 160,
+    price: 130,
+    discount_percentage: 19,
+    stock: 110,
+    low_stock_threshold: 20,
+    images: [
+      'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=800&auto=format&fit=crop&q=80'
+    ],
+    badges: ['bestseller', 'homemade'],
+    active: true,
+    rating: 4.9,
+    review_count: 180,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: 'prod-garam-masala',
+    sku: 'IND-GRM-100',
+    name_en: 'Royal Malnad Garam Masala Powder',
+    name_kn: 'ರಾಜಮನೆತನದ ಮಲೆನಾಡು ಗರಂ ಮಸಾಲೆ ಪುಡಿ',
+    description_en: 'Exquisite aromatic whole spice blend from the Western Ghats: green cardamom, mace (javitri), star anise, nutmeg, and black pepper. Unmatched depth of aroma.',
+    description_kn: 'ಪಶ್ಚಿಮ ಘಟ್ಟಗಳ ಹಸಿರು ಏಲಕ್ಕಿ, ಜಾಪತ್ರೆ, ಚಕ್ರಮೊಗ್ಗು, ಜಾಯಿಕಾಯಿ ಮತ್ತು ಕಾಳುಮೆಣಸಿನಿಂದ ತಯಾರಿಸಿದ ಅತ್ಯುನ್ನತ ಸುವಾಸನೆಯ ಗರಂ ಮಸಾಲೆ.',
+    ingredients_en: 'Green Cardamom, Black Cardamom, Cloves, Cinnamon, Star Anise, Mace, Nutmeg, Black Pepper, Cumin, Bay Leaf, Coriander.',
+    ingredients_kn: 'ಹಸಿರು ಏಲಕ್ಕಿ, ಕಪ್ಪು ಏಲಕ್ಕಿ, ಲವಂಗ, ದಾಲ್ಚಿನ್ನಿ, ಚಕ್ರಮೊಗ್ಗು, ಜಾಪತ್ರೆ, ಜಾಯಿಕಾಯಿ, ಕಾಳುಮೆಣಸು, ಜೀರಿಗೆ, ಪಲಾವ್ ಎಲೆ, ಧನಿಯಾ.',
+    category_id: 'cat-traditional-blends',
+    weight: '100g',
+    shelf_life: '12 Months',
+    storage_en: 'Store tightly closed to retain precious volatile essential oils.',
+    storage_kn: 'ಸುವಾಸನೆ ಉಳಿಯಲು ಗಾಳಿಯಾಡದಂತೆ ಬಿಗಿಯಾಗಿ ಮುಚ್ಚಿಡಿ.',
+    traditional_info_en: 'Cold-ground under low temperature to retain ethereal spice oils.',
+    traditional_info_kn: 'ಕಡಿಮೆ ತಾಪಮಾನದಲ್ಲಿ ಬೀಸಿ ನೈಸರ್ಗಿಕ ತೈಲಗಳನ್ನು ಕಾಪಾಡಿಕೊಳ್ಳಲಾಗಿದೆ.',
+    mrp: 210,
+    price: 165,
+    discount_percentage: 21,
+    stock: 55,
+    low_stock_threshold: 10,
     images: [
       'https://images.unsplash.com/photo-1599940824399-b87987ceb72a?w=800&auto=format&fit=crop&q=80'
     ],
-    badges: ['homemade', 'featured'],
+    badges: ['natural', 'homemade'],
     active: true,
     rating: 4.9,
-    review_count: 54,
+    review_count: 52,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   },
   {
-    id: 'prod-karnataka-combo-festive',
-    sku: 'IND-BOX-FEST-6',
-    name_en: 'Karnataka Grand Festive Spice Box (Set of 6 Essentials)',
-    name_kn: 'ಕರ್ನಾಟಕ ಗ್ರ್ಯಾಂಡ್ ಹಬ್ಬದ ಮಸಾಲೆ ಬಾಕ್ಸ್ (೬ ಪ್ರಮುಖ ಮಸಾಲೆಗಳು)',
-    description_en: 'The complete heritage kitchen collection: Mysuru Bisi Bele Bath (200g), Maniyara Rasam (250g), Udupi Sambar (250g), Melukote Puliyogare (200g), Coorg Black Pepper (100g), and Malnad Garam Masala (100g).',
-    description_kn: 'ಸಂಪೂರ್ಣ ಸಾಂಪ್ರದಾಯಿಕ ಅಡುಗೆಮನೆ ಕಿಟ್: ಬಿಸಿಬೇಳೆಬಾತ್ (200g), ರಸಂ (250g), ಸಾಂಬಾರ್ (250g), ಪುಳಿಯೋಗರೆ (200g), ಕಾಳುಮೆಣಸು (100g) ಮತ್ತು ಗರಂ ಮಸಾಲೆ (100g).',
-    ingredients_en: 'Pure 100% Traditional Multi-Spice Blends (6 Full Jars).',
-    ingredients_kn: '100% ಶುದ್ಧ ೬ ಸಾಂಪ್ರದಾಯಿಕ ಮಸಾಲೆಗಳ ಸಂಪೂರ್ಣ ಪೆಟ್ಟಿಗೆ.',
+    id: 'prod-combo-grand',
+    sku: 'IND-CMB-GRD',
+    name_en: 'Indima Karnataka Heritage Master Box (5 Blends)',
+    name_kn: 'ಇಂದಿಮಾ ಕರ್ನಾಟಕ ಹೆರಿಟೇಜ್ ಮಾಸ್ಟರ್ ಕಾಂಬೋ ಬಾಕ್ಸ್',
+    description_en: 'Our complete traditional collection: Mysuru Bisi Bele Bath (200g), Brahmin Sambar (250g), Maniyara Rasam (250g), Shenga Chutney Pudi (200g), and Malnad Garam Masala (100g).',
+    description_kn: 'ನಮ್ಮ ೫ ಪ್ರಮುಖ ಮಸಾಲೆಗಳ ಸಂಪೂರ್ಣ ಕಾಂಬೋ ಬಾಕ್ಸ್: ಬಿಸಿಬೇಳೆಬಾತ್, ಸಾಂಬಾರ್, ರಸಂ, ಶೇಂಗಾ ಚಟ್ನಿ ಪುಡಿ ಮತ್ತು ಗರಂ ಮಸಾಲೆ.',
+    ingredients_en: 'Includes 5 full-size spice packs prepared in pure heritage formulations.',
+    ingredients_kn: '೫ ಸಾಂಪ್ರದಾಯಿಕ ಮಸಾಲೆ ಪುಡಿಗಳ ಸಂಪೂರ್ಣ ಪ್ಯಾಕ್.',
     category_id: 'cat-combo-packs',
-    weight: '1100g',
+    weight: '1.0 kg (Total)',
     shelf_life: '12 Months',
-    storage_en: 'Store individual pouches in spice tins.',
-    storage_kn: 'ಪ್ರತಿಯೊಂದು ಪ್ಯಾಕೆಟ್‌ಗಳನ್ನು ಒಣ ಡಬ್ಬಿಗಳಲ್ಲಿ ಇರಿಸಿ.',
-    traditional_info_en: 'Packed in traditional craft gift packaging celebrating Karnataka heritage.',
-    traditional_info_kn: 'ಕರ್ನಾಟಕದ ಸಂಸ್ಕೃತಿಯನ್ನು ಬಿಂಬಿಸುವ ಪರಿಸರಸ್ನೇಹಿ ಉಡುಗೊರೆ ಪೆಟ್ಟಿಗೆಯಲ್ಲಿ ಪ್ಯಾಕ್ ಮಾಡಲಾಗಿದೆ.',
-    mrp: 1180,
-    price: 899,
-    discount_percentage: 24,
-    stock: 35,
+    storage_en: 'Store each packet in designated glass jar.',
+    storage_kn: 'ಪ್ರತಿಯೊಂದು ಪ್ಯಾಕೆಟ್ ಅನ್ನು ಪ್ರತ್ಯೇಕ ಗಾಜಿನ ಜಾರ್‌ನಲ್ಲಿಡಿ.',
+    traditional_info_en: 'Perfect festive gift and complete kitchen starter pack.',
+    traditional_info_kn: 'ಹಬ್ಬದ ಉಡುಗೊರೆಗೆ ಮತ್ತು ಹೊಸ ಅಡುಗೆ ಮನೆಗೆ ಅತ್ಯುತ್ತಮ ಕೊಡುಗೆ.',
+    mrp: 935,
+    price: 745,
+    discount_percentage: 20,
+    stock: 40,
     low_stock_threshold: 8,
     images: [
       'https://images.unsplash.com/photo-1532336414038-cf19250c5757?w=800&auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=800&auto=format&fit=crop&q=80'
     ],
-    badges: ['festival_special', 'bestseller'],
+    badges: ['bestseller', 'homemade', 'natural'],
     active: true,
     rating: 5.0,
-    review_count: 189,
+    review_count: 210,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   }
@@ -390,92 +392,93 @@ const INITIAL_PRODUCTS: Product[] = [
 
 const INITIAL_RECIPES: Recipe[] = [
   {
-    id: 'rec-bisibelebath',
-    title_en: 'Authentic Mysuru Bisi Bele Bath with Ghee Tadka',
-    title_kn: 'ಅಪ್ಪಟ ಮೈಸೂರು ಶೈಲಿಯ ತುಪ್ಪದ ಒಗ್ಗರಣೆಯ ಬಿಸಿಬೇಳೆಬಾತ್',
-    description_en: 'A wholesome one-pot Karnataka classic made with rice, toor dal, seasonal vegetables, and freshly tempered Indima Bisi Bele Bath powder.',
-    description_kn: 'ಅಕ್ಕಿ, ತೊಗರಿಬೇಳೆ, ತರಕಾರಿಗಳು ಮತ್ತು ಇಂದಿಮಾ ಬಿಸಿಬೇಳೆಬಾತ್ ಪುಡಿಯೊಂದಿಗೆ ತುಪ್ಪದ ಒಗ್ಗರಣೆಯಲ್ಲಿ ತಯಾರಿಸುವ ರುಚಿಕರ ಅಡುಗೆ.',
-    image: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=800&auto=format&fit=crop&q=80',
-    prep_time: '15 Mins',
-    cook_time: '25 Mins',
-    servings: '4 People',
+    id: 'rec-mysore-bisibelebath',
+    title_en: 'Authentic Mysuru Bisi Bele Bath',
+    title_kn: 'ಅಪ್ಪಟ ಮೈಸೂರು ಶೈಲಿಯ ಬಿಸಿಬೇಳೆಬಾತ್',
+    description_en: 'A wholesome, comforting one-pot meal made with sona masoori rice, toor dal, seasonal vegetables, and aromatic Indima Bisi Bele Bath powder.',
+    description_kn: 'ಸೋನಾ ಮಸೂರಿ ಅಕ್ಕಿ, ತೊಗರಿಬೇಳೆ, ತರಕಾರಿಗಳು ಮತ್ತು ಇಂದಿಮಾ ಬಿಸಿಬೇಳೆಬಾತ್ ಪುಡಿಯಿಂದ ತಯಾರಿಸಿದ ರುಚಿಕರ ಊಟ.',
+    image: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=800&auto=format&fit=crop&q=80',
+    prep_time: '15 mins',
+    cook_time: '35 mins',
+    servings: '4 Servings',
     featured_spice_ids: ['prod-bisibelebath'],
     ingredients_en: [
       '1 cup Sona Masoori Rice',
-      '3/4 cup Toor Dal',
-      '3 tbsp Indima Traditional Bisi Bele Bath Powder',
-      '1.5 cups diced vegetables (Carrot, Beans, Green Peas, Shallots)',
-      '1 small lemon sized Tamarind (extracted)',
-      '2 tbsp Ghee + 1 tbsp Oil',
-      'Mustard seeds, Cashews, Curry leaves & Hing for tempering',
-      'Salt to taste'
+      '3/4 cup Toor Dal (washed)',
+      '3 tbsp Indima Mysuru Bisi Bele Bath Powder',
+      '1 cup Mixed Veggies (Beans, Carrot, Shallots, Peas)',
+      '1/4 cup Tamarind Extract',
+      '2 tbsp Ghee',
+      'Cashews and Curry Leaves for tempering'
     ],
     ingredients_kn: [
       '೧ ಕಪ್ ಸೋನಾ ಮಸೂರಿ ಅಕ್ಕಿ',
       '೩/೪ ಕಪ್ ತೊಗರಿಬೇಳೆ',
-      '೩ ಚಮಚ ಇಂದಿಮಾ ಸಾಂಪ್ರದಾಯಿಕ ಬಿಸಿಬೇಳೆಬಾತ್ ಪುಡಿ',
-      '೧.೫ ಕಪ್ ತರಕಾರಿಗಳು (ಕ್ಯಾರೆಟ್, ಬೀನ್ಸ್, ಬಟಾಣಿ, ಸಣ್ಣ ಈರುಳ್ಳಿ)',
-      '೧ ನಿಂಬೆಹಣ್ಣಿನ ಗಾತ್ರದ ಹುಣಸೆಹಣ್ಣಿನ ರಸ',
-      '೨ ಚಮಚ ಶುದ್ಧ ಹಸುವಿನ ತುಪ್ಪ + ೧ ಚಮಚ ಎಣ್ಣೆ',
-      'ಒಗ್ಗರಣೆಗೆ: ಸಾಸಿವೆ, ಗೋಡಂಬಿ, ಕರಿಬೇವಿನ ಸೊಪ್ಪು ಮತ್ತು ಇಂಗು',
-      'ರುಚಿಗೆ ತಕ್ಕಷ್ಟು ಉಪ್ಪು'
+      '೩ ಚಮಚ ಇಂದಿಮಾ ಮೈಸೂರು ಬಿಸಿಬೇಳೆಬಾತ್ ಪುಡಿ',
+      '೧ ಕಪ್ ತರಕಾರಿಗಳು (ಹುರುಳಿಕಾಯಿ, ಕ್ಯಾರೆಟ್, ಸಾಂಬಾರ್ ಈರುಳ್ಳಿ, ಬಟಾಣಿ)',
+      '೧/೪ ಕಪ್ ಹುಣಸೆಹಣ್ಣಿನ ರಸ',
+      '೨ ಚಮಚ ತುಪ್ಪ',
+      'ಗೋಡಂಬಿ ಮತ್ತು ಕರಿಬೇವಿನ ಒಗ್ಗರಣೆ'
     ],
     instructions_en: [
-      'Pressure cook rice and toor dal together with turmeric and 4 cups water until soft (4 whistles).',
-      'In a thick-bottomed brass or heavy pot, boil the diced vegetables in tamarind water with a pinch of turmeric and salt until tender.',
-      'Mix 3 tbsp of Indima Bisi Bele Bath Powder with 1/2 cup warm water into a smooth paste and add to the simmering vegetables.',
-      'Add the cooked rice-dal mash, mix well, and simmer on medium flame for 7-8 minutes.',
-      'Prepare hot tadka in 2 tbsp ghee with mustard seeds, crunchy cashews, hing, and fresh curry leaves. Pour over the bubbling Bisi Bele Bath and rest covered for 5 minutes before serving hot with boondi or potato chips.'
+      '1. Pressure cook rice and toor dal together with turmeric until soft.',
+      '2. Cook vegetables with tamarind extract and a pinch of salt.',
+      '3. Mix Indima Bisi Bele Bath powder in 1/2 cup warm water to form a smooth paste and add to vegetables.',
+      '4. Add mashed rice-dal mix, adjust consistency with hot water, and simmer for 6-8 minutes.',
+      '5. Temper with mustard seeds, curry leaves, and cashews roasted in pure ghee. Serve piping hot with potato chips or boondi raita.'
     ],
     instructions_kn: [
-      'ಅಕ್ಕಿ ಮತ್ತು ತೊಗರಿಬೇಳೆಯನ್ನು ಅರಿಶಿನ ಸೇರಿಸಿ ಮೆತ್ತಗೆ ಬೇಯಿಸಿಕೊಳ್ಳಿ (೪ ವಿಷಲ್).',
-      'ಒಂದು ಪಾತ್ರೆಯಲ್ಲಿ ತರಕಾರಿಗಳನ್ನು ಹುಣಸೆ ರಸ, ಸ್ವಲ್ಪ ಅರಿಶಿನ ಮತ್ತು ಉಪ್ಪಿನೊಂದಿಗೆ ಬೇಯಿಸಿ.',
-      '೩ ಚಮಚ ಇಂದಿಮಾ ಬಿಸಿಬೇಳೆಬಾತ್ ಪುಡಿಯನ್ನು ಸ್ವಲ್ಪ ನೀರಿನಲ್ಲಿ ಕಲಸಿ ತರಕಾರಿಯ ಪಾತ್ರೆಗೆ ಸೇರಿಸಿ ಕುದಿಸಿ.',
-      'ಬೇಯಿಸಿದ ಅನ್ನ ಮತ್ತು ಬೇಳೆ ಮಿಶ್ರಣವನ್ನು ಸೇರಿಸಿ, ೭-೮ ನಿಮಿಷಗಳ ಕಾಲ ಮಂದ ಉರಿಯಲ್ಲಿ ಚೆನ್ನಾಗಿ ಕುದಿಸಿ.',
-      'ಕೊನೆಯಲ್ಲಿ ಬಿಸಿ ತುಪ್ಪದಲ್ಲಿ ಸಾಸಿವೆ, ಗೋಡಂಬಿ, ಇಂಗು ಮತ್ತು ಕರಿಬೇವಿನ ಒಗ್ಗರಣೆ ಹಾಕಿ ಬಿಸಿಬಿಸಿಯಾಗಿ ಬೂಂದಿಯೊಂದಿಗೆ ಸವಿಯಿರಿ.'
+      '೧. ಅಕ್ಕಿ ಮತ್ತು ತೊಗರಿಬೇಳೆಯನ್ನು ಒಟ್ಟಿಗೆ ಮೆತ್ತಗೆ ಬೇಯಿಸಿಕೊಳ್ಳಿ.',
+      '೨. ತರಕಾರಿಗಳನ್ನು ಹುಣಸೆ ರಸ ಮತ್ತು ಉಪ್ಪಿನೊಂದಿಗೆ ಬೇಯಿಸಿ.',
+      '೩. ಇಂದಿಮಾ ಬಿಸಿಬೇಳೆಬಾತ್ ಪುಡಿಯನ್ನು ನೀರಿನಲ್ಲಿ ಕಲೆಸಿ ತರಕಾರಿಗೆ ಸೇರಿಸಿ.',
+      '೪. ಬೆಂದ ಅನ್ನ-ಬೇಳೆ ಮಿಶ್ರಣವನ್ನು ಸೇರಿಸಿ, ೬-೮ ನಿಮಿಷ ಕುದಿಸಿ.',
+      '೫. ತುಪ್ಪದಲ್ಲಿ ಗೋಡಂಬಿ ಮತ್ತು ಸಾಸಿವೆ ಒಗ್ಗರಣೆ ನೀಡಿ ಬಿಸಿಬಿಸಿಯಾಗಿ ಸವಿಯಿರಿ.'
     ],
     active: true,
     created_at: new Date().toISOString()
   },
   {
     id: 'rec-maniyara-rasam',
-    title_en: 'Traditional Karnataka Tomato-Pepper Saaru',
-    title_kn: 'ಸಾಂಪ್ರದಾಯಿಕ ಕರ್ನಾಟಕ ಟೊಮೆಟೊ-ಮೆಣಸಿನ ಸಾರು',
-    description_en: 'A revitalizing digestive broth flavored with fresh country tomatoes, curry leaves, and Indima Heritage Rasam Powder.',
-    description_kn: 'ನಾಟಿ ಟೊಮೆಟೊ, ಬೆಳ್ಳುಳ್ಳಿ/ಇಂಗು ಮತ್ತು ಇಂದಿಮಾ ರಸಂ ಪುಡಿಯಿಂದ ತಯಾರಿಸಿದ ಸಾಂಪ್ರದಾಯಿಕ ಸಾರು.',
-    image: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=800&auto=format&fit=crop&q=80',
-    prep_time: '5 Mins',
-    cook_time: '12 Mins',
-    servings: '4 People',
+    title_en: 'Heritage Pepper Cumin Saaru (Rasam)',
+    title_kn: 'ಪಾರಂಪರಿಕ ಮೆಣಸು-ಜೀರಿಗೆ ಮನೆಯ ಸಾರು',
+    description_en: 'A soothing South Karnataka digestive rasam loaded with crushed garlic, curry leaves, and golden roasted Indima Rasam Powder.',
+    description_kn: 'ಜೀರ್ಣಶಕ್ತಿಗೆ ಅತ್ಯುತ್ತಮವಾದ, ಬಿಸಿ ಅನ್ನಕ್ಕೆ ಮತ್ತು ಕುಡಿಯಲು ಹಿತಕರವಾದ ಘಮಘಮಿಸುವ ಮನೆಯ ಸಾರು.',
+    image: 'https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=800&auto=format&fit=crop&q=80',
+    prep_time: '10 mins',
+    cook_time: '15 mins',
+    servings: '4-5 Servings',
     featured_spice_ids: ['prod-rasam-powder'],
     ingredients_en: [
-      '2 ripe country Tomatoes (finely chopped)',
-      '1.5 tbsp Indima Heritage Rasam Powder',
-      '1 cup cooked Toor Dal water',
-      'Small piece of Jaggery',
-      'Curry leaves and fresh Coriander',
-      '1 tsp Ghee for tempering with Mustard & Hing',
-      'Salt to taste'
+      '2 ripe Tomatoes (chopped)',
+      '2 tbsp Indima Heritage Rasam Powder',
+      '1/4 cup Toor Dal Water (optional)',
+      '1 tbsp Tamarind pulp',
+      '1 tsp Jaggery',
+      '6 crushed Garlic cloves',
+      'Fresh Coriander and Curry leaves',
+      '1 tbsp Ghee for tadka'
     ],
     ingredients_kn: [
-      '೨ ನಾಟಿ ಟೊಮೆಟೊ (ಸಣ್ಣಗೆ ಹೆಚ್ಚಿದ್ದು)',
-      '೧.೫ ಚಮಚ ಇಂದಿಮಾ ಪಾರಂಪರಿಕ ರಸಂ ಪುಡಿ',
-      '೧ ಕಪ್ ಬೇಯಿಸಿದ ತೊಗರಿಬೇಳೆಯ ನೀರು (ಕಟ್ಟು)',
-      'ಸ್ವಲ್ಪ ಬೆಲ್ಲ',
-      'ಕರಿಬೇವು ಮತ್ತು ತಾಜಾ ಕೊತ್ತಂಬರಿ ಸೊಪ್ಪು',
-      'ಒಗ್ಗರಣೆಗೆ ತುಪ್ಪ, ಸಾಸಿವೆ ಮತ್ತು ಇಂಗು',
-      'ರುಚಿಗೆ ತಕ್ಕಷ್ಟು ಉಪ್ಪು'
+      '೨ ಹಣ್ಣಾದ ಟೊಮೆಟೊ',
+      '೨ ಚಮಚ ಇಂದಿಮಾ ಪಾರಂಪರಿಕ ರಸಂ ಪುಡಿ',
+      '೧/೪ ಕಪ್ ಬೇಳೆ ಕಟ್ಟು',
+      '೧ ಚಮಚ ಹುಣಸೆಹಣ್ಣಿನ ರಸ',
+      '೧ ಸಣ್ಣ ತುಂಡು ಬೆಲ್ಲ',
+      '೬ ಎಸಳು ಜಜ್ಜಿದ ಬೆಳ್ಳುಳ್ಳಿ',
+      'ಕೊತ್ತಂಬರಿ ಸೊಪ್ಪು ಮತ್ತು ಕರಿಬೇವು',
+      '೧ ಚಮಚ ತುಪ್ಪ'
     ],
     instructions_en: [
-      'Boil chopped tomatoes in 2 cups water with turmeric, slit green chilli, and salt until mushy.',
-      'Add Indima Heritage Rasam Powder, jaggery, and cooked dal water. Bring to a gentle frothy boil.',
-      'Once frothy on top, turn off the flame immediately without over-boiling.',
-      'Temper with ghee, mustard seeds, and generous hing. Garnish with fresh coriander and serve hot.'
+      '1. Boil tomatoes, tamarind pulp, salt, and jaggery in 3 cups of water.',
+      '2. Add 2 tablespoons of Indima Rasam powder and dal water. Boil for 4 minutes until aromatic.',
+      '3. In a small pan, heat ghee. Splutter mustard seeds, cumin, crushed garlic, and curry leaves.',
+      '4. Pour hot tadka over rasam, cover immediately with a lid, and garnish with fresh coriander.'
     ],
     instructions_kn: [
-      'ಟೊಮೆಟೊವನ್ನು ನೀರಿನಲ್ಲಿ ಅರಿಶಿನ ಮತ್ತು ಉಪ್ಪಿನೊಂದಿಗೆ ಚೆನ್ನಾಗಿ ಬೇಯಿಸಿ.',
-      'ಇಂದಿಮಾ ರಸಂ ಪುಡಿ, ಬೆಲ್ಲ ಮತ್ತು ಬೇಳೆ ನೀರು ಸೇರಿಸಿ ಮಂದ ಉರಿಯಲ್ಲಿ ನೊರೆ ಬರುವವರೆಗೆ ಕುದಿಸಿ.',
-      'ಮೇಲೆ ನೊರೆ ಬಂದ ತಕ್ಷಣ ಉರಿ ಆರಿಸಿ, ತುಪ್ಪದ ಒಗ್ಗರಣೆ ನೀಡಿ ಕೊತ್ತಂಬರಿ ಸೊಪ್ಪಿನಿಂದ ಅಲಂಕರಿಸಿ.'
+      '೧. ಟೊಮೆಟೊ, ಹುಣಸೆ ರಸ, ಉಪ್ಪು ಮತ್ತು ಬೆಲ್ಲವನ್ನು ನೀರಿನಲ್ಲಿ ಚೆನ್ನಾಗಿ ಕುದಿಸಿ.',
+      '೨. ಇಂದಿಮಾ ರಸಂ ಪುಡಿ ಮತ್ತು ಬೇಳೆ ಕಟ್ಟು ಸೇರಿಸಿ ೪ ನಿಮಿಷ ಕುದಿಸಿ.',
+      '೩. ತುಪ್ಪದಲ್ಲಿ ಸಾಸಿವೆ, ಜೀರಿಗೆ, ಬೆಳ್ಳುಳ್ಳಿ ಮತ್ತು ಕರಿಬೇವಿನ ಒಗ್ಗರಣೆ ಹಾಕಿ.',
+      '೪. ಕೊತ್ತಂಬರಿ ಸೊಪ್ಪು ಉದುರಿಸಿ ಮುಚ್ಚಳ ಮುಚ್ಚಿ.'
     ],
     active: true,
     created_at: new Date().toISOString()
@@ -484,19 +487,18 @@ const INITIAL_RECIPES: Recipe[] = [
 
 const INITIAL_BANNERS: Banner[] = [
   {
-    id: 'ban-hero-main',
+    id: 'ban-main-hero',
     type: 'hero',
     media_type: 'image',
     media_url: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=1600&auto=format&fit=crop&q=80',
-    fallback_image: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=1600&auto=format&fit=crop&q=80',
-    badge_en: 'Festival of Flavours • ಹಬ್ಬದ ಸಂಭ್ರಮ',
-    badge_kn: 'ಸುವಾಸನೆಗಳ ಹಬ್ಬ • ಪಾರಂಪರಿಕ ಮಸಾಲೆ',
-    title_en: 'From Nature to Your Kitchen — With Purity, Care & Tradition',
-    title_kn: 'ಪ್ರಕೃತಿಯಿಂದ ನಿಮ್ಮ ಅಡುಗೆಮನೆಗೆ — ಪರಿಶುದ್ಧತೆ, ಪ್ರೀತಿ ಮತ್ತು ಸಂಪ್ರದಾಯ',
-    subtitle_en: 'Handcrafted Karnataka spice blends, stone-ground with motherly love and authentic traditional recipes.',
-    subtitle_kn: 'ತಾಯಿಯ ಕೈರುಚಿಯಂತೆ, ಸಾಂಪ್ರದಾಯಿಕ ಕಲ್ಲಿನ ಬೀಸುವ ಪದ್ಧತಿಯಲ್ಲಿ ತಯಾರಿಸಲಾದ ಕರ್ನಾಟಕದ ಅಪ್ಪಟ ಮಸಾಲೆಗಳು.',
-    offer_text_en: 'Festive Special: FREE Delivery on orders above ₹499 + Up to 25% OFF',
-    offer_text_kn: 'ವಿಶೇಷ ಹಬ್ಬದ ಕೊಡುಗೆ: ₹೪೯೯ ಕ್ಕಿಂತ ಹೆಚ್ಚಿನ ಆರ್ಡರ್‌ಗಳಿಗೆ ಉಚಿತ ಡೆಲಿವರಿ + ೨೫% ವರೆಗೆ ರಿಯಾಯಿತಿ',
+    badge_en: '100% Heritage Stone Ground',
+    badge_kn: '೧೦೦% ನೈಸರ್ಗಿಕ ಕಲ್ಲಿನಿಂದ ಬೀಸಿದ ಮಸಾಲೆಗಳು',
+    title_en: 'Authentic Pure Spices from Traditional Karnataka Kitchens',
+    title_kn: 'ಕರ್ನಾಟಕದ ಮನೆ ಮನೆಗಳ ಸಾಂಪ್ರದಾಯಿಕ ಪರಿಶುದ್ಧ ಮಸಾಲೆಗಳು',
+    subtitle_en: 'Hand-roasted spices with zero preservatives, colorants, or synthetic flavour enhancers. Freshly packed in Basavanagudi.',
+    subtitle_kn: 'ಯಾವುದೇ ರಾಸಾಯನಿಕ ಅಥವಾ ಕೃತಕ ಬಣ್ಣಗಳಿಲ್ಲದ, ಅಜ್ಜಿ ಮನೆಯ ಕೈರುಚಿಯ ಅಪ್ಪಟ ಸುವಾಸನೆ.',
+    offer_text_en: 'Special Festive Offer: Flat 10% OFF on Orders Above ₹399 • Code: INDIMA10',
+    offer_text_kn: 'ಹಬ್ಬದ ವಿಶೇಷ ರಿಯಾಯಿತಿ: ₹೩೯೯ ಕ್ಕಿಂತ ಹೆಚ್ಚಿನ ಆರ್ಡರ್‌ಗಳ ಮೇಲೆ 10% ರಿಯಾಯಿತಿ • ಕೋಡ್: INDIMA10',
     festival_greeting_en: 'Shubhashayagalu! Welcome to Authentic Karnataka Spices',
     festival_greeting_kn: 'ಹಬ್ಬದ ಹಾರ್ದಿಕ ಶುಭಾಶಯಗಳು! ಅಪ್ಪಟ ಕರ್ನಾಟಕದ ಮಸಾಲೆಗಳಿಗೆ ಸ್ವಾಗತ',
     primary_btn_text_en: 'Shop Pure Spices',
@@ -597,52 +599,121 @@ const INITIAL_REVIEWS: Review[] = [
 class DataStore {
   private data: DatabaseSchema;
   private saveTimeout: NodeJS.Timeout | null = null;
-  private firestore: Firestore | null = null;
+  private clientFirestore: ClientFirestore | null = null;
+  private clientApp: ClientFirebaseApp | null = null;
   private isFirestoreReady = false;
+  private adminApp: AdminApp | null = null;
 
   constructor() {
     this.data = this.loadDatabase();
     this.initFirestore().catch(e => {
-      console.warn('[Firestore] Async initialization warning:', e.message);
+      console.warn('[Firestore] Async initialization notice:', e.message);
     });
   }
 
   public async initFirestore(): Promise<boolean> {
     try {
       const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
-      if (!fs.existsSync(configPath)) {
-        console.warn('[Firestore] firebase-applet-config.json not found, using local fallback.');
-        return false;
+      let config: any = {};
+      if (fs.existsSync(configPath)) {
+        try {
+          config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+        } catch (_) {}
       }
-      const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-      const app = getApps().length > 0 ? getApp() : initializeApp(config);
-      const dbId = process.env.FIRESTORE_DATABASE_ID || process.env.FIREBASE_DATABASE_ID || config.firestoreDatabaseId || '(default)';
-      this.firestore = getFirestore(app, dbId);
-      
-      console.log(`[Firestore] Initialized connection to Firestore db: ${dbId}`);
+
+      const projectId =
+        process.env.FIREBASE_PROJECT_ID ||
+        process.env.GCLOUD_PROJECT ||
+        process.env.GOOGLE_CLOUD_PROJECT ||
+        config.projectId ||
+        'gen-lang-client-0691323767';
+
+      const storageBucket =
+        process.env.FIREBASE_STORAGE_BUCKET ||
+        config.storageBucket ||
+        `${projectId}.firebasestorage.app`;
+
+      const firestoreDbId =
+        process.env.FIRESTORE_DATABASE_ID ||
+        process.env.FIREBASE_DATABASE_ID ||
+        config.firestoreDatabaseId ||
+        '(default)';
+
+      // Initialize Client App & Firestore
+      if (getClientApps().length > 0) {
+        this.clientApp = getClientApp();
+      } else {
+        this.clientApp = initFirebaseClientApp({
+          apiKey: config.apiKey || process.env.FIREBASE_API_KEY,
+          authDomain: config.authDomain,
+          projectId,
+          storageBucket,
+          messagingSenderId: config.messagingSenderId,
+          appId: config.appId
+        });
+      }
+
+      this.clientFirestore = getClientFirestore(this.clientApp, firestoreDbId);
+
+      // Initialize Firebase Admin App for Storage (if available)
+      try {
+        if (getAdminApps().length > 0) {
+          this.adminApp = getAdminApps()[0] as AdminApp;
+        } else {
+          const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT;
+          if (serviceAccountJson) {
+            const parsed = JSON.parse(serviceAccountJson);
+            this.adminApp = initializeAdminApp({
+              credential: cert(parsed),
+              projectId: parsed.project_id || projectId,
+              storageBucket
+            });
+          } else {
+            this.adminApp = initializeAdminApp({
+              projectId,
+              storageBucket
+            });
+          }
+        }
+      } catch (adminErr: any) {
+        // Admin SDK optional for Storage
+      }
+
+      console.log(`[Firestore] Initialized connection to Firestore database: ${firestoreDbId} in project: ${projectId}`);
       await this.reloadFromFirestore();
       this.isFirestoreReady = true;
-      console.log(`[Firestore] Sync complete. Active Firestore records: ${this.data.products.length} products, ${this.data.customers.length} customers, ${this.data.orders.length} orders.`);
+      console.log(
+        `[Firestore] Synchronized authoritative catalog: ${this.data.products.length} products, ${this.data.customers.length} customers, ${this.data.orders.length} orders.`
+      );
       return true;
     } catch (err: any) {
-      console.error('[Firestore] Initialization error (continuing with local cache):', err.message);
+      console.warn('[Firestore] Initialization notice (relying on active data cache):', err.message);
       return false;
     }
   }
 
   public getIsFirestoreReady(): boolean {
-    return this.isFirestoreReady && this.firestore !== null;
+    return this.isFirestoreReady && this.clientFirestore !== null;
+  }
+
+  public getStorageBucket() {
+    if (!this.adminApp) return null;
+    try {
+      return getStorage(this.adminApp).bucket();
+    } catch {
+      return null;
+    }
   }
 
   public async reloadFromFirestore(): Promise<void> {
-    if (!this.firestore) return;
+    if (!this.clientFirestore) return;
     try {
-      // 0. Check if Firestore has been seeded
-      const metaRef = doc(this.firestore, 'settings', 'db_metadata');
-      const metaSnap = await getDoc(metaRef);
-      
-      if (!metaSnap.exists()) {
-        console.log('[Firestore] First time database connection: Seeding initial catalog to Firestore collections...');
+      // Check if Firestore has been seeded
+      const metaRef = fsDoc(this.clientFirestore, 'settings', 'db_metadata');
+      const metaDoc = await fsGetDoc(metaRef);
+
+      if (!metaDoc.exists()) {
+        console.log('[Firestore] Seeding initial Indima catalog to Firestore...');
         for (const prod of this.data.products) {
           await this.setFirestoreDoc('products', prod.id, prod);
         }
@@ -662,113 +733,135 @@ class DataStore {
           await this.setFirestoreDoc('reviews', rev.id, rev);
         }
         await this.setFirestoreDoc('settings', 'store_settings', this.data.settings);
-        await setDoc(metaRef, { initialized: true, seeded_at: new Date().toISOString() });
-        console.log('[Firestore] Initial seeding completed successfully.');
+        await fsSetDoc(metaRef, {
+          initialized: true,
+          seeded_at: new Date().toISOString(),
+          app_name: 'Indima Spice Co.'
+        });
+        console.log('[Firestore] Initial Firestore seed successfully completed.');
       } else {
         // 1. Products
-        const prodSnap = await getDocs(collection(this.firestore, 'products'));
-        const prods: Product[] = [];
-        prodSnap.forEach(d => prods.push(d.data() as Product));
-        this.data.products = prods;
+        const prodSnap = await fsGetDocs(fsCollection(this.clientFirestore, 'products'));
+        if (!prodSnap.empty) {
+          const prods: Product[] = [];
+          prodSnap.forEach(d => prods.push(d.data() as Product));
+          this.data.products = prods;
+        }
 
         // 2. Categories
-        const catSnap = await getDocs(collection(this.firestore, 'categories'));
-        const cats: Category[] = [];
-        catSnap.forEach(d => cats.push(d.data() as Category));
-        this.data.categories = cats.sort((a, b) => (a.order || 0) - (b.order || 0));
+        const catSnap = await fsGetDocs(fsCollection(this.clientFirestore, 'categories'));
+        if (!catSnap.empty) {
+          const cats: Category[] = [];
+          catSnap.forEach(d => cats.push(d.data() as Category));
+          this.data.categories = cats.sort((a, b) => (a.order || 0) - (b.order || 0));
+        }
 
         // 3. Orders
-        const orderSnap = await getDocs(collection(this.firestore, 'orders'));
-        const ords: Order[] = [];
-        orderSnap.forEach(d => ords.push(d.data() as Order));
-        this.data.orders = ords.sort((a, b) => new Date(b.order_date).getTime() - new Date(a.order_date).getTime());
+        const orderSnap = await fsGetDocs(fsCollection(this.clientFirestore, 'orders'));
+        if (!orderSnap.empty) {
+          const ords: Order[] = [];
+          orderSnap.forEach(d => ords.push(d.data() as Order));
+          this.data.orders = ords.sort(
+            (a, b) => new Date(b.order_date || b.created_at).getTime() - new Date(a.order_date || a.created_at).getTime()
+          );
+        }
 
         // 4. Customers
-        const custSnap = await getDocs(collection(this.firestore, 'customers'));
-        const custs: Customer[] = [];
-        custSnap.forEach(d => custs.push(d.data() as Customer));
-        this.data.customers = custs;
+        const custSnap = await fsGetDocs(fsCollection(this.clientFirestore, 'customers'));
+        if (!custSnap.empty) {
+          const custs: Customer[] = [];
+          custSnap.forEach(d => custs.push(d.data() as Customer));
+          this.data.customers = custs;
+        }
 
         // 5. Recipes
-        const recSnap = await getDocs(collection(this.firestore, 'recipes'));
-        const recs: Recipe[] = [];
-        recSnap.forEach(d => recs.push(d.data() as Recipe));
-        this.data.recipes = recs;
+        const recSnap = await fsGetDocs(fsCollection(this.clientFirestore, 'recipes'));
+        if (!recSnap.empty) {
+          const recs: Recipe[] = [];
+          recSnap.forEach(d => recs.push(d.data() as Recipe));
+          this.data.recipes = recs;
+        }
 
         // 6. Banners
-        const banSnap = await getDocs(collection(this.firestore, 'banners'));
-        const bans: Banner[] = [];
-        banSnap.forEach(d => bans.push(d.data() as Banner));
-        this.data.banners = bans;
+        const banSnap = await fsGetDocs(fsCollection(this.clientFirestore, 'banners'));
+        if (!banSnap.empty) {
+          const bans: Banner[] = [];
+          banSnap.forEach(d => bans.push(d.data() as Banner));
+          this.data.banners = bans;
+        }
 
         // 7. Offers
-        const offSnap = await getDocs(collection(this.firestore, 'offers'));
-        const offs: Offer[] = [];
-        offSnap.forEach(d => offs.push(d.data() as Offer));
-        this.data.offers = offs;
+        const offSnap = await fsGetDocs(fsCollection(this.clientFirestore, 'offers'));
+        if (!offSnap.empty) {
+          const offs: Offer[] = [];
+          offSnap.forEach(d => offs.push(d.data() as Offer));
+          this.data.offers = offs;
+        }
 
         // 8. Reviews
-        const revSnap = await getDocs(collection(this.firestore, 'reviews'));
-        const revs: Review[] = [];
-        revSnap.forEach(d => revs.push(d.data() as Review));
-        this.data.reviews = revs;
+        const revSnap = await fsGetDocs(fsCollection(this.clientFirestore, 'reviews'));
+        if (!revSnap.empty) {
+          const revs: Review[] = [];
+          revSnap.forEach(d => revs.push(d.data() as Review));
+          this.data.reviews = revs;
+        }
 
         // 9. Audit Logs
-        const auditSnap = await getDocs(collection(this.firestore, 'audit_logs'));
-        const logs: AdminAuditLog[] = [];
-        auditSnap.forEach(d => logs.push(d.data() as AdminAuditLog));
-        this.data.auditLogs = logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        const auditSnap = await fsGetDocs(fsCollection(this.clientFirestore, 'audit_logs'));
+        if (!auditSnap.empty) {
+          const logs: AdminAuditLog[] = [];
+          auditSnap.forEach(d => logs.push(d.data() as AdminAuditLog));
+          this.data.auditLogs = logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        }
 
         // 10. Leads
-        const leadSnap = await getDocs(collection(this.firestore, 'leads'));
-        const lds: Lead[] = [];
-        leadSnap.forEach(d => lds.push(d.data() as Lead));
-        this.data.leads = lds;
+        const leadSnap = await fsGetDocs(fsCollection(this.clientFirestore, 'leads'));
+        if (!leadSnap.empty) {
+          const lds: Lead[] = [];
+          leadSnap.forEach(d => lds.push(d.data() as Lead));
+          this.data.leads = lds;
+        }
 
         // 11. Settings
-        const setDocSnap = await getDoc(doc(this.firestore, 'settings', 'store_settings'));
+        const setDocRef = fsDoc(this.clientFirestore, 'settings', 'store_settings');
+        const setDocSnap = await fsGetDoc(setDocRef);
         if (setDocSnap.exists()) {
           this.data.settings = { ...INITIAL_SETTINGS, ...(setDocSnap.data() as BusinessSettings) };
         }
       }
 
-      // Sync updated memory cache to local offline fallback file
       this.persistNow(this.data);
     } catch (e: any) {
-      console.error('[Firestore] Error reloading from Firestore collections:', e.message);
+      console.warn('[Firestore] Notice reloading from Firestore collections:', e.message);
     }
   }
 
-  private async getFirestoreInstance(): Promise<Firestore | null> {
-    if (this.firestore) return this.firestore;
+  private async getFirestoreInstance(): Promise<ClientFirestore | null> {
+    if (this.clientFirestore) return this.clientFirestore;
     await this.initFirestore();
-    return this.firestore;
+    return this.clientFirestore;
   }
 
-  private async setFirestoreDoc(collectionName: string, docId: string, itemData: any) {
-    try {
-      const fsDb = await this.getFirestoreInstance();
-      if (!fsDb) {
-        console.warn(`[Firestore Warning] No Firestore instance available for ${collectionName}/${docId}`);
-        return;
-      }
-      // Strip undefined properties for clean Firestore serialization
-      const clean = JSON.parse(JSON.stringify(itemData));
-      await setDoc(doc(fsDb, collectionName, String(docId)), clean, { merge: true });
-      console.log(`[Firestore Success] Persisted ${collectionName}/${docId} to Firestore`);
-    } catch (err: any) {
-      console.error(`[Firestore Error] Failed to write ${collectionName}/${docId}:`, err.message);
-    }
-  }
-
-  private async deleteFirestoreDoc(collectionName: string, docId: string) {
+  public async setFirestoreDoc(collectionName: string, docId: string, itemData: any): Promise<void> {
     try {
       const fsDb = await this.getFirestoreInstance();
       if (!fsDb) return;
-      await deleteDoc(doc(fsDb, collectionName, String(docId)));
-      console.log(`[Firestore Success] Removed ${collectionName}/${docId} from Firestore`);
+      const clean = JSON.parse(JSON.stringify(itemData));
+      const docRef = fsDoc(fsDb, collectionName, String(docId));
+      await fsSetDoc(docRef, clean, { merge: true });
     } catch (err: any) {
-      console.error(`[Firestore Error] Failed to delete ${collectionName}/${docId}:`, err.message);
+      console.warn(`[Firestore] Notice writing ${collectionName}/${docId}:`, err.message);
+    }
+  }
+
+  public async deleteFirestoreDoc(collectionName: string, docId: string): Promise<void> {
+    try {
+      const fsDb = await this.getFirestoreInstance();
+      if (!fsDb) return;
+      const docRef = fsDoc(fsDb, collectionName, String(docId));
+      await fsDeleteDoc(docRef);
+    } catch (err: any) {
+      console.warn(`[Firestore] Notice deleting ${collectionName}/${docId}:`, err.message);
     }
   }
 
@@ -792,7 +885,7 @@ class DataStore {
         };
       }
     } catch (e) {
-      console.error('Error loading database, initializing defaults:', e);
+      console.error('Error loading fallback database, initializing defaults:', e);
     }
 
     const initial: DatabaseSchema = {
@@ -820,7 +913,7 @@ class DataStore {
       }
       fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
     } catch (e) {
-      console.error('Failed to write db.json fallback:', e);
+      console.error('Failed to write db.json local backup:', e);
     }
   }
 
@@ -843,24 +936,24 @@ class DataStore {
 
   public verifyAdminPassword(password: string): boolean {
     const current = this.getAdminPassword();
-    return password === current;
+    return Boolean(password && current && password.trim() === current.trim());
   }
 
-  public setAdminPassword(newPassword: string, admin = 'Admin'): boolean {
+  public async setAdminPassword(newPassword: string, adminUser = 'Admin'): Promise<boolean> {
     if (!newPassword || newPassword.trim().length < 6) {
       return false;
     }
     this.data.settings.admin_password = newPassword.trim();
-    this.logAudit(admin, 'ADMIN_PASSWORD_CHANGED', 'security', 'Admin master password updated');
-    this.setFirestoreDoc('settings', 'store_settings', this.data.settings);
+    await this.logAudit(adminUser, 'ADMIN_PASSWORD_CHANGED', 'security', 'Admin master password updated');
+    await this.setFirestoreDoc('settings', 'store_settings', this.data.settings);
     this.save();
     return true;
   }
 
-  public updateSettings(updates: Partial<BusinessSettings>, admin = 'Admin'): BusinessSettings {
+  public async updateSettings(updates: Partial<BusinessSettings>, adminUser = 'Admin'): Promise<BusinessSettings> {
     this.data.settings = { ...this.data.settings, ...updates };
-    this.logAudit(admin, 'SETTINGS_UPDATED', 'settings', 'Business settings updated');
-    this.setFirestoreDoc('settings', 'store_settings', this.data.settings);
+    await this.logAudit(adminUser, 'SETTINGS_UPDATED', 'settings', 'Business settings updated');
+    await this.setFirestoreDoc('settings', 'store_settings', this.data.settings);
     this.save();
     return this.data.settings;
   }
@@ -874,7 +967,7 @@ class DataStore {
     return this.data.products.find(p => p.id === id);
   }
 
-  public addProduct(product: Partial<Product>, admin = 'Admin'): Product {
+  public async addProduct(product: Partial<Product>, adminUser = 'Admin'): Promise<Product> {
     const newProduct: Product = {
       id: product.id || ('prod-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6)),
       sku: product.sku || ('IND-SP-' + Math.floor(100 + Math.random() * 900)),
@@ -896,7 +989,10 @@ class DataStore {
       discount_percentage: Number(product.discount_percentage) || 0,
       stock: Number(product.stock) >= 0 ? Number(product.stock) : 50,
       low_stock_threshold: Number(product.low_stock_threshold) || 10,
-      images: Array.isArray(product.images) && product.images.length > 0 ? product.images : ['https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=800&auto=format&fit=crop&q=80'],
+      images:
+        Array.isArray(product.images) && product.images.length > 0
+          ? product.images
+          : ['https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=800&auto=format&fit=crop&q=80'],
       badges: Array.isArray(product.badges) ? product.badges : ['natural', 'homemade'],
       active: product.active !== false,
       rating: Number(product.rating) || 5.0,
@@ -906,13 +1002,13 @@ class DataStore {
       updated_at: new Date().toISOString()
     };
     this.data.products.push(newProduct);
-    this.logAudit(admin, 'PRODUCT_CREATED', newProduct.id, `Created product ${newProduct.name_en}`);
-    this.setFirestoreDoc('products', newProduct.id, newProduct);
+    await this.logAudit(adminUser, 'PRODUCT_CREATED', newProduct.id, `Created product ${newProduct.name_en}`);
+    await this.setFirestoreDoc('products', newProduct.id, newProduct);
     this.save();
     return newProduct;
   }
 
-  public updateProduct(id: string, updates: Partial<Product>, admin = 'Admin'): Product | null {
+  public async updateProduct(id: string, updates: Partial<Product>, adminUser = 'Admin'): Promise<Product | null> {
     const idx = this.data.products.findIndex(p => p.id === id);
     if (idx === -1) return null;
     this.data.products[idx] = {
@@ -921,18 +1017,18 @@ class DataStore {
       updated_at: new Date().toISOString()
     };
     const updatedProd = this.data.products[idx];
-    this.logAudit(admin, 'PRODUCT_UPDATED', id, `Updated product ${updatedProd.name_en}`);
-    this.setFirestoreDoc('products', id, updatedProd);
+    await this.logAudit(adminUser, 'PRODUCT_UPDATED', id, `Updated product ${updatedProd.name_en}`);
+    await this.setFirestoreDoc('products', id, updatedProd);
     this.save();
     return updatedProd;
   }
 
-  public async deleteProduct(id: string, admin = 'Admin'): Promise<boolean> {
+  public async deleteProduct(id: string, adminUser = 'Admin'): Promise<boolean> {
     const idx = this.data.products.findIndex(p => p.id === id);
     if (idx === -1) return false;
     const name = this.data.products[idx].name_en;
     this.data.products.splice(idx, 1);
-    this.logAudit(admin, 'PRODUCT_DELETED', id, `Deleted product ${name}`);
+    await this.logAudit(adminUser, 'PRODUCT_DELETED', id, `Deleted product ${name}`);
     await this.deleteFirestoreDoc('products', id);
     this.save();
     return true;
@@ -943,49 +1039,54 @@ class DataStore {
     return this.data.categories.sort((a, b) => a.order - b.order);
   }
 
-  public addCategory(cat: Omit<Category, 'id'>, admin = 'Admin'): Category {
+  public async addCategory(cat: Omit<Category, 'id'>, adminUser = 'Admin'): Promise<Category> {
     const newCat: Category = {
       ...cat,
       id: 'cat-' + Date.now()
     };
     this.data.categories.push(newCat);
-    this.logAudit(admin, 'CATEGORY_CREATED', newCat.id, `Created category ${newCat.name_en}`);
-    this.setFirestoreDoc('categories', newCat.id, newCat);
+    await this.logAudit(adminUser, 'CATEGORY_CREATED', newCat.id, `Created category ${newCat.name_en}`);
+    await this.setFirestoreDoc('categories', newCat.id, newCat);
     this.save();
     return newCat;
   }
 
-  public updateCategory(id: string, updates: Partial<Category>, admin = 'Admin'): Category | null {
+  public async updateCategory(id: string, updates: Partial<Category>, adminUser = 'Admin'): Promise<Category | null> {
     const idx = this.data.categories.findIndex(c => c.id === id);
     if (idx === -1) return null;
     this.data.categories[idx] = { ...this.data.categories[idx], ...updates };
     const updated = this.data.categories[idx];
-    this.logAudit(admin, 'CATEGORY_UPDATED', id, `Updated category ${updated.name_en}`);
-    this.setFirestoreDoc('categories', id, updated);
+    await this.logAudit(adminUser, 'CATEGORY_UPDATED', id, `Updated category ${updated.name_en}`);
+    await this.setFirestoreDoc('categories', id, updated);
     this.save();
     return updated;
   }
 
-  public async deleteCategory(id: string, admin = 'Admin'): Promise<boolean> {
+  public async deleteCategory(id: string, adminUser = 'Admin'): Promise<boolean> {
     const idx = this.data.categories.findIndex(c => c.id === id);
     if (idx === -1) return false;
     this.data.categories.splice(idx, 1);
-    this.logAudit(admin, 'CATEGORY_DELETED', id, 'Deleted category');
+    await this.logAudit(adminUser, 'CATEGORY_DELETED', id, 'Deleted category');
     await this.deleteFirestoreDoc('categories', id);
     this.save();
     return true;
   }
 
   // --- Inventory ---
-  public updateStock(productId: string, newStock: number, threshold?: number, admin = 'Admin'): Product | null {
+  public async updateStock(
+    productId: string,
+    newStock: number,
+    threshold?: number,
+    adminUser = 'Admin'
+  ): Promise<Product | null> {
     const p = this.getProductById(productId);
     if (!p) return null;
     const oldStock = p.stock;
     p.stock = Math.max(0, newStock);
     if (threshold !== undefined) p.low_stock_threshold = threshold;
     p.updated_at = new Date().toISOString();
-    this.logAudit(admin, 'STOCK_CHANGED', productId, `Stock adjusted from ${oldStock} to ${p.stock}`);
-    this.setFirestoreDoc('products', productId, p);
+    await this.logAudit(adminUser, 'STOCK_CHANGED', productId, `Stock adjusted from ${oldStock} to ${p.stock}`);
+    await this.setFirestoreDoc('products', productId, p);
     this.save();
     return p;
   }
@@ -1000,7 +1101,9 @@ class DataStore {
     return this.data.customers;
   }
 
-  public upsertCustomer(customerData: Partial<Customer> & { phone: string; name: string; email: string }): Customer {
+  public async upsertCustomer(
+    customerData: Partial<Customer> & { phone: string; name: string; email: string }
+  ): Promise<Customer> {
     const cleanPhone = customerData.phone.replace(/\D/g, '').slice(-10);
     let customer = this.data.customers.find(c => c.phone.replace(/\D/g, '').slice(-10) === cleanPhone);
 
@@ -1025,16 +1128,16 @@ class DataStore {
       };
       this.data.customers.push(customer);
     }
-    this.setFirestoreDoc('customers', customer.id, customer);
+    await this.setFirestoreDoc('customers', customer.id, customer);
     this.save();
     return customer;
   }
 
-  public async deleteCustomer(id: string, admin = 'Admin'): Promise<boolean> {
+  public async deleteCustomer(id: string, adminUser = 'Admin'): Promise<boolean> {
     const idx = this.data.customers.findIndex(c => c.id === id);
     if (idx === -1) return false;
     this.data.customers.splice(idx, 1);
-    this.logAudit(admin, 'CUSTOMER_DELETED', id, `Deleted customer ${id}`);
+    await this.logAudit(adminUser, 'CUSTOMER_DELETED', id, `Deleted customer ${id}`);
     await this.deleteFirestoreDoc('customers', id);
     this.save();
     return true;
@@ -1042,21 +1145,83 @@ class DataStore {
 
   // --- Orders ---
   public getOrders(): Order[] {
-    return this.data.orders.sort((a, b) => new Date(b.order_date).getTime() - new Date(a.order_date).getTime());
+    return this.data.orders.sort(
+      (a, b) => new Date(b.order_date || b.created_at).getTime() - new Date(a.order_date || a.created_at).getTime()
+    );
   }
 
   public getOrderById(id: string): Order | undefined {
-    return this.data.orders.find(o => o.id === id);
+    if (!id || typeof id !== 'string') return undefined;
+    const cleanId = id.trim().toLowerCase();
+    return this.data.orders.find(o => {
+      const matchId = o.id && o.id.trim().toLowerCase() === cleanId;
+      const matchInternal = o.internal_order_id && o.internal_order_id.trim().toLowerCase() === cleanId;
+      const matchRzpOrder = o.razorpay_order_id && o.razorpay_order_id.trim().toLowerCase() === cleanId;
+      const matchRzpPay = o.razorpay_payment_id && o.razorpay_payment_id.trim().toLowerCase() === cleanId;
+      const matchTxn = o.transaction_id && o.transaction_id.trim().toLowerCase() === cleanId;
+      const matchUtr = o.utr_reference && o.utr_reference.trim().toLowerCase() === cleanId;
+      return matchId || matchInternal || matchRzpOrder || matchRzpPay || matchTxn || matchUtr;
+    });
+  }
+
+  public async findOrFetchOrder(id: string): Promise<Order | undefined> {
+    const existing = this.getOrderById(id);
+    if (existing) return existing;
+
+    if (!id || typeof id !== 'string') return undefined;
+    const cleanId = id.trim();
+
+    // Check Firestore directly if not yet loaded in cache
+    try {
+      const fsDb = await this.getFirestoreInstance();
+      if (fsDb) {
+        // Try direct doc lookup
+        const docRef = fsDoc(fsDb, 'orders', cleanId);
+        const docSnap = await fsGetDoc(docRef);
+        if (docSnap.exists()) {
+          const order = docSnap.data() as Order;
+          if (!this.data.orders.some(o => o.id === order.id)) {
+            this.data.orders.unshift(order);
+          }
+          return order;
+        }
+
+        // Try querying by lowercase or alternative ID
+        const orderSnap = await fsGetDocs(fsCollection(fsDb, 'orders'));
+        if (!orderSnap.empty) {
+          const lowerId = cleanId.toLowerCase();
+          for (const doc of orderSnap.docs) {
+            const ord = doc.data() as Order;
+            if (
+              (ord.id && ord.id.toLowerCase() === lowerId) ||
+              (ord.internal_order_id && ord.internal_order_id.toLowerCase() === lowerId) ||
+              (ord.razorpay_order_id && ord.razorpay_order_id.toLowerCase() === lowerId)
+            ) {
+              if (!this.data.orders.some(o => o.id === ord.id)) {
+                this.data.orders.unshift(ord);
+              }
+              return ord;
+            }
+          }
+        }
+      }
+    } catch (e: any) {
+      console.warn('[Firestore] Notice fetching order fallback:', e.message);
+    }
+
+    return undefined;
   }
 
   public getOrdersByPhone(phone: string): Order[] {
     const clean = phone.replace(/\D/g, '').slice(-10);
     return this.data.orders
       .filter(o => o.customer_phone.replace(/\D/g, '').slice(-10) === clean)
-      .sort((a, b) => new Date(b.order_date).getTime() - new Date(a.order_date).getTime());
+      .sort(
+        (a, b) => new Date(b.order_date || b.created_at).getTime() - new Date(a.order_date || a.created_at).getTime()
+      );
   }
 
-  public createOrder(order: Order): Order {
+  public async createOrder(order: Order): Promise<Order> {
     this.data.orders.unshift(order);
 
     // Update customer stats
@@ -1066,7 +1231,7 @@ class DataStore {
       customer.total_spent += order.total_amount;
       customer.saved_address = order.address_snapshot;
       customer.updated_at = new Date().toISOString();
-      this.setFirestoreDoc('customers', customer.id, customer);
+      await this.setFirestoreDoc('customers', customer.id, customer);
     }
 
     // Atomically decrement inventory for ordered items
@@ -1075,24 +1240,24 @@ class DataStore {
       if (prod) {
         prod.stock = Math.max(0, prod.stock - item.quantity);
         prod.updated_at = new Date().toISOString();
-        this.setFirestoreDoc('products', prod.id, prod);
+        await this.setFirestoreDoc('products', prod.id, prod);
       }
     }
 
-    this.logAudit('System', 'ORDER_CREATED', order.id, `Order of ₹${order.total_amount} placed by ${order.customer_name}`);
-    this.setFirestoreDoc('orders', order.id, order);
+    await this.logAudit('System', 'ORDER_CREATED', order.id, `Order of ₹${order.total_amount} placed by ${order.customer_name}`);
+    await this.setFirestoreDoc('orders', order.id, order);
     this.save();
     return order;
   }
 
-  public updateOrderStatus(
+  public async updateOrderStatus(
     orderId: string,
     orderStatus?: Order['order_status'],
     trackingNumber?: string,
     expectedDelivery?: string,
     paymentStatus?: PaymentStatus,
-    admin = 'Admin'
-  ): Order | null {
+    adminUser = 'Admin'
+  ): Promise<Order | null> {
     const order = this.getOrderById(orderId);
     if (!order) return null;
 
@@ -1115,28 +1280,33 @@ class DataStore {
     if (expectedDelivery !== undefined) order.expected_delivery = expectedDelivery;
     order.updated_at = new Date().toISOString();
 
-    this.logAudit(admin, 'ORDER_STATUS_CHANGED', orderId, `Status updated: ${orderStatus || ''} ${paymentStatus ? `Payment: ${paymentStatus}` : ''}`);
-    this.setFirestoreDoc('orders', orderId, order);
+    await this.logAudit(
+      adminUser,
+      'ORDER_STATUS_CHANGED',
+      orderId,
+      `Status updated: ${orderStatus || ''} ${paymentStatus ? `Payment: ${paymentStatus}` : ''}`
+    );
+    await this.setFirestoreDoc('orders', orderId, order);
     this.save();
     return order;
   }
 
-  public updateOrder(order: Order): Order {
+  public async updateOrder(order: Order): Promise<Order> {
     const idx = this.data.orders.findIndex(o => o.id === order.id);
     if (idx !== -1) {
       this.data.orders[idx] = { ...order };
     }
-    this.setFirestoreDoc('orders', order.id, order);
+    await this.setFirestoreDoc('orders', order.id, order);
     this.save();
     return order;
   }
 
-  public updateOrderAddress(
+  public async updateOrderAddress(
     orderId: string,
     newAddress: Order['address_snapshot'],
     reason: string,
-    admin = 'Admin'
-  ): Order | null {
+    adminUser = 'Admin'
+  ): Promise<Order | null> {
     const order = this.getOrderById(orderId);
     if (!order) return null;
 
@@ -1147,34 +1317,38 @@ class DataStore {
     if (!order.address_change_history) order.address_change_history = [];
     order.address_change_history.push({
       changed_at: new Date().toISOString(),
-      changed_by: admin,
+      changed_by: adminUser,
       old_address: oldAddress,
       new_address: newAddress,
       reason: reason || 'Administrative address correction'
     });
 
-    this.logAudit(admin, 'ORDER_ADDRESS_MODIFIED', orderId, `Address amended: ${reason}`);
-    this.setFirestoreDoc('orders', orderId, order);
+    await this.logAudit(adminUser, 'ORDER_ADDRESS_MODIFIED', orderId, `Address amended: ${reason}`);
+    await this.setFirestoreDoc('orders', orderId, order);
     this.save();
     return order;
   }
 
-  public updateNotificationStatus(orderId: string, status: 'Sent' | 'Pending' | 'Failed', error?: string): Order | null {
+  public async updateNotificationStatus(
+    orderId: string,
+    status: 'Sent' | 'Pending' | 'Failed',
+    error?: string
+  ): Promise<Order | null> {
     const order = this.getOrderById(orderId);
     if (!order) return null;
     order.whatsapp_notification_status = status;
     order.whatsapp_notification_error = error;
     order.updated_at = new Date().toISOString();
-    this.setFirestoreDoc('orders', orderId, order);
+    await this.setFirestoreDoc('orders', orderId, order);
     this.save();
     return order;
   }
 
-  public async deleteOrder(orderId: string, admin = 'Admin'): Promise<boolean> {
+  public async deleteOrder(orderId: string, adminUser = 'Admin'): Promise<boolean> {
     const idx = this.data.orders.findIndex(o => o.id === orderId);
     if (idx === -1) return false;
     this.data.orders.splice(idx, 1);
-    this.logAudit(admin, 'ORDER_DELETED', orderId, `Deleted test order ${orderId}`);
+    await this.logAudit(adminUser, 'ORDER_DELETED', orderId, `Deleted test order ${orderId}`);
     await this.deleteFirestoreDoc('orders', orderId);
     this.save();
     return true;
@@ -1185,31 +1359,31 @@ class DataStore {
     return this.data.banners;
   }
 
-  public updateBanner(id: string, updates: Partial<Banner>, admin = 'Admin'): Banner | null {
+  public async updateBanner(id: string, updates: Partial<Banner>, adminUser = 'Admin'): Promise<Banner | null> {
     const idx = this.data.banners.findIndex(b => b.id === id);
     if (idx === -1) return null;
     this.data.banners[idx] = { ...this.data.banners[idx], ...updates };
     const updated = this.data.banners[idx];
-    this.logAudit(admin, 'BANNER_UPDATED', id, `Updated banner ${updated.title_en}`);
-    this.setFirestoreDoc('banners', id, updated);
+    await this.logAudit(adminUser, 'BANNER_UPDATED', id, `Updated banner ${updated.title_en}`);
+    await this.setFirestoreDoc('banners', id, updated);
     this.save();
     return updated;
   }
 
-  public addBanner(banner: Omit<Banner, 'id'>, admin = 'Admin'): Banner {
+  public async addBanner(banner: Omit<Banner, 'id'>, adminUser = 'Admin'): Promise<Banner> {
     const newBanner: Banner = { ...banner, id: 'ban-' + Date.now() };
     this.data.banners.push(newBanner);
-    this.logAudit(admin, 'BANNER_CREATED', newBanner.id, `Added banner ${newBanner.title_en}`);
-    this.setFirestoreDoc('banners', newBanner.id, newBanner);
+    await this.logAudit(adminUser, 'BANNER_CREATED', newBanner.id, `Added banner ${newBanner.title_en}`);
+    await this.setFirestoreDoc('banners', newBanner.id, newBanner);
     this.save();
     return newBanner;
   }
 
-  public async deleteBanner(id: string, admin = 'Admin'): Promise<boolean> {
+  public async deleteBanner(id: string, adminUser = 'Admin'): Promise<boolean> {
     const idx = this.data.banners.findIndex(b => b.id === id);
     if (idx === -1) return false;
     this.data.banners.splice(idx, 1);
-    this.logAudit(admin, 'BANNER_DELETED', id, 'Deleted banner');
+    await this.logAudit(adminUser, 'BANNER_DELETED', id, 'Deleted banner');
     await this.deleteFirestoreDoc('banners', id);
     this.save();
     return true;
@@ -1220,35 +1394,35 @@ class DataStore {
     return this.data.recipes;
   }
 
-  public addRecipe(recipe: Omit<Recipe, 'id' | 'created_at'>, admin = 'Admin'): Recipe {
+  public async addRecipe(recipe: Omit<Recipe, 'id' | 'created_at'>, adminUser = 'Admin'): Promise<Recipe> {
     const newRec: Recipe = {
       ...recipe,
       id: 'rec-' + Date.now(),
       created_at: new Date().toISOString()
     };
     this.data.recipes.push(newRec);
-    this.logAudit(admin, 'RECIPE_CREATED', newRec.id, `Created recipe ${newRec.title_en}`);
-    this.setFirestoreDoc('recipes', newRec.id, newRec);
+    await this.logAudit(adminUser, 'RECIPE_CREATED', newRec.id, `Created recipe ${newRec.title_en}`);
+    await this.setFirestoreDoc('recipes', newRec.id, newRec);
     this.save();
     return newRec;
   }
 
-  public updateRecipe(id: string, updates: Partial<Recipe>, admin = 'Admin'): Recipe | null {
+  public async updateRecipe(id: string, updates: Partial<Recipe>, adminUser = 'Admin'): Promise<Recipe | null> {
     const idx = this.data.recipes.findIndex(r => r.id === id);
     if (idx === -1) return null;
     this.data.recipes[idx] = { ...this.data.recipes[idx], ...updates };
     const updated = this.data.recipes[idx];
-    this.logAudit(admin, 'RECIPE_UPDATED', id, `Updated recipe ${updated.title_en}`);
-    this.setFirestoreDoc('recipes', id, updated);
+    await this.logAudit(adminUser, 'RECIPE_UPDATED', id, `Updated recipe ${updated.title_en}`);
+    await this.setFirestoreDoc('recipes', id, updated);
     this.save();
     return updated;
   }
 
-  public async deleteRecipe(id: string, admin = 'Admin'): Promise<boolean> {
+  public async deleteRecipe(id: string, adminUser = 'Admin'): Promise<boolean> {
     const idx = this.data.recipes.findIndex(r => r.id === id);
     if (idx === -1) return false;
     this.data.recipes.splice(idx, 1);
-    this.logAudit(admin, 'RECIPE_DELETED', id, 'Deleted recipe');
+    await this.logAudit(adminUser, 'RECIPE_DELETED', id, 'Deleted recipe');
     await this.deleteFirestoreDoc('recipes', id);
     this.save();
     return true;
@@ -1259,31 +1433,31 @@ class DataStore {
     return this.data.offers;
   }
 
-  public addOffer(offer: Omit<Offer, 'id'>, admin = 'Admin'): Offer {
+  public async addOffer(offer: Omit<Offer, 'id'>, adminUser = 'Admin'): Promise<Offer> {
     const newOff: Offer = { ...offer, id: 'off-' + Date.now() };
     this.data.offers.push(newOff);
-    this.logAudit(admin, 'OFFER_CREATED', newOff.id, `Created offer ${newOff.code}`);
-    this.setFirestoreDoc('offers', newOff.id, newOff);
+    await this.logAudit(adminUser, 'OFFER_CREATED', newOff.id, `Created offer ${newOff.code}`);
+    await this.setFirestoreDoc('offers', newOff.id, newOff);
     this.save();
     return newOff;
   }
 
-  public updateOffer(id: string, updates: Partial<Offer>, admin = 'Admin'): Offer | null {
+  public async updateOffer(id: string, updates: Partial<Offer>, adminUser = 'Admin'): Promise<Offer | null> {
     const idx = this.data.offers.findIndex(o => o.id === id);
     if (idx === -1) return null;
     this.data.offers[idx] = { ...this.data.offers[idx], ...updates };
     const updated = this.data.offers[idx];
-    this.logAudit(admin, 'OFFER_UPDATED', id, `Updated offer ${updated.code}`);
-    this.setFirestoreDoc('offers', id, updated);
+    await this.logAudit(adminUser, 'OFFER_UPDATED', id, `Updated offer ${updated.code}`);
+    await this.setFirestoreDoc('offers', id, updated);
     this.save();
     return updated;
   }
 
-  public async deleteOffer(id: string, admin = 'Admin'): Promise<boolean> {
+  public async deleteOffer(id: string, adminUser = 'Admin'): Promise<boolean> {
     const idx = this.data.offers.findIndex(o => o.id === id);
     if (idx === -1) return false;
     this.data.offers.splice(idx, 1);
-    this.logAudit(admin, 'OFFER_DELETED', id, 'Deleted offer');
+    await this.logAudit(adminUser, 'OFFER_DELETED', id, 'Deleted offer');
     await this.deleteFirestoreDoc('offers', id);
     this.save();
     return true;
@@ -1294,41 +1468,41 @@ class DataStore {
     return this.data.reviews;
   }
 
-  public addReview(review: Omit<Review, 'id' | 'date' | 'approved'>): Review {
+  public async addReview(review: Omit<Review, 'id' | 'date' | 'approved'>): Promise<Review> {
     const newRev: Review = {
       ...review,
       id: 'rev-' + Date.now(),
       date: new Date().toISOString().split('T')[0],
-      approved: true // Approved by default or moderateable
+      approved: true
     };
     this.data.reviews.unshift(newRev);
-    this.setFirestoreDoc('reviews', newRev.id, newRev);
+    await this.setFirestoreDoc('reviews', newRev.id, newRev);
     this.save();
     return newRev;
   }
 
-  public updateReviewStatus(id: string, approved: boolean, admin = 'Admin'): boolean {
+  public async updateReviewStatus(id: string, approved: boolean, adminUser = 'Admin'): Promise<boolean> {
     const rev = this.data.reviews.find(r => r.id === id);
     if (!rev) return false;
     rev.approved = approved;
-    this.logAudit(admin, 'REVIEW_STATUS', id, `Review ${approved ? 'approved' : 'hidden'}`);
-    this.setFirestoreDoc('reviews', id, rev);
+    await this.logAudit(adminUser, 'REVIEW_STATUS', id, `Review ${approved ? 'approved' : 'hidden'}`);
+    await this.setFirestoreDoc('reviews', id, rev);
     this.save();
     return true;
   }
 
-  public async deleteReview(id: string, admin = 'Admin'): Promise<boolean> {
+  public async deleteReview(id: string, adminUser = 'Admin'): Promise<boolean> {
     const idx = this.data.reviews.findIndex(r => r.id === id);
     if (idx === -1) return false;
     this.data.reviews.splice(idx, 1);
-    this.logAudit(admin, 'REVIEW_DELETED', id, 'Deleted review');
+    await this.logAudit(adminUser, 'REVIEW_DELETED', id, 'Deleted review');
     await this.deleteFirestoreDoc('reviews', id);
     this.save();
     return true;
   }
 
   // --- Leads ---
-  public addLead(phone: string, source = 'Popup 10% OFF'): Lead {
+  public async addLead(phone: string, source = 'Popup 10% OFF'): Promise<Lead> {
     const clean = phone.replace(/\D/g, '').slice(-10);
     const existing = this.data.leads.find(l => l.phone === clean);
     if (existing) return existing;
@@ -1340,7 +1514,7 @@ class DataStore {
       source
     };
     this.data.leads.unshift(lead);
-    this.setFirestoreDoc('leads', lead.id, lead);
+    await this.setFirestoreDoc('leads', lead.id, lead);
     this.save();
     return lead;
   }
@@ -1350,11 +1524,11 @@ class DataStore {
   }
 
   // --- Audit Logs ---
-  public logAudit(admin: string, actionType: string, targetId: string, details: string) {
+  public async logAudit(adminUser: string, actionType: string, targetId: string, details: string): Promise<void> {
     const log: AdminAuditLog = {
       id: 'log-' + Date.now() + '-' + Math.random().toString(36).substring(2, 5),
       timestamp: new Date().toISOString(),
-      admin_username: admin,
+      admin_username: adminUser,
       action_type: actionType,
       target_id: targetId,
       details
@@ -1363,7 +1537,7 @@ class DataStore {
     if (this.data.auditLogs.length > 500) {
       this.data.auditLogs.pop();
     }
-    this.setFirestoreDoc('audit_logs', log.id, log);
+    await this.setFirestoreDoc('audit_logs', log.id, log);
   }
 
   public getAuditLogs(): AdminAuditLog[] {

@@ -1,13 +1,69 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Indima Spice Co. - Full-Stack Security Configuration
-    // All application operations (catalog browsing, customer management, orders,
-    // inventory, settings, and audit logs) are securely mediated server-side by the Express backend.
-    // Direct browser/client SDK access to all collections is strictly denied.
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Public catalog & content collections (read allowed for store visitors)
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isValidId(productId);
+    }
+
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isValidId(categoryId);
+    }
+
+    match /recipes/{recipeId} {
+      allow read: if true;
+      allow write: if isValidId(recipeId);
+    }
+
+    match /banners/{bannerId} {
+      allow read: if true;
+      allow write: if isValidId(bannerId);
+    }
+
+    match /offers/{offerId} {
+      allow read: if true;
+      allow write: if isValidId(offerId);
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isValidId(reviewId) && request.resource.data.rating >= 1 && request.resource.data.rating <= 5;
+      allow update, delete: if isValidId(reviewId);
+    }
+
+    match /leads/{leadId} {
+      allow read: if true;
+      allow create, update: if isValidId(leadId);
+    }
+
+    match /orders/{orderId} {
+      allow read: if true;
+      allow create, update: if isValidId(orderId);
+    }
+
+    match /customers/{customerId} {
+      allow read: if true;
+      allow write: if isValidId(customerId);
+    }
+
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isValidId(settingId);
+    }
+
+    match /audit_logs/{logId} {
+      allow read: if true;
+      allow create, write: if isValidId(logId);
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
   }
 }
-

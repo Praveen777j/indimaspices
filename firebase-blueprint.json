@@ -1,0 +1,187 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "Authentic spice product with pricing, stock, weights, and regional details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name_en": { "type": "string" },
+        "name_kn": { "type": "string" },
+        "category_id": { "type": "string" },
+        "price": { "type": "number" },
+        "stock": { "type": "number" },
+        "status": { "type": "string", "enum": ["in_stock", "low_stock", "out_of_stock"] }
+      },
+      "required": ["id", "name_en", "price"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Spice category taxonomy",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name_en": { "type": "string" },
+        "name_kn": { "type": "string" },
+        "order": { "type": "number" }
+      },
+      "required": ["id", "name_en"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer purchase orders and tracking info",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "order_number": { "type": "string" },
+        "customer_id": { "type": "string" },
+        "total_amount": { "type": "number" },
+        "status": { "type": "string" },
+        "payment_status": { "type": "string" }
+      },
+      "required": ["id", "total_amount", "status"]
+    },
+    "Customer": {
+      "title": "Customer",
+      "description": "Customer profiles and order history aggregation",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" }
+      },
+      "required": ["id", "name", "phone"]
+    },
+    "Recipe": {
+      "title": "Recipe",
+      "description": "Karnataka heritage recipes and spice pairing guides",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title_en": { "type": "string" },
+        "title_kn": { "type": "string" }
+      },
+      "required": ["id", "title_en"]
+    },
+    "Banner": {
+      "title": "Banner",
+      "description": "Hero, festival, and announcement banners",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title_en": { "type": "string" },
+        "type": { "type": "string" },
+        "enabled": { "type": "boolean" }
+      },
+      "required": ["id", "title_en"]
+    },
+    "Offer": {
+      "title": "Offer",
+      "description": "Coupon codes and festive discounts",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "code": { "type": "string" },
+        "discount_value": { "type": "number" },
+        "active": { "type": "boolean" }
+      },
+      "required": ["id", "code"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "Customer ratings and testimonials",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "product_id": { "type": "string" },
+        "customer_name": { "type": "string" },
+        "rating": { "type": "number" },
+        "approved": { "type": "boolean" }
+      },
+      "required": ["id", "product_id", "customer_name", "rating"]
+    },
+    "AdminAuditLog": {
+      "title": "AdminAuditLog",
+      "description": "Administrative action logs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "action": { "type": "string" },
+        "admin_user": { "type": "string" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["id", "action", "timestamp"]
+    },
+    "Lead": {
+      "title": "Lead",
+      "description": "B2B wholesale, distributorship and export inquiries",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "type": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "name", "phone"]
+    },
+    "BusinessSettings": {
+      "title": "BusinessSettings",
+      "description": "Store configuration, contact information, delivery rules and payment details",
+      "type": "object",
+      "properties": {
+        "store_name": { "type": "string" },
+        "phone": { "type": "string" },
+        "support_email": { "type": "string" }
+      },
+      "required": ["store_name"]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Catalog of authentic spice powders and whole spices"
+    },
+    "/categories/{categoryId}": {
+      "schema": "Category",
+      "description": "Product categories"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Customer purchase orders and tracking info"
+    },
+    "/customers/{customerId}": {
+      "schema": "Customer",
+      "description": "Registered and guest customers with loyalty points"
+    },
+    "/recipes/{recipeId}": {
+      "schema": "Recipe",
+      "description": "Karnataka heritage recipes and spice pairing guides"
+    },
+    "/banners/{bannerId}": {
+      "schema": "Banner",
+      "description": "Hero, festival, and announcement banners"
+    },
+    "/offers/{offerId}": {
+      "schema": "Offer",
+      "description": "Coupon codes and festive discounts"
+    },
+    "/reviews/{reviewId}": {
+      "schema": "Review",
+      "description": "Customer ratings and testimonials"
+    },
+    "/audit_logs/{logId}": {
+      "schema": "AdminAuditLog",
+      "description": "Security and administrative audit trail"
+    },
+    "/leads/{leadId}": {
+      "schema": "Lead",
+      "description": "Wholesale, distributor, and export inquiries"
+    },
+    "/settings/{settingId}": {
+      "schema": "BusinessSettings",
+      "description": "Store configuration, contact info, and payment settings"
+    }
+  }
+}

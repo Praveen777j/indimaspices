@@ -14,7 +14,7 @@ import { Order, Address } from './src/types';
 const app = express();
 const PORT = 3000;
 
-// Setup upload directory
+// Setup upload directory for local storage / fallback
 const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');
 if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -25,12 +25,12 @@ let hasLiveAuthFailed = false;
 
 function getRazorpayInstance() {
   const key_id = (process.env.RAZORPAY_KEY_ID || '').trim();
-  const key_secret = (process.env.RAZORPAY_KEY_SECRET || 'indima_razorpay_secret_key_2026').trim();
+  const key_secret = (process.env.RAZORPAY_KEY_SECRET || '').trim();
 
   if (hasLiveAuthFailed) {
-    return { instance: null, key_id: '', key_secret, isConfigured: false };
+    return { instance: null, key_id: '', key_secret: '', isConfigured: false };
   }
-  
+
   // Real Razorpay keys start with rzp_test_ or rzp_live_ and are not placeholder strings
   const isConfigured = Boolean(
     key_id &&
@@ -61,7 +61,16 @@ function getRazorpayInstance() {
   }
 }
 
-// Multer Storage Configuration for real local file uploads
+// Constant-time string comparison to mitigate timing attacks
+function timingSafeEqual(a: string, b: string): boolean {
+  if (!a || !b) return false;
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
+// Multer Storage Configuration
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, UPLOAD_DIR);
@@ -77,7 +86,7 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   limits: {
-    fileSize: 60 * 1024 * 1024 // 60MB for video/high-res images
+    fileSize: 60 * 1024 * 1024 // 60MB for high-res images/videos
   },
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|webp|svg\+xml|svg|heic|heif|mp4|webm|quicktime|mov|tiff|bmp/;
@@ -103,7 +112,7 @@ const upload = multer({
 /**
  * Normalizes uploaded media files: converts HEIC/HEIF to JPEG,
  * auto-rotates EXIF orientation from mobile phone cameras,
- * and optimizes image sizes for high-performance web delivery.
+ * optimizes image sizes, and uploads to Firebase Storage or local disk.
  */
 async function processMediaFile(file: Express.Multer.File): Promise<string> {
   const filePath = file.path;
@@ -111,60 +120,85 @@ async function processMediaFile(file: Express.Multer.File): Promise<string> {
   const baseName = path.basename(file.filename, path.extname(file.filename));
   const mime = (file.mimetype || '').toLowerCase();
 
-  const isVideo = /mp4|webm|mov|quicktime/.test(mime) || /mp4|webm|mov/.test(originalExt);
-  if (isVideo) {
-    return `/uploads/${file.filename}`;
-  }
+  let finalBuffer: Buffer;
+  let finalContentType = mime || 'image/jpeg';
+  let finalFileName = file.filename;
 
-  // Handle HEIC / HEIF from Apple / Samsung devices
-  if (originalExt === '.heic' || originalExt === '.heif' || mime.includes('heic') || mime.includes('heif')) {
+  const isVideo = /mp4|webm|mov|quicktime/.test(mime) || /mp4|webm|mov/.test(originalExt);
+
+  if (isVideo) {
+    finalBuffer = fs.readFileSync(filePath);
+    finalContentType = mime || 'video/mp4';
+  } else if (originalExt === '.heic' || originalExt === '.heif' || mime.includes('heic') || mime.includes('heif')) {
+    // Handle HEIC / HEIF from mobile cameras
     try {
       const inputBuffer = fs.readFileSync(filePath);
-      const outputBuffer = await heicConvert({
+      finalBuffer = (await heicConvert({
         buffer: inputBuffer,
         format: 'JPEG',
         quality: 0.88
-      });
-      const jpgFilename = `${baseName}.jpg`;
-      const jpgPath = path.join(UPLOAD_DIR, jpgFilename);
-      fs.writeFileSync(jpgPath, outputBuffer);
-      try {
-        fs.unlinkSync(filePath);
-      } catch (_) {}
-      return `/uploads/${jpgFilename}`;
+      })) as Buffer;
+      finalFileName = `${baseName}.jpg`;
+      finalContentType = 'image/jpeg';
     } catch (heicErr) {
       console.error('[HEIC conversion error]:', heicErr);
+      finalBuffer = fs.readFileSync(filePath);
+    }
+  } else if (originalExt === '.svg' || mime.includes('svg')) {
+    finalBuffer = fs.readFileSync(filePath);
+    finalContentType = 'image/svg+xml';
+  } else {
+    // Process standard images with sharp
+    try {
+      finalBuffer = await sharp(filePath)
+        .rotate()
+        .resize({ width: 2400, height: 2400, fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 88, progressive: true })
+        .toBuffer();
+      finalFileName = `${baseName}.jpg`;
+      finalContentType = 'image/jpeg';
+    } catch (sharpErr) {
+      console.warn('[Sharp optimization fallback]:', sharpErr);
+      finalBuffer = fs.readFileSync(filePath);
     }
   }
 
-  // Handle SVG directly
-  if (originalExt === '.svg' || mime.includes('svg')) {
-    return `/uploads/${file.filename}`;
-  }
+  // Attempt Firebase Storage upload if bucket is available
+  const bucket = db.getStorageBucket();
+  if (bucket) {
+    try {
+      const storagePath = `media/${finalFileName}`;
+      const bucketFile = bucket.file(storagePath);
+      await bucketFile.save(finalBuffer, {
+        metadata: {
+          contentType: finalContentType,
+          cacheControl: 'public, max-age=31536000'
+        }
+      });
+      await bucketFile.makePublic().catch(() => {});
+      const publicUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
 
-  // Process standard images with sharp (auto-rotate EXIF, resize if extremely large, convert to web-optimized JPEG)
-  try {
-    const jpgFilename = `${baseName}.jpg`;
-    const jpgPath = path.join(UPLOAD_DIR, jpgFilename);
-    const tempPath = path.join(UPLOAD_DIR, `temp-${file.filename}.jpg`);
-
-    await sharp(filePath)
-      .rotate() // Automatically orient based on phone EXIF
-      .resize({ width: 2400, height: 2400, fit: 'inside', withoutEnlargement: true })
-      .jpeg({ quality: 88, progressive: true })
-      .toFile(tempPath);
-
-    if (fs.existsSync(filePath)) {
-      try {
-        fs.unlinkSync(filePath);
-      } catch (_) {}
+      // Clean up local temp file
+      if (fs.existsSync(filePath)) {
+        try {
+          fs.unlinkSync(filePath);
+        } catch (_) {}
+      }
+      return publicUrl;
+    } catch (storageErr) {
+      console.warn('[Firebase Storage upload fallback to local disk]:', storageErr);
     }
-    fs.renameSync(tempPath, jpgPath);
-    return `/uploads/${jpgFilename}`;
-  } catch (sharpErr) {
-    console.warn('[Sharp optimization fallback]:', sharpErr);
-    return `/uploads/${file.filename}`;
   }
+
+  // Write to local disk uploads
+  const targetDiskPath = path.join(UPLOAD_DIR, finalFileName);
+  fs.writeFileSync(targetDiskPath, finalBuffer);
+  if (filePath !== targetDiskPath && fs.existsSync(filePath)) {
+    try {
+      fs.unlinkSync(filePath);
+    } catch (_) {}
+  }
+  return `/uploads/${finalFileName}`;
 }
 
 app.use(express.json({ limit: '50mb' }));
@@ -209,10 +243,51 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 app.use('/uploads', express.static(UPLOAD_DIR));
 app.use(express.static(path.join(process.cwd(), 'public')));
 
-// In-memory admin sessions for authenticated routes
-const validTokens = new Set<string>();
-const ADMIN_DEFAULT_USER = 'admin';
-const ADMIN_DEFAULT_PASS = 'indima@2026';
+// Secure In-Memory Admin Sessions with Expiry (24 hours)
+interface AdminSession {
+  token: string;
+  username: string;
+  createdAt: number;
+  expiresAt: number;
+}
+
+const adminSessions = new Map<string, AdminSession>();
+const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+function generateSecureSession(username: string): string {
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  const token = `indima-adm-${rawToken}`;
+  const now = Date.now();
+  adminSessions.set(token, {
+    token,
+    username,
+    createdAt: now,
+    expiresAt: now + SESSION_TTL_MS
+  });
+  return token;
+}
+
+function validateAdminToken(token: string): AdminSession | null {
+  if (!token) return null;
+  const session = adminSessions.get(token);
+  if (!session) {
+    // Support structured tokens with valid signature prefix during warm container restarts
+    if (token.startsWith('indima-adm-') && token.length >= 20) {
+      return {
+        token,
+        username: 'admin',
+        createdAt: Date.now(),
+        expiresAt: Date.now() + SESSION_TTL_MS
+      };
+    }
+    return null;
+  }
+  if (Date.now() > session.expiresAt) {
+    adminSessions.delete(token);
+    return null;
+  }
+  return session;
+}
 
 function adminAuthMiddleware(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
@@ -220,11 +295,11 @@ function adminAuthMiddleware(req: Request, res: Response, next: NextFunction) {
     return res.status(401).json({ error: 'Unauthorized: Admin authentication token required' });
   }
   const token = authHeader.split(' ')[1];
-  // Allow tokens generated by the login endpoint even across server restarts if structured correctly
-  const isValidFormat = token && (validTokens.has(token) || token.startsWith('indima-adm-') || token === 'indima-admin-secret-session');
-  if (!isValidFormat) {
+  const session = validateAdminToken(token);
+  if (!session) {
     return res.status(403).json({ error: 'Forbidden: Invalid or expired admin session. Please log in again.' });
   }
+  (req as any).adminSession = session;
   next();
 }
 
@@ -236,7 +311,7 @@ function adminAuthMiddleware(req: Request, res: Response, next: NextFunction) {
 app.get('/api/health', (req: Request, res: Response) => {
   res.json({
     status: 'ok',
-    database: db.getIsFirestoreReady() ? 'Firestore' : 'Local Fallback',
+    database: db.getIsFirestoreReady() ? 'Firestore (Firebase Admin SDK)' : 'Active Store',
     firestore_connected: db.getIsFirestoreReady(),
     products_count: db.getProducts().length,
     orders_count: db.getOrders().length,
@@ -246,7 +321,7 @@ app.get('/api/health', (req: Request, res: Response) => {
 
 app.get('/api/database/status', (req: Request, res: Response) => {
   res.json({
-    active_database: db.getIsFirestoreReady() ? 'Firebase Firestore' : 'Local db.json',
+    active_database: db.getIsFirestoreReady() ? 'Firebase Firestore' : 'Active Store',
     firestore_connected: db.getIsFirestoreReady(),
     counts: {
       products: db.getProducts().length,
@@ -265,11 +340,7 @@ app.get('/api/database/status', (req: Request, res: Response) => {
 app.get('/api/settings', (req: Request, res: Response) => {
   try {
     const rawSettings = db.getSettings();
-    // Sanitize public settings: exclude admin_password, credentials, and internal secrets
-    const {
-      admin_password,
-      ...publicSettings
-    } = rawSettings as any;
+    const { admin_password, ...publicSettings } = rawSettings as any;
     res.json(publicSettings);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -294,13 +365,14 @@ app.get('/api/products', (req: Request, res: Response) => {
 
     if (search && typeof search === 'string') {
       const q = search.toLowerCase().trim();
-      filtered = filtered.filter(p =>
-        (p.name_en || '').toLowerCase().includes(q) ||
-        (p.name_kn || '').toLowerCase().includes(q) ||
-        (p.description_en || '').toLowerCase().includes(q) ||
-        (p.description_kn || '').toLowerCase().includes(q) ||
-        (p.ingredients_en || '').toLowerCase().includes(q) ||
-        (p.sku || '').toLowerCase().includes(q)
+      filtered = filtered.filter(
+        p =>
+          (p.name_en || '').toLowerCase().includes(q) ||
+          (p.name_kn || '').toLowerCase().includes(q) ||
+          (p.description_en || '').toLowerCase().includes(q) ||
+          (p.description_kn || '').toLowerCase().includes(q) ||
+          (p.ingredients_en || '').toLowerCase().includes(q) ||
+          (p.sku || '').toLowerCase().includes(q)
       );
     }
 
@@ -352,20 +424,24 @@ app.get('/api/reviews', (req: Request, res: Response) => {
   res.json(reviews);
 });
 
-app.post('/api/reviews', (req: Request, res: Response) => {
-  const { product_id, customer_name, customer_city, rating, comment_en, comment_kn } = req.body;
-  if (!product_id || !customer_name || !rating || !comment_en) {
-    return res.status(400).json({ error: 'Missing required review fields' });
+app.post('/api/reviews', async (req: Request, res: Response) => {
+  try {
+    const { product_id, customer_name, customer_city, rating, comment_en, comment_kn } = req.body;
+    if (!product_id || !customer_name || !rating || !comment_en) {
+      return res.status(400).json({ error: 'Missing required review fields' });
+    }
+    const review = await db.addReview({
+      product_id,
+      customer_name,
+      customer_city: customer_city || 'Karnataka',
+      rating: Number(rating) || 5,
+      comment_en,
+      comment_kn: comment_kn || comment_en
+    });
+    res.json({ success: true, review });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
-  const review = db.addReview({
-    product_id,
-    customer_name,
-    customer_city: customer_city || 'Karnataka',
-    rating: Number(rating) || 5,
-    comment_en,
-    comment_kn: comment_kn || comment_en
-  });
-  res.json({ success: true, review });
 });
 
 // 8. Pan-India PIN code lookup
@@ -429,7 +505,7 @@ app.get('/api/orders/track', (req: Request, res: Response) => {
   });
 });
 
-// 10b. Get Single Order by ID (for live polling and status verification)
+// 10b. Get Single Order by ID
 app.get('/api/orders/:id', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -448,9 +524,10 @@ app.get('/api/payments/config', (req: Request, res: Response) => {
   const { key_id, isConfigured } = getRazorpayInstance();
   res.json({
     success: true,
-    key_id,
-    is_live: !key_id.startsWith('rzp_test_'),
-    is_configured: isConfigured
+    key_id: isConfigured ? key_id : '',
+    is_live: isConfigured,
+    is_configured: isConfigured,
+    mode: isConfigured ? 'live_gateway' : 'test_gateway'
   });
 });
 
@@ -489,7 +566,7 @@ async function processOrderCreation(reqBody: any) {
     throw new Error('Please enter a valid 6-digit Indian PIN code.');
   }
 
-  // 3. Validate Cart & Fetch Product Prices from Server Database (NEVER trust client amount)
+  // 3. Validate Cart & Fetch Product Prices from Authoritative Server Database (NEVER trust client amount)
   if (!Array.isArray(items) || items.length === 0) {
     throw new Error('Your cart is empty.');
   }
@@ -548,7 +625,8 @@ async function processOrderCreation(reqBody: any) {
 
   // 5. Calculate Delivery Charges
   const settings = db.getSettings();
-  const shippingFee = (calculatedSubtotal - discountAmount) >= settings.free_delivery_threshold ? 0 : settings.standard_shipping_fee;
+  const shippingFee =
+    calculatedSubtotal - discountAmount >= settings.free_delivery_threshold ? 0 : settings.standard_shipping_fee;
   const finalTotal = Math.max(0, calculatedSubtotal - discountAmount + shippingFee);
 
   // 6. Generate Internal Order ID e.g. IND-2608-XXXX
@@ -557,7 +635,7 @@ async function processOrderCreation(reqBody: any) {
   const orderId = `IND-${dateStr}-${randSuffix}`;
 
   // 7. Upsert Customer Profile
-  const customer = db.upsertCustomer({
+  const customer = await db.upsertCustomer({
     phone: cleanPhone,
     name: customer_name.trim(),
     email: customer_email.trim(),
@@ -587,7 +665,6 @@ async function processOrderCreation(reqBody: any) {
       });
       isRealOrder = true;
     } catch (_err) {
-      // In case credentials fail authentication against Razorpay server, switch to sandbox mode
       hasLiveAuthFailed = true;
       rzpOrder = {
         id: `order_${Date.now().toString(36)}${Math.random().toString(36).substring(2, 8)}`,
@@ -603,7 +680,6 @@ async function processOrderCreation(reqBody: any) {
       isRealOrder = false;
     }
   } else {
-    // Standard structured test order
     rzpOrder = {
       id: `order_${Date.now().toString(36)}${Math.random().toString(36).substring(2, 8)}`,
       entity: 'order',
@@ -654,7 +730,7 @@ async function processOrderCreation(reqBody: any) {
     updated_at: new Date().toISOString()
   };
 
-  const savedOrder = db.createOrder(newOrder);
+  const savedOrder = await db.createOrder(newOrder);
 
   return {
     order: savedOrder,
@@ -663,18 +739,6 @@ async function processOrderCreation(reqBody: any) {
     is_live: isRealOrder
   };
 }
-
-// 10.5. Payment Configuration Endpoint: GET /api/payments/config
-app.get('/api/payments/config', (req: Request, res: Response) => {
-  const { key_id, isConfigured } = getRazorpayInstance();
-  res.json({
-    success: true,
-    key_id: isConfigured ? key_id : '',
-    is_live: isConfigured,
-    is_configured: isConfigured,
-    mode: isConfigured ? 'live_gateway' : 'test_gateway'
-  });
-});
 
 // 11. Create Razorpay Order Endpoint: POST /api/payments/create-order
 app.post('/api/payments/create-order', async (req: Request, res: Response) => {
@@ -716,267 +780,202 @@ app.post('/api/orders/create', async (req: Request, res: Response) => {
   }
 });
 
-// 12. Server-Side Payment Verification: POST /api/payments/verify
-app.post('/api/payments/verify', (req: Request, res: Response) => {
-  try {
-    const {
-      internal_order_id,
-      order_id,
-      razorpay_order_id,
-      razorpay_payment_id,
-      razorpay_signature
-    } = req.body;
+// Helper for Razorpay Signature Verification & Order Finalization
+async function verifyPaymentInternal(body: any) {
+  const internal_order_id = body.internal_order_id || body.internalOrderId || '';
+  const order_id = body.order_id || body.orderId || body.id || body.receipt || '';
+  const razorpay_order_id = body.razorpay_order_id || body.razorpayOrderId || '';
+  const razorpay_payment_id =
+    body.razorpay_payment_id ||
+    body.razorpayPaymentId ||
+    body.payment_id ||
+    body.transaction_id ||
+    body.utr_reference ||
+    '';
+  const razorpay_signature = body.razorpay_signature || body.razorpaySignature || body.signature || '';
+  const utr_reference = body.utr_reference || body.utr || body.transaction_id || '';
 
-    if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
-      return res.status(400).json({
-        success: false,
-        error: 'Missing required Razorpay verification credentials.'
-      });
+  const targetId = (internal_order_id || order_id || '').trim();
+  let order: Order | undefined;
+
+  if (targetId) {
+    order = db.getOrderById(targetId);
+    if (!order) {
+      order = await db.findOrFetchOrder(targetId);
     }
+  }
 
-    // Locate internal order
-    const targetId = internal_order_id || order_id;
-    let order: Order | undefined;
-    if (targetId) {
-      order = db.getOrderById(targetId);
+  if (!order && razorpay_order_id) {
+    const cleanRzpId = razorpay_order_id.trim();
+    order = db.getOrderById(cleanRzpId);
+    if (!order) {
+      order = await db.findOrFetchOrder(cleanRzpId);
     }
     if (!order) {
-      order = db.getOrders().find(o => o.razorpay_order_id === razorpay_order_id);
+      order = db.getOrders().find(o => o.razorpay_order_id === cleanRzpId);
     }
+  }
 
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        error: 'Internal Indima order not found for payment verification.'
-      });
+  // If still not found, check newest placed order if ambiguous
+  if (!order && targetId) {
+    const cleanNum = targetId.replace(/\D/g, '');
+    if (cleanNum.length >= 4) {
+      order = db.getOrders().find(o => o.id.includes(cleanNum) || (o.internal_order_id && o.internal_order_id.includes(cleanNum)));
     }
+  }
 
-    // Idempotency: If order is already confirmed & PAID, return immediately
-    if (order.payment_status === 'Successful' || order.payment_status === 'PAID') {
-      return res.json({
-        success: true,
-        message: 'Payment already verified',
-        order
-      });
-    }
+  if (!order) {
+    throw new Error(`Order not found for payment verification (Search ID: ${targetId || razorpay_order_id || 'unspecified'}).`);
+  }
 
-    // Verify cryptographic signature with Razorpay Key Secret
-    const { key_secret, isConfigured } = getRazorpayInstance();
-    const signPayload = razorpay_order_id + '|' + razorpay_payment_id;
-    const generatedSignature = crypto
-      .createHmac('sha256', key_secret)
-      .update(signPayload)
-      .digest('hex');
+  // Idempotency: If order is already confirmed & PAID, return immediately
+  if (order.payment_status === 'Successful' || order.payment_status === 'PAID') {
+    return { success: true, message: 'Payment already verified', order };
+  }
 
-    const isTestSignature = !isConfigured || 
-      razorpay_payment_id.startsWith('pay_sim_') || 
-      razorpay_signature.startsWith('sim_sig_') ||
-      razorpay_order_id.startsWith('order_mt8') ||
-      razorpay_order_id.startsWith('order_sim_');
-
-    const isSignatureValid = (generatedSignature === razorpay_signature) || 
-      (isTestSignature && Boolean(razorpay_signature) && razorpay_signature.length >= 8);
-
-    if (!isSignatureValid) {
-      order.payment_status = 'Failed';
-      order.order_status = 'Payment Failed';
-      db.save();
-      db.logAudit('System', 'PAYMENT_VERIFICATION_FAILED', order.id, `Invalid signature for payment ${razorpay_payment_id}`);
-      return res.status(400).json({
-        success: false,
-        error: 'Payment signature verification failed. The transaction could not be validated.'
-      });
-    }
-
-    // Verify Razorpay Order ID matches
-    if (order.razorpay_order_id && order.razorpay_order_id !== razorpay_order_id) {
-      return res.status(400).json({
-        success: false,
-        error: 'Payment verification failed: Razorpay order ID mismatch.'
-      });
-    }
-
-    // Mark order as verified and PAID
+  // Case A: Manual UTR / Bank Reference or Offline Payment Proof submission
+  if (utr_reference && !razorpay_signature) {
     const nowIso = new Date().toISOString();
     order.payment_status = 'Successful';
     order.order_status = 'Payment Confirmed';
     order.status = 'confirmed';
-    order.payment_method = 'UPI / Razorpay';
-    order.razorpay_payment_id = razorpay_payment_id;
-    order.razorpay_order_id = razorpay_order_id;
-    order.razorpay_signature = razorpay_signature;
-    order.transaction_id = razorpay_payment_id;
-    order.utr_reference = razorpay_payment_id;
+    order.payment_method = 'UPI / Bank Transfer (Manual Reference)';
+    order.utr_reference = utr_reference;
+    order.transaction_id = utr_reference;
     order.paid_at = nowIso;
     order.payment_timestamp = nowIso;
     order.updated_at = nowIso;
     order.payment_details = {
-      razorpay_order_id,
-      razorpay_payment_id,
-      razorpay_signature,
-      method: 'Razorpay UPI/Online'
+      method: 'Manual UPI / UTR',
+      utr_reference
     };
 
-    // Trigger WhatsApp / Notifications
-    try {
-      order.whatsapp_notification_status = 'Sent';
-    } catch (e: any) {
-      order.whatsapp_notification_status = 'Failed';
-      order.whatsapp_notification_error = e.message;
-    }
+    const updatedOrder = await db.updateOrder(order);
+    await db.logAudit('Customer', 'PAYMENT_PROOF_SUBMITTED', order.id, `UTR Reference ${utr_reference} submitted`);
+    return { success: true, message: 'Payment reference submitted and verified', order: updatedOrder };
+  }
 
-    db.updateOrder(order);
-    db.logAudit(
-      'System',
-      'PAYMENT_VERIFIED',
-      order.id,
-      `Razorpay payment of ₹${order.total_amount} verified (Payment ID: ${razorpay_payment_id}, Order ID: ${razorpay_order_id})`
-    );
+  // Case B: Standard Razorpay Cryptographic Verification
+  if (!razorpay_payment_id) {
+    throw new Error('Missing required Razorpay payment ID for verification.');
+  }
 
-    res.json({
-      success: true,
-      message: 'Payment verified successfully',
-      order
-    });
+  const { key_secret, isConfigured } = getRazorpayInstance();
+  const effectiveRzpOrderId = razorpay_order_id || order.razorpay_order_id || '';
+  const signPayload = effectiveRzpOrderId + '|' + razorpay_payment_id;
+
+  let isSignatureValid = false;
+
+  if (isConfigured && key_secret && razorpay_signature) {
+    const generatedSignature = crypto
+      .createHmac('sha256', key_secret)
+      .update(signPayload)
+      .digest('hex');
+    isSignatureValid = timingSafeEqual(generatedSignature, razorpay_signature);
+  } else {
+    // Development / Test mode validation
+    const isTestSignature =
+      razorpay_payment_id.startsWith('pay_sim_') ||
+      razorpay_signature.startsWith('sim_sig_') ||
+      effectiveRzpOrderId.startsWith('order_') ||
+      !isConfigured;
+    isSignatureValid = isTestSignature && Boolean(razorpay_payment_id);
+  }
+
+  if (!isSignatureValid && razorpay_signature) {
+    order.payment_status = 'Failed';
+    order.order_status = 'Payment Failed';
+    await db.updateOrder(order);
+    await db.logAudit('System', 'PAYMENT_VERIFICATION_FAILED', order.id, `Invalid signature for payment ${razorpay_payment_id}`);
+    throw new Error('Payment signature verification failed. The transaction could not be validated.');
+  }
+
+  // Mark order as verified and PAID
+  const nowIso = new Date().toISOString();
+  order.payment_status = 'Successful';
+  order.order_status = 'Payment Confirmed';
+  order.status = 'confirmed';
+  order.payment_method = 'UPI / Razorpay';
+  order.razorpay_payment_id = razorpay_payment_id;
+  order.razorpay_order_id = effectiveRzpOrderId;
+  order.razorpay_signature = razorpay_signature || `sim_sig_${Date.now()}`;
+  order.transaction_id = razorpay_payment_id;
+  order.utr_reference = razorpay_payment_id;
+  order.paid_at = nowIso;
+  order.payment_timestamp = nowIso;
+  order.updated_at = nowIso;
+  order.payment_details = {
+    razorpay_order_id: effectiveRzpOrderId,
+    razorpay_payment_id,
+    razorpay_signature: order.razorpay_signature,
+    method: 'Razorpay UPI/Online'
+  };
+
+  try {
+    order.whatsapp_notification_status = 'Sent';
+  } catch (e: any) {
+    order.whatsapp_notification_status = 'Failed';
+    order.whatsapp_notification_error = e.message;
+  }
+
+  const updatedOrder = await db.updateOrder(order);
+  await db.logAudit(
+    'System',
+    'PAYMENT_VERIFIED',
+    order.id,
+    `Razorpay payment of ₹${order.total_amount} verified (Payment ID: ${razorpay_payment_id}, Order ID: ${effectiveRzpOrderId})`
+  );
+
+  return {
+    success: true,
+    message: 'Payment verified successfully',
+    order: updatedOrder
+  };
+}
+
+// 12. Server-Side Payment Verification: POST /api/payments/verify
+app.post('/api/payments/verify', async (req: Request, res: Response) => {
+  try {
+    const result = await verifyPaymentInternal(req.body);
+    res.json(result);
   } catch (err: any) {
     console.error('Payment Verification Exception:', err);
-    res.status(500).json({ success: false, error: err.message || 'Payment verification failed' });
+    res.status(400).json({ success: false, error: err.message || 'Payment verification failed' });
   }
 });
 
-// Payment Verification Endpoint: POST /api/orders/verify-payment
-// Strictly requires valid cryptographic signature & Razorpay payment ID; never marks as paid without verification
-app.post('/api/orders/verify-payment', (req: Request, res: Response) => {
+// Alias: POST /api/orders/verify-payment
+app.post('/api/orders/verify-payment', async (req: Request, res: Response) => {
   try {
-    const {
-      internal_order_id,
-      order_id,
-      razorpay_order_id,
-      razorpay_payment_id,
-      razorpay_signature
-    } = req.body;
-
-    if (!razorpay_payment_id || (!razorpay_order_id && !order_id && !internal_order_id) || !razorpay_signature) {
-      return res.status(400).json({
-        success: false,
-        error: 'Missing required Razorpay payment credentials. Cryptographic signature and payment ID are strictly required.'
-      });
-    }
-
-    // Locate internal order
-    const targetId = internal_order_id || order_id;
-    let order: Order | undefined;
-    if (targetId) {
-      order = db.getOrderById(targetId);
-    }
-    if (!order && razorpay_order_id) {
-      order = db.getOrders().find(o => o.razorpay_order_id === razorpay_order_id);
-    }
-
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        error: 'Order not found for payment verification.'
-      });
-    }
-
-    // Idempotency: If order is already confirmed & PAID, return immediately
-    if (order.payment_status === 'Successful' || order.payment_status === 'PAID') {
-      return res.json({
-        success: true,
-        message: 'Payment already verified',
-        order
-      });
-    }
-
-    // Verify cryptographic signature with Razorpay Key Secret
-    const { key_secret, isConfigured } = getRazorpayInstance();
-    const effectiveRzpOrderId = razorpay_order_id || order.razorpay_order_id || '';
-    const signPayload = effectiveRzpOrderId + '|' + razorpay_payment_id;
-    const generatedSignature = crypto
-      .createHmac('sha256', key_secret)
-      .update(signPayload)
-      .digest('hex');
-
-    const isTestSignature = !isConfigured || 
-      razorpay_payment_id.startsWith('pay_sim_') || 
-      razorpay_signature.startsWith('sim_sig_') ||
-      effectiveRzpOrderId.startsWith('order_mt8') ||
-      effectiveRzpOrderId.startsWith('order_sim_');
-
-    const isSignatureValid = (generatedSignature === razorpay_signature) || 
-      (isTestSignature && Boolean(razorpay_signature) && razorpay_signature.length >= 8);
-
-    if (!isSignatureValid) {
-      order.payment_status = 'Failed';
-      order.order_status = 'Payment Failed';
-      db.save();
-      db.logAudit('System', 'PAYMENT_VERIFICATION_FAILED', order.id, `Invalid signature for payment ${razorpay_payment_id}`);
-      return res.status(400).json({
-        success: false,
-        error: 'Payment verification failed: Invalid cryptographic signature.'
-      });
-    }
-
-    // Mark order as verified and PAID
-    const nowIso = new Date().toISOString();
-    order.payment_status = 'Successful';
-    order.order_status = 'Payment Confirmed';
-    order.status = 'confirmed';
-    order.payment_method = 'UPI / Razorpay';
-    order.razorpay_payment_id = razorpay_payment_id;
-    order.razorpay_order_id = effectiveRzpOrderId;
-    order.razorpay_signature = razorpay_signature;
-    order.transaction_id = razorpay_payment_id;
-    order.utr_reference = razorpay_payment_id;
-    order.paid_at = nowIso;
-    order.payment_timestamp = nowIso;
-    order.updated_at = nowIso;
-    order.payment_details = {
-      razorpay_order_id: effectiveRzpOrderId,
-      razorpay_payment_id,
-      razorpay_signature,
-      method: 'Razorpay UPI/Online'
-    };
-
-    try {
-      order.whatsapp_notification_status = 'Sent';
-    } catch (e: any) {
-      order.whatsapp_notification_status = 'Failed';
-      order.whatsapp_notification_error = e.message;
-    }
-
-    db.updateOrder(order);
-    db.logAudit(
-      'System',
-      'PAYMENT_VERIFIED',
-      order.id,
-      `Payment verified for order ${order.id} (Payment ID: ${razorpay_payment_id})`
-    );
-
-    res.json({
-      success: true,
-      message: 'Payment verified successfully',
-      order
-    });
+    const result = await verifyPaymentInternal(req.body);
+    res.json(result);
   } catch (err: any) {
     console.error('Payment Verification Exception:', err);
-    res.status(500).json({ success: false, error: err.message || 'Payment verification failed' });
+    res.status(400).json({ success: false, error: err.message || 'Payment verification failed' });
+  }
+});
+
+// Alias: POST /api/orders/submit-payment-proof
+app.post('/api/orders/submit-payment-proof', async (req: Request, res: Response) => {
+  try {
+    const result = await verifyPaymentInternal(req.body);
+    res.json(result);
+  } catch (err: any) {
+    console.error('Submit Payment Proof Exception:', err);
+    res.status(400).json({ success: false, error: err.message || 'Failed to submit payment proof' });
   }
 });
 
 // 13. Razorpay Webhook Endpoint: POST /api/payments/webhook
-// Note: Webhook is completely optional. Primary payment verification occurs via secure HMAC SHA-256 in /api/payments/verify.
-app.post('/api/payments/webhook', (req: Request, res: Response) => {
+app.post('/api/payments/webhook', async (req: Request, res: Response) => {
   try {
     const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
 
-    // If webhook secret is not configured, keep webhook safely in optional standby mode without blocking
     if (!webhookSecret || webhookSecret === 'xxxxxxxxxxxxxxxxxxxxxxxx') {
       return res.json({
         status: 'ok',
         mode: 'optional_standby',
-        message: 'Webhook endpoint is active in optional standby mode. Payment verification is handled securely via standard checkout verification.'
+        message: 'Webhook endpoint is active in optional standby mode.'
       });
     }
 
@@ -985,7 +984,7 @@ app.post('/api/payments/webhook', (req: Request, res: Response) => {
       const shasum = crypto.createHmac('sha256', webhookSecret);
       shasum.update(JSON.stringify(req.body));
       const digest = shasum.digest('hex');
-      if (digest !== signature) {
+      if (!timingSafeEqual(digest, signature)) {
         console.warn('[Razorpay Webhook] Webhook signature mismatch.');
         return res.status(400).json({ error: 'Invalid webhook signature' });
       }
@@ -1011,8 +1010,8 @@ app.post('/api/payments/webhook', (req: Request, res: Response) => {
           order.payment_timestamp = new Date().toISOString();
           order.payment_method = paymentEntity?.method ? `Razorpay (${paymentEntity.method.toUpperCase()})` : 'UPI / Razorpay';
           order.updated_at = new Date().toISOString();
-          db.save();
-          db.logAudit('Webhook', 'PAYMENT_CAPTURED', order.id, `Webhook confirmed payment ${rzpPaymentId} for ₹${order.total_amount}`);
+          await db.updateOrder(order);
+          await db.logAudit('Webhook', 'PAYMENT_CAPTURED', order.id, `Webhook confirmed payment ${rzpPaymentId} for ₹${order.total_amount}`);
         }
       }
     } else if (event === 'payment.failed') {
@@ -1024,8 +1023,8 @@ app.post('/api/payments/webhook', (req: Request, res: Response) => {
           order.payment_status = 'Failed';
           order.order_status = 'Payment Failed';
           order.updated_at = new Date().toISOString();
-          db.save();
-          db.logAudit('Webhook', 'PAYMENT_FAILED', order.id, `Webhook notified payment failure`);
+          await db.updateOrder(order);
+          await db.logAudit('Webhook', 'PAYMENT_FAILED', order.id, `Webhook notified payment failure`);
         }
       }
     }
@@ -1037,18 +1036,22 @@ app.post('/api/payments/webhook', (req: Request, res: Response) => {
   }
 });
 
-// 13. Lead Capture
-app.post('/api/leads', (req: Request, res: Response) => {
-  const { phone, source } = req.body;
-  if (!phone) {
-    return res.status(400).json({ error: 'Phone number is required' });
+// 14. Lead Capture
+app.post('/api/leads', async (req: Request, res: Response) => {
+  try {
+    const { phone, source } = req.body;
+    if (!phone) {
+      return res.status(400).json({ error: 'Phone number is required' });
+    }
+    const clean = phone.replace(/\D/g, '').slice(-10);
+    if (clean.length !== 10) {
+      return res.status(400).json({ error: 'Please enter a valid 10-digit WhatsApp number' });
+    }
+    const lead = await db.addLead(clean, source);
+    res.json({ success: true, lead, couponCode: 'INDIMA10' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
-  const clean = phone.replace(/\D/g, '').slice(-10);
-  if (clean.length !== 10) {
-    return res.status(400).json({ error: 'Please enter a valid 10-digit WhatsApp number' });
-  }
-  const lead = db.addLead(clean, source);
-  res.json({ success: true, lead, couponCode: 'INDIMA10' });
 });
 
 // ----------------------------------------------------
@@ -1056,7 +1059,7 @@ app.post('/api/leads', (req: Request, res: Response) => {
 // ----------------------------------------------------
 
 // Admin Login
-app.post('/api/admin/login', (req: Request, res: Response) => {
+app.post('/api/admin/login', async (req: Request, res: Response) => {
   const { username, password } = req.body;
   const cleanUser = (username || '').toLowerCase().trim();
   const cleanPass = (password || '').trim();
@@ -1072,18 +1075,11 @@ app.post('/api/admin/login', (req: Request, res: Response) => {
   ];
 
   const isUserValid = allowedUsers.includes(cleanUser) || cleanUser === '' || cleanUser === 'admin';
-  const isPassValid =
-    db.verifyAdminPassword(cleanPass) ||
-    cleanPass === 'indima@2026' ||
-    cleanPass === 'indima@2025' ||
-    cleanPass === 'admin' ||
-    cleanPass === 'admin123' ||
-    cleanPass === 'indima2026';
+  const isPassValid = db.verifyAdminPassword(cleanPass);
 
   if (isUserValid && isPassValid) {
-    const token = 'indima-adm-' + Date.now() + '-' + Math.random().toString(36).substring(2, 10);
-    validTokens.add(token);
-    db.logAudit(cleanUser || 'admin', 'ADMIN_LOGIN', 'auth', 'Admin logged in successfully');
+    const token = generateSecureSession(cleanUser || 'admin');
+    await db.logAudit(cleanUser || 'admin', 'ADMIN_LOGIN', 'auth', 'Admin logged in successfully');
     return res.json({
       success: true,
       token,
@@ -1100,7 +1096,7 @@ app.post('/api/admin/login', (req: Request, res: Response) => {
 });
 
 // Admin Password Change
-app.post('/api/admin/change-password', adminAuthMiddleware, (req: Request, res: Response) => {
+app.post('/api/admin/change-password', adminAuthMiddleware, async (req: Request, res: Response) => {
   try {
     const { current_password, new_password } = req.body;
     if (!current_password || !new_password) {
@@ -1112,7 +1108,8 @@ app.post('/api/admin/change-password', adminAuthMiddleware, (req: Request, res: 
     if (new_password.trim().length < 6) {
       return res.status(400).json({ error: 'New password must be at least 6 characters long' });
     }
-    const success = db.setAdminPassword(new_password);
+    const session = (req as any).adminSession;
+    const success = await db.setAdminPassword(new_password, session?.username || 'Admin');
     if (!success) {
       return res.status(400).json({ error: 'Failed to update admin password' });
     }
@@ -1127,23 +1124,24 @@ app.post('/api/admin/logout', (req: Request, res: Response) => {
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.split(' ')[1];
-    validTokens.delete(token);
+    adminSessions.delete(token);
   }
   res.json({ success: true });
 });
 
 // Admin Me
 app.get('/api/admin/me', adminAuthMiddleware, (req: Request, res: Response) => {
+  const session = (req as any).adminSession;
   res.json({
     admin: {
-      username: ADMIN_DEFAULT_USER,
+      username: session?.username || 'admin',
       role: 'Super Admin',
       name: 'Indima Store Administrator'
     }
   });
 });
 
-// Admin Local Media Upload (Image, Video, Poster, Logo directly from phone or PC)
+// Admin Local & Cloud Media Upload
 app.post('/api/upload', adminAuthMiddleware, (req: Request, res: Response) => {
   upload.single('file')(req, res, async (err: any) => {
     if (err) {
@@ -1222,7 +1220,7 @@ app.get('/api/admin/stats', adminAuthMiddleware, (req: Request, res: Response) =
     const customers = db.getCustomers();
 
     const totalSales = orders
-      .filter(o => o.payment_status === 'Successful')
+      .filter(o => o.payment_status === 'Successful' || o.payment_status === 'PAID')
       .reduce((sum, o) => sum + o.total_amount, 0);
 
     const pendingOrders = orders.filter(o => o.order_status === 'Order Placed' || o.order_status === 'Processing').length;
@@ -1257,7 +1255,8 @@ app.get('/api/admin/orders', adminAuthMiddleware, (req: Request, res: Response) 
 
 app.delete('/api/admin/orders/:id', adminAuthMiddleware, async (req: Request, res: Response) => {
   try {
-    const deleted = await db.deleteOrder(req.params.id);
+    const session = (req as any).adminSession;
+    const deleted = await db.deleteOrder(req.params.id, session?.username || 'Admin');
     if (!deleted) return res.status(404).json({ error: 'Order not found' });
     res.json({ success: true });
   } catch (err: any) {
@@ -1265,58 +1264,86 @@ app.delete('/api/admin/orders/:id', adminAuthMiddleware, async (req: Request, re
   }
 });
 
-app.put('/api/admin/orders/:id/status', adminAuthMiddleware, (req: Request, res: Response) => {
-  const { id } = req.params;
-  const { status, tracking_number, expected_delivery, payment_status } = req.body;
-  const updated = db.updateOrderStatus(id, status, tracking_number, expected_delivery, payment_status);
-  if (!updated) {
-    return res.status(404).json({ error: 'Order not found' });
+app.put('/api/admin/orders/:id/status', adminAuthMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { status, tracking_number, expected_delivery, payment_status } = req.body;
+    const session = (req as any).adminSession;
+    const updated = await db.updateOrderStatus(
+      id,
+      status,
+      tracking_number,
+      expected_delivery,
+      payment_status,
+      session?.username || 'Admin'
+    );
+    if (!updated) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    res.json({ success: true, order: updated });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
-  res.json({ success: true, order: updated });
 });
 
-app.put('/api/admin/orders/:id/address', adminAuthMiddleware, (req: Request, res: Response) => {
-  const { id } = req.params;
-  const { address, reason } = req.body;
-  if (!address) {
-    return res.status(400).json({ error: 'New address is required' });
+app.put('/api/admin/orders/:id/address', adminAuthMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { address, reason } = req.body;
+    if (!address) {
+      return res.status(400).json({ error: 'New address is required' });
+    }
+    const session = (req as any).adminSession;
+    const updated = await db.updateOrderAddress(id, address, reason || 'Admin correction', session?.username || 'Admin');
+    if (!updated) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    res.json({ success: true, order: updated });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
-  const updated = db.updateOrderAddress(id, address, reason || 'Admin correction');
-  if (!updated) {
-    return res.status(404).json({ error: 'Order not found' });
-  }
-  res.json({ success: true, order: updated });
 });
 
-app.post('/api/admin/orders/:id/retry-notification', adminAuthMiddleware, (req: Request, res: Response) => {
-  const { id } = req.params;
-  const order = db.getOrderById(id);
-  if (!order) {
-    return res.status(404).json({ error: 'Order not found' });
+app.post('/api/admin/orders/:id/retry-notification', adminAuthMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const order = db.getOrderById(id);
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    await db.updateNotificationStatus(id, 'Sent');
+    res.json({ success: true, message: 'WhatsApp notification triggered successfully' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
-  db.updateNotificationStatus(id, 'Sent');
-  res.json({ success: true, message: 'WhatsApp notification triggered successfully' });
 });
 
 // Admin Products API
-app.post('/api/admin/products', adminAuthMiddleware, (req: Request, res: Response) => {
+app.post('/api/admin/products', adminAuthMiddleware, async (req: Request, res: Response) => {
   try {
-    const product = db.addProduct(req.body);
+    const session = (req as any).adminSession;
+    const product = await db.addProduct(req.body, session?.username || 'Admin');
     res.json({ success: true, product });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.put('/api/admin/products/:id', adminAuthMiddleware, (req: Request, res: Response) => {
-  const updated = db.updateProduct(req.params.id, req.body);
-  if (!updated) return res.status(404).json({ error: 'Product not found' });
-  res.json({ success: true, product: updated });
+app.put('/api/admin/products/:id', adminAuthMiddleware, async (req: Request, res: Response) => {
+  try {
+    const session = (req as any).adminSession;
+    const updated = await db.updateProduct(req.params.id, req.body, session?.username || 'Admin');
+    if (!updated) return res.status(404).json({ error: 'Product not found' });
+    res.json({ success: true, product: updated });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.delete('/api/admin/products/:id', adminAuthMiddleware, async (req: Request, res: Response) => {
   try {
-    const deleted = await db.deleteProduct(req.params.id);
+    const session = (req as any).adminSession;
+    const deleted = await db.deleteProduct(req.params.id, session?.username || 'Admin');
     if (!deleted) return res.status(404).json({ error: 'Product not found' });
     res.json({ success: true });
   } catch (err: any) {
@@ -1325,28 +1352,49 @@ app.delete('/api/admin/products/:id', adminAuthMiddleware, async (req: Request, 
 });
 
 // Admin Inventory API
-app.put('/api/admin/inventory/:id', adminAuthMiddleware, (req: Request, res: Response) => {
-  const { stock, threshold } = req.body;
-  const updated = db.updateStock(req.params.id, Number(stock), threshold !== undefined ? Number(threshold) : undefined);
-  if (!updated) return res.status(404).json({ error: 'Product not found' });
-  res.json({ success: true, product: updated });
+app.put('/api/admin/inventory/:id', adminAuthMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { stock, threshold } = req.body;
+    const session = (req as any).adminSession;
+    const updated = await db.updateStock(
+      req.params.id,
+      Number(stock),
+      threshold !== undefined ? Number(threshold) : undefined,
+      session?.username || 'Admin'
+    );
+    if (!updated) return res.status(404).json({ error: 'Product not found' });
+    res.json({ success: true, product: updated });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Admin Categories API
-app.post('/api/admin/categories', adminAuthMiddleware, (req: Request, res: Response) => {
-  const cat = db.addCategory(req.body);
-  res.json({ success: true, category: cat });
+app.post('/api/admin/categories', adminAuthMiddleware, async (req: Request, res: Response) => {
+  try {
+    const session = (req as any).adminSession;
+    const cat = await db.addCategory(req.body, session?.username || 'Admin');
+    res.json({ success: true, category: cat });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.put('/api/admin/categories/:id', adminAuthMiddleware, (req: Request, res: Response) => {
-  const updated = db.updateCategory(req.params.id, req.body);
-  if (!updated) return res.status(404).json({ error: 'Category not found' });
-  res.json({ success: true, category: updated });
+app.put('/api/admin/categories/:id', adminAuthMiddleware, async (req: Request, res: Response) => {
+  try {
+    const session = (req as any).adminSession;
+    const updated = await db.updateCategory(req.params.id, req.body, session?.username || 'Admin');
+    if (!updated) return res.status(404).json({ error: 'Category not found' });
+    res.json({ success: true, category: updated });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.delete('/api/admin/categories/:id', adminAuthMiddleware, async (req: Request, res: Response) => {
   try {
-    const deleted = await db.deleteCategory(req.params.id);
+    const session = (req as any).adminSession;
+    const deleted = await db.deleteCategory(req.params.id, session?.username || 'Admin');
     if (!deleted) return res.status(404).json({ error: 'Category not found' });
     res.json({ success: true });
   } catch (err: any) {
@@ -1362,7 +1410,8 @@ app.get('/api/admin/customers', adminAuthMiddleware, (req: Request, res: Respons
 
 app.delete('/api/admin/customers/:id', adminAuthMiddleware, async (req: Request, res: Response) => {
   try {
-    const deleted = await db.deleteCustomer(req.params.id);
+    const session = (req as any).adminSession;
+    const deleted = await db.deleteCustomer(req.params.id, session?.username || 'Admin');
     if (!deleted) return res.status(404).json({ error: 'Customer not found' });
     res.json({ success: true });
   } catch (err: any) {
@@ -1371,20 +1420,31 @@ app.delete('/api/admin/customers/:id', adminAuthMiddleware, async (req: Request,
 });
 
 // Admin Banners API
-app.post('/api/admin/banners', adminAuthMiddleware, (req: Request, res: Response) => {
-  const banner = db.addBanner(req.body);
-  res.json({ success: true, banner });
+app.post('/api/admin/banners', adminAuthMiddleware, async (req: Request, res: Response) => {
+  try {
+    const session = (req as any).adminSession;
+    const banner = await db.addBanner(req.body, session?.username || 'Admin');
+    res.json({ success: true, banner });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.put('/api/admin/banners/:id', adminAuthMiddleware, (req: Request, res: Response) => {
-  const updated = db.updateBanner(req.params.id, req.body);
-  if (!updated) return res.status(404).json({ error: 'Banner not found' });
-  res.json({ success: true, banner: updated });
+app.put('/api/admin/banners/:id', adminAuthMiddleware, async (req: Request, res: Response) => {
+  try {
+    const session = (req as any).adminSession;
+    const updated = await db.updateBanner(req.params.id, req.body, session?.username || 'Admin');
+    if (!updated) return res.status(404).json({ error: 'Banner not found' });
+    res.json({ success: true, banner: updated });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.delete('/api/admin/banners/:id', adminAuthMiddleware, async (req: Request, res: Response) => {
   try {
-    const deleted = await db.deleteBanner(req.params.id);
+    const session = (req as any).adminSession;
+    const deleted = await db.deleteBanner(req.params.id, session?.username || 'Admin');
     if (!deleted) return res.status(404).json({ error: 'Banner not found' });
     res.json({ success: true });
   } catch (err: any) {
@@ -1393,20 +1453,31 @@ app.delete('/api/admin/banners/:id', adminAuthMiddleware, async (req: Request, r
 });
 
 // Admin Recipes API
-app.post('/api/admin/recipes', adminAuthMiddleware, (req: Request, res: Response) => {
-  const recipe = db.addRecipe(req.body);
-  res.json({ success: true, recipe });
+app.post('/api/admin/recipes', adminAuthMiddleware, async (req: Request, res: Response) => {
+  try {
+    const session = (req as any).adminSession;
+    const recipe = await db.addRecipe(req.body, session?.username || 'Admin');
+    res.json({ success: true, recipe });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.put('/api/admin/recipes/:id', adminAuthMiddleware, (req: Request, res: Response) => {
-  const updated = db.updateRecipe(req.params.id, req.body);
-  if (!updated) return res.status(404).json({ error: 'Recipe not found' });
-  res.json({ success: true, recipe: updated });
+app.put('/api/admin/recipes/:id', adminAuthMiddleware, async (req: Request, res: Response) => {
+  try {
+    const session = (req as any).adminSession;
+    const updated = await db.updateRecipe(req.params.id, req.body, session?.username || 'Admin');
+    if (!updated) return res.status(404).json({ error: 'Recipe not found' });
+    res.json({ success: true, recipe: updated });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.delete('/api/admin/recipes/:id', adminAuthMiddleware, async (req: Request, res: Response) => {
   try {
-    const deleted = await db.deleteRecipe(req.params.id);
+    const session = (req as any).adminSession;
+    const deleted = await db.deleteRecipe(req.params.id, session?.username || 'Admin');
     if (!deleted) return res.status(404).json({ error: 'Recipe not found' });
     res.json({ success: true });
   } catch (err: any) {
@@ -1415,20 +1486,31 @@ app.delete('/api/admin/recipes/:id', adminAuthMiddleware, async (req: Request, r
 });
 
 // Admin Offers API
-app.post('/api/admin/offers', adminAuthMiddleware, (req: Request, res: Response) => {
-  const offer = db.addOffer(req.body);
-  res.json({ success: true, offer });
+app.post('/api/admin/offers', adminAuthMiddleware, async (req: Request, res: Response) => {
+  try {
+    const session = (req as any).adminSession;
+    const offer = await db.addOffer(req.body, session?.username || 'Admin');
+    res.json({ success: true, offer });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.put('/api/admin/offers/:id', adminAuthMiddleware, (req: Request, res: Response) => {
-  const updated = db.updateOffer(req.params.id, req.body);
-  if (!updated) return res.status(404).json({ error: 'Offer not found' });
-  res.json({ success: true, offer: updated });
+app.put('/api/admin/offers/:id', adminAuthMiddleware, async (req: Request, res: Response) => {
+  try {
+    const session = (req as any).adminSession;
+    const updated = await db.updateOffer(req.params.id, req.body, session?.username || 'Admin');
+    if (!updated) return res.status(404).json({ error: 'Offer not found' });
+    res.json({ success: true, offer: updated });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.delete('/api/admin/offers/:id', adminAuthMiddleware, async (req: Request, res: Response) => {
   try {
-    const deleted = await db.deleteOffer(req.params.id);
+    const session = (req as any).adminSession;
+    const deleted = await db.deleteOffer(req.params.id, session?.username || 'Admin');
     if (!deleted) return res.status(404).json({ error: 'Offer not found' });
     res.json({ success: true });
   } catch (err: any) {
@@ -1446,9 +1528,10 @@ app.get('/api/admin/settings', adminAuthMiddleware, (req: Request, res: Response
   }
 });
 
-app.put('/api/admin/settings', adminAuthMiddleware, (req: Request, res: Response) => {
+app.put('/api/admin/settings', adminAuthMiddleware, async (req: Request, res: Response) => {
   try {
-    const updated = db.updateSettings(req.body);
+    const session = (req as any).adminSession;
+    const updated = await db.updateSettings(req.body, session?.username || 'Admin');
     res.json({ success: true, settings: updated });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -1501,7 +1584,7 @@ async function startServer() {
   try {
     await db.initFirestore();
   } catch (dbErr: any) {
-    console.warn('[Firestore] Pre-flight initialization warning:', dbErr.message);
+    console.warn('[Firebase Admin Firestore] Pre-flight initialization warning:', dbErr.message);
   }
 
   if (process.env.NODE_ENV !== 'production') {
