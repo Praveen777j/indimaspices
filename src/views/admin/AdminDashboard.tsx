@@ -121,11 +121,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
 
   // In-app deletion confirmation modal state
   const [deleteTarget, setDeleteTarget] = useState<{
-    type: 'product' | 'recipe' | 'offer';
+    type: 'product' | 'recipe' | 'offer' | 'category' | 'banner' | 'customer' | 'order';
     id: string;
     title: string;
   } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
 
   // Address edit state
   const [addressEditReason, setAddressEditReason] = useState('');
@@ -341,44 +342,60 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
     }
   };
 
-  // Order Status Update
+  // Order Status Update (Optimistic)
   const handleUpdateOrderStatus = async (orderId: string) => {
     if (!token) return;
-    try {
-      const order = orders.find(o => o.id === orderId);
-      const isConfirming = newOrderStatus === 'confirmed' || newOrderStatus === 'processing' || newOrderStatus === 'packed' || newOrderStatus === 'shipped';
-      const paymentStatus = isConfirming && order?.payment_status !== 'Successful' ? 'Successful' : undefined;
+    const order = orders.find(o => o.id === orderId);
+    const isConfirming = newOrderStatus === 'confirmed' || newOrderStatus === 'processing' || newOrderStatus === 'packed' || newOrderStatus === 'shipped';
+    const paymentStatus = isConfirming && order?.payment_status !== 'Successful' ? 'Successful' : undefined;
 
-      const res = await api.updateOrderStatus(token, orderId, {
+    // Optimistically update order in state immediately
+    setOrders(prev => prev.map(o => o.id === orderId ? {
+      ...o,
+      status: newOrderStatus.toLowerCase().includes('deliv') ? 'delivered' : newOrderStatus.toLowerCase().includes('ship') ? 'shipped' : newOrderStatus.toLowerCase().includes('pack') ? 'packed' : newOrderStatus.toLowerCase().includes('process') ? 'confirmed' : o.status,
+      order_status: newOrderStatus,
+      tracking_number: newTrackingNumber || o.tracking_number,
+      expected_delivery: newExpectedDelivery || o.expected_delivery,
+      payment_status: paymentStatus || o.payment_status,
+      updated_at: new Date().toISOString()
+    } : o));
+
+    setIsOrderModalOpen(false);
+    showSuccess('Order status updated');
+
+    try {
+      await api.updateOrderStatus(token, orderId, {
         status: newOrderStatus,
         tracking_number: newTrackingNumber || undefined,
         expected_delivery: newExpectedDelivery || undefined,
         payment_status: paymentStatus
       });
-      if (res.success) {
-        showSuccess('Order status updated successfully');
-        setIsOrderModalOpen(false);
-        loadAllData();
-      }
     } catch (e) {
       console.error(e);
     }
   };
 
-  // Order Address Emergency Modification
+  // Order Address Emergency Modification (Optimistic)
   const handleUpdateOrderAddress = async (orderId: string) => {
     if (!token || !addressEditReason.trim() || !modifiedAddress) return;
+    
+    // Optimistically update
+    setOrders(prev => prev.map(o => o.id === orderId ? {
+      ...o,
+      address_snapshot: modifiedAddress,
+      customer_address: `${modifiedAddress.street}, ${modifiedAddress.city}, ${modifiedAddress.state} - ${modifiedAddress.pincode}`,
+      updated_at: new Date().toISOString()
+    } : o));
+
+    setIsOrderModalOpen(false);
+    setAddressEditReason('');
+    showSuccess('Address updated');
+
     try {
-      const res = await api.updateOrderAddress(token, orderId, {
+      await api.updateOrderAddress(token, orderId, {
         address: modifiedAddress,
         reason: addressEditReason.trim()
       });
-      if (res.success) {
-        showSuccess('Address updated and audit entry recorded');
-        setIsOrderModalOpen(false);
-        setAddressEditReason('');
-        loadAllData();
-      }
     } catch (e) {
       console.error(e);
     }
@@ -387,23 +404,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
   // Retry WhatsApp notification
   const handleRetryNotification = async (orderId: string) => {
     if (!token) return;
+    showSuccess('Sending WhatsApp notification...');
     try {
       const res = await api.retryNotification(token, orderId);
       if (res.success) {
         showSuccess('WhatsApp notification triggered to admin & customer');
-        loadAllData();
       }
     } catch (e) {
       console.error(e);
     }
   };
 
-  // Product Save
+  // Product Save (Optimistic & Blazing Fast)
   const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token || !editingProduct) return;
+    
+    setIsSavingProduct(true);
     try {
-      const isEdit = products.some(p => p.id === editingProduct.id);
+      const isEdit = Boolean(editingProduct.id && products.some(p => p.id === editingProduct.id));
       const validImages = Array.isArray(editingProduct.images)
         ? editingProduct.images.filter(Boolean)
         : [];
@@ -412,8 +431,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
         ? validImages[0]
         : (editingProduct.image_url || '/indima-logo.svg');
 
-      const cleanedProduct = {
+      const productId = editingProduct.id || ('prod-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6));
+
+      const cleanedProduct: Product = {
         ...editingProduct,
+        id: productId,
         mrp: Number(editingProduct.mrp) || 0,
         price: Number(editingProduct.price) || 0,
         discount_percentage: Number(editingProduct.discount_percentage) || 0,
@@ -421,20 +443,38 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
         low_stock_threshold: Number(editingProduct.low_stock_threshold) || 10,
         images: validImages.length > 0 ? validImages : [primaryImage],
         image_url: primaryImage,
-        active: editingProduct.active !== false
+        active: editingProduct.active !== false,
+        updated_at: new Date().toISOString(),
+        created_at: editingProduct.created_at || new Date().toISOString()
       };
-      const res = await api.saveProduct(token, cleanedProduct, isEdit);
-      if (res && (res.success || res.product || !res.error)) {
-        showSuccess(isEdit ? 'Product updated successfully' : 'Product created successfully');
-        setIsProductModalOpen(false);
-        setEditingProduct(null);
-        await loadAllData();
+
+      // 1. Instantly update UI state without waiting for network roundtrip
+      if (isEdit) {
+        setProducts(prev => prev.map(p => p.id === cleanedProduct.id ? cleanedProduct : p));
       } else {
-        showSuccess('Failed to save product: ' + (res?.error || 'Unknown error'));
+        setProducts(prev => [cleanedProduct, ...prev]);
       }
+
+      // 2. Instantly close modal and notify user
+      setIsProductModalOpen(false);
+      setEditingProduct(null);
+      showSuccess(isEdit ? 'Product updated successfully' : 'Product created successfully');
+
+      // 3. Persist to server in background
+      api.saveProduct(token, cleanedProduct, isEdit).then(res => {
+        if (res && res.product) {
+          // Sync with authoritative server payload (e.g., ID or timestamp)
+          setProducts(prev => prev.map(p => p.id === cleanedProduct.id || p.id === res.product.id ? res.product : p));
+        }
+      }).catch(err => {
+        console.warn('[Product Save Background Notice]:', err);
+      });
+
     } catch (e: any) {
       console.error('Error saving product', e);
       showSuccess('Error saving product: ' + (e?.message || 'Network error'));
+    } finally {
+      setIsSavingProduct(false);
     }
   };
 
@@ -443,60 +483,69 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
     setDeleteTarget({ type: 'product', id, title });
   };
 
-  // In-app Delete Execution
+  // In-app Delete Execution (Optimistic & Instant)
   const handleConfirmDelete = async () => {
     if (!token || !deleteTarget) return;
+    const target = { ...deleteTarget };
     setIsDeleting(true);
+
+    // 1. Optimistically remove item from UI immediately
+    if (target.type === 'product') {
+      setProducts(prev => prev.filter(p => p.id !== target.id));
+      showSuccess('Product deleted successfully');
+    } else if (target.type === 'category') {
+      setCategories(prev => prev.filter(c => c.id !== target.id));
+      showSuccess('Category deleted successfully');
+    } else if (target.type === 'recipe') {
+      setRecipes(prev => prev.filter(r => r.id !== target.id));
+      showSuccess('Recipe deleted successfully');
+    } else if (target.type === 'offer') {
+      setOffers(prev => prev.filter(o => o.id !== target.id));
+      showSuccess('Offer deleted successfully');
+    } else if (target.type === 'banner') {
+      setBanners(prev => prev.filter(b => b.id !== target.id));
+      showSuccess('Banner deleted successfully');
+    } else if (target.type === 'customer') {
+      setCustomers(prev => prev.filter(c => c.id !== target.id));
+      showSuccess('Customer deleted successfully');
+    } else if (target.type === 'order') {
+      setOrders(prev => prev.filter(o => o.id !== target.id));
+      showSuccess('Order deleted successfully');
+    }
+
+    // 2. Instantly close confirmation modal
+    setDeleteTarget(null);
+    setIsDeleting(false);
+
+    // 3. Perform backend deletion in background
     try {
-      if (deleteTarget.type === 'product') {
-        const res = await api.deleteProduct(token, deleteTarget.id);
-        if (res && res.error) {
-          showSuccess('Delete failed: ' + res.error);
-        } else {
-          showSuccess(`Product deleted successfully`);
-        }
-      } else if (deleteTarget.type === 'category') {
-        const res = await api.deleteCategory(token, deleteTarget.id);
-        if (res && res.error) {
-          showSuccess('Delete failed: ' + res.error);
-        } else {
-          showSuccess(`Category deleted successfully`);
-        }
-      } else if (deleteTarget.type === 'recipe') {
-        await api.deleteRecipe(token, deleteTarget.id);
-        showSuccess(`Recipe deleted successfully`);
-      } else if (deleteTarget.type === 'offer') {
-        await api.deleteOffer(token, deleteTarget.id);
-        showSuccess(`Offer deleted successfully`);
-      } else if (deleteTarget.type === 'banner') {
-        await api.deleteBanner(token, deleteTarget.id);
-        showSuccess(`Banner deleted successfully`);
-      } else if (deleteTarget.type === 'customer') {
-        await api.deleteCustomer(token, deleteTarget.id);
-        showSuccess(`Customer deleted successfully`);
-      } else if (deleteTarget.type === 'order') {
-        await api.deleteOrder(token, deleteTarget.id);
-        showSuccess(`Order deleted successfully`);
+      if (target.type === 'product') {
+        await api.deleteProduct(token, target.id);
+      } else if (target.type === 'category') {
+        await api.deleteCategory(token, target.id);
+      } else if (target.type === 'recipe') {
+        await api.deleteRecipe(token, target.id);
+      } else if (target.type === 'offer') {
+        await api.deleteOffer(token, target.id);
+      } else if (target.type === 'banner') {
+        await api.deleteBanner(token, target.id);
+      } else if (target.type === 'customer') {
+        await api.deleteCustomer(token, target.id);
+      } else if (target.type === 'order') {
+        await api.deleteOrder(token, target.id);
       }
-      setDeleteTarget(null);
-      await loadAllData();
     } catch (e: any) {
-      console.error('Delete error', e);
-      showSuccess('Delete failed: ' + (e?.message || 'Please try again'));
-    } finally {
-      setIsDeleting(false);
+      console.warn('[Delete Background Notice]:', e);
     }
   };
 
-  // Inventory Quick Update
+  // Inventory Quick Update (Optimistic)
   const handleUpdateStock = async (id: string, newStock: number) => {
     if (!token) return;
+    setProducts(prev => prev.map(p => p.id === id ? { ...p, stock: newStock } : p));
+    showSuccess('Stock updated');
     try {
-      const res = await api.updateInventory(token, id, newStock);
-      if (res.success) {
-        showSuccess('Stock updated');
-        loadAllData();
-      }
+      await api.updateInventory(token, id, newStock);
     } catch (e) {
       console.error(e);
     }
@@ -506,30 +555,35 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token || !settings) return;
+    showSuccess('Saving settings...');
     try {
       const res = await api.updateSettings(token, settings);
-      if (res.success) {
+      if (res.success || res.settings) {
         showSuccess('Settings saved successfully');
-        loadAllData();
       }
     } catch (e) {
       console.error(e);
     }
   };
 
-  // Save Recipe
+  // Save Recipe (Optimistic)
   const handleSaveRecipe = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token || !editingRecipe) return;
+    const isEdit = recipes.some(r => r.id === editingRecipe.id);
+    const targetRecipe = { ...editingRecipe, id: editingRecipe.id || ('rec-' + Date.now()) };
+    
+    if (isEdit) {
+      setRecipes(prev => prev.map(r => r.id === targetRecipe.id ? targetRecipe : r));
+    } else {
+      setRecipes(prev => [targetRecipe, ...prev]);
+    }
+    setIsRecipeModalOpen(false);
+    setEditingRecipe(null);
+    showSuccess('Recipe saved');
+
     try {
-      const isEdit = recipes.some(r => r.id === editingRecipe.id);
-      const res = await api.saveRecipe(token, editingRecipe, isEdit);
-      if (res.success) {
-        showSuccess('Recipe saved');
-        setIsRecipeModalOpen(false);
-        setEditingRecipe(null);
-        loadAllData();
-      }
+      await api.saveRecipe(token, targetRecipe, isEdit);
     } catch (e) {
       console.error(e);
     }
@@ -540,19 +594,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
     setDeleteTarget({ type: 'recipe', id, title });
   };
 
-  // Save Offer
+  // Save Offer (Optimistic)
   const handleSaveOffer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token || !editingOffer) return;
+    const isEdit = offers.some(o => o.id === editingOffer.id);
+    const targetOffer = { ...editingOffer, id: editingOffer.id || ('off-' + Date.now()) };
+
+    if (isEdit) {
+      setOffers(prev => prev.map(o => o.id === targetOffer.id ? targetOffer : o));
+    } else {
+      setOffers(prev => [targetOffer, ...prev]);
+    }
+    setIsOfferModalOpen(false);
+    setEditingOffer(null);
+    showSuccess('Offer saved');
+
     try {
-      const isEdit = offers.some(o => o.id === editingOffer.id);
-      const res = await api.saveOffer(token, editingOffer, isEdit);
-      if (res.success) {
-        showSuccess('Offer saved');
-        setIsOfferModalOpen(false);
-        setEditingOffer(null);
-        loadAllData();
-      }
+      await api.saveOffer(token, targetOffer, isEdit);
     } catch (e) {
       console.error(e);
     }
@@ -563,19 +622,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
     setDeleteTarget({ type: 'offer', id, title });
   };
 
-  // Save Banner
+  // Save Banner (Optimistic)
   const handleSaveBanner = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token || !editingBanner) return;
+    const isEdit = banners.some(b => b.id === editingBanner.id);
+    const targetBanner = { ...editingBanner, id: editingBanner.id || ('ban-' + Date.now()) };
+
+    if (isEdit) {
+      setBanners(prev => prev.map(b => b.id === targetBanner.id ? targetBanner : b));
+    } else {
+      setBanners(prev => [targetBanner, ...prev]);
+    }
+    setIsBannerModalOpen(false);
+    setEditingBanner(null);
+    showSuccess('Banner updated');
+
     try {
-      const isEdit = banners.some(b => b.id === editingBanner.id);
-      const res = await api.saveBanner(token, editingBanner, isEdit);
-      if (res.success) {
-        showSuccess('Banner updated');
-        setIsBannerModalOpen(false);
-        setEditingBanner(null);
-        loadAllData();
-      }
+      await api.saveBanner(token, targetBanner, isEdit);
     } catch (e) {
       console.error(e);
     }
@@ -2208,10 +2272,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
                   </button>
                   <button
                     type="submit"
-                    className="px-6 py-2.5 bg-[#993300] hover:bg-[#802B00] text-white font-bold rounded-xl cursor-pointer transition-all shadow-md active:scale-98 text-xs flex items-center space-x-1.5"
+                    disabled={isSavingProduct}
+                    className="px-6 py-2.5 bg-[#993300] hover:bg-[#802B00] disabled:bg-[#993300]/60 text-white font-bold rounded-xl cursor-pointer transition-all shadow-md active:scale-98 text-xs flex items-center space-x-1.5"
                   >
                     <Check className="w-3.5 h-3.5" />
-                    <span>Save Spice Product</span>
+                    <span>{isSavingProduct ? 'Saving Spice Product...' : 'Save Spice Product'}</span>
                   </button>
                 </div>
               </div>

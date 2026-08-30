@@ -906,23 +906,33 @@ class DataStore {
   }
 
   private persistNow(data: DatabaseSchema) {
+    if (this.saveTimeout) {
+      clearTimeout(this.saveTimeout);
+      this.saveTimeout = null;
+    }
     try {
       const dir = path.dirname(DB_FILE);
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
       }
-      fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
-    } catch (e) {
-      console.error('Failed to write db.json local backup:', e);
+      const jsonStr = JSON.stringify(data, null, 2);
+      fs.promises.writeFile(DB_FILE, jsonStr, 'utf-8').catch(e => {
+        console.warn('[DataStore] Notice writing backup db.json:', e.message);
+      });
+    } catch (e: any) {
+      console.warn('[DataStore] Notice preparing db.json backup:', e.message);
     }
   }
 
   public save() {
     if (this.saveTimeout) {
       clearTimeout(this.saveTimeout);
-      this.saveTimeout = null;
     }
-    this.persistNow(this.data);
+    // Debounce disk writes by 100ms so multiple rapid state changes write efficiently without blocking the event loop
+    this.saveTimeout = setTimeout(() => {
+      this.saveTimeout = null;
+      this.persistNow(this.data);
+    }, 100);
   }
 
   // --- Settings & Security ---
@@ -944,17 +954,21 @@ class DataStore {
       return false;
     }
     this.data.settings.admin_password = newPassword.trim();
-    await this.logAudit(adminUser, 'ADMIN_PASSWORD_CHANGED', 'security', 'Admin master password updated');
-    await this.setFirestoreDoc('settings', 'store_settings', this.data.settings);
     this.save();
+    Promise.allSettled([
+      this.logAudit(adminUser, 'ADMIN_PASSWORD_CHANGED', 'security', 'Admin master password updated'),
+      this.setFirestoreDoc('settings', 'store_settings', this.data.settings)
+    ]).catch(() => {});
     return true;
   }
 
   public async updateSettings(updates: Partial<BusinessSettings>, adminUser = 'Admin'): Promise<BusinessSettings> {
     this.data.settings = { ...this.data.settings, ...updates };
-    await this.logAudit(adminUser, 'SETTINGS_UPDATED', 'settings', 'Business settings updated');
-    await this.setFirestoreDoc('settings', 'store_settings', this.data.settings);
     this.save();
+    Promise.allSettled([
+      this.logAudit(adminUser, 'SETTINGS_UPDATED', 'settings', 'Business settings updated'),
+      this.setFirestoreDoc('settings', 'store_settings', this.data.settings)
+    ]).catch(() => {});
     return this.data.settings;
   }
 
@@ -1001,10 +1015,14 @@ class DataStore {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
-    this.data.products.push(newProduct);
-    await this.logAudit(adminUser, 'PRODUCT_CREATED', newProduct.id, `Created product ${newProduct.name_en}`);
-    await this.setFirestoreDoc('products', newProduct.id, newProduct);
+    this.data.products.unshift(newProduct);
     this.save();
+    
+    Promise.allSettled([
+      this.setFirestoreDoc('products', newProduct.id, newProduct),
+      this.logAudit(adminUser, 'PRODUCT_CREATED', newProduct.id, `Created product ${newProduct.name_en}`)
+    ]).catch(() => {});
+
     return newProduct;
   }
 
@@ -1017,9 +1035,13 @@ class DataStore {
       updated_at: new Date().toISOString()
     };
     const updatedProd = this.data.products[idx];
-    await this.logAudit(adminUser, 'PRODUCT_UPDATED', id, `Updated product ${updatedProd.name_en}`);
-    await this.setFirestoreDoc('products', id, updatedProd);
     this.save();
+
+    Promise.allSettled([
+      this.setFirestoreDoc('products', id, updatedProd),
+      this.logAudit(adminUser, 'PRODUCT_UPDATED', id, `Updated product ${updatedProd.name_en}`)
+    ]).catch(() => {});
+
     return updatedProd;
   }
 
@@ -1028,9 +1050,13 @@ class DataStore {
     if (idx === -1) return false;
     const name = this.data.products[idx].name_en;
     this.data.products.splice(idx, 1);
-    await this.logAudit(adminUser, 'PRODUCT_DELETED', id, `Deleted product ${name}`);
-    await this.deleteFirestoreDoc('products', id);
     this.save();
+
+    Promise.allSettled([
+      this.deleteFirestoreDoc('products', id),
+      this.logAudit(adminUser, 'PRODUCT_DELETED', id, `Deleted product ${name}`)
+    ]).catch(() => {});
+
     return true;
   }
 
@@ -1045,9 +1071,13 @@ class DataStore {
       id: 'cat-' + Date.now()
     };
     this.data.categories.push(newCat);
-    await this.logAudit(adminUser, 'CATEGORY_CREATED', newCat.id, `Created category ${newCat.name_en}`);
-    await this.setFirestoreDoc('categories', newCat.id, newCat);
     this.save();
+
+    Promise.allSettled([
+      this.setFirestoreDoc('categories', newCat.id, newCat),
+      this.logAudit(adminUser, 'CATEGORY_CREATED', newCat.id, `Created category ${newCat.name_en}`)
+    ]).catch(() => {});
+
     return newCat;
   }
 
@@ -1056,39 +1086,48 @@ class DataStore {
     if (idx === -1) return null;
     this.data.categories[idx] = { ...this.data.categories[idx], ...updates };
     const updated = this.data.categories[idx];
-    await this.logAudit(adminUser, 'CATEGORY_UPDATED', id, `Updated category ${updated.name_en}`);
-    await this.setFirestoreDoc('categories', id, updated);
     this.save();
+
+    Promise.allSettled([
+      this.setFirestoreDoc('categories', id, updated),
+      this.logAudit(adminUser, 'CATEGORY_UPDATED', id, `Updated category ${updated.name_en}`)
+    ]).catch(() => {});
+
     return updated;
   }
 
   public async deleteCategory(id: string, adminUser = 'Admin'): Promise<boolean> {
     const idx = this.data.categories.findIndex(c => c.id === id);
     if (idx === -1) return false;
+    const name = this.data.categories[idx].name_en;
     this.data.categories.splice(idx, 1);
-    await this.logAudit(adminUser, 'CATEGORY_DELETED', id, 'Deleted category');
-    await this.deleteFirestoreDoc('categories', id);
     this.save();
+
+    Promise.allSettled([
+      this.deleteFirestoreDoc('categories', id),
+      this.logAudit(adminUser, 'CATEGORY_DELETED', id, `Deleted category ${name}`)
+    ]).catch(() => {});
+
     return true;
   }
 
-  // --- Inventory ---
-  public async updateStock(
-    productId: string,
-    newStock: number,
-    threshold?: number,
-    adminUser = 'Admin'
-  ): Promise<Product | null> {
-    const p = this.getProductById(productId);
-    if (!p) return null;
-    const oldStock = p.stock;
-    p.stock = Math.max(0, newStock);
-    if (threshold !== undefined) p.low_stock_threshold = threshold;
-    p.updated_at = new Date().toISOString();
-    await this.logAudit(adminUser, 'STOCK_CHANGED', productId, `Stock adjusted from ${oldStock} to ${p.stock}`);
-    await this.setFirestoreDoc('products', productId, p);
+  // --- Inventory Quick Stock Update ---
+  public async updateStock(id: string, newStock: number, threshold?: number, adminUser = 'Admin'): Promise<Product | null> {
+    const product = this.data.products.find(p => p.id === id);
+    if (!product) return null;
+    product.stock = Math.max(0, newStock);
+    if (threshold !== undefined) {
+      product.low_stock_threshold = Math.max(0, threshold);
+    }
+    product.updated_at = new Date().toISOString();
     this.save();
-    return p;
+
+    Promise.allSettled([
+      this.setFirestoreDoc('products', id, product),
+      this.logAudit(adminUser, 'INVENTORY_STOCK_UPDATE', id, `Updated stock to ${newStock} for ${product.name_en}`)
+    ]).catch(() => {});
+
+    return product;
   }
 
   // --- Customers ---
