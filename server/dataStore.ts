@@ -1,18 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { initializeApp as initFirebaseClientApp, getApps as getClientApps, getApp as getClientApp, FirebaseApp as ClientFirebaseApp } from 'firebase/app';
-import {
-  getFirestore as getClientFirestore,
-  Firestore as ClientFirestore,
-  collection as fsCollection,
-  doc as fsDoc,
-  getDoc as fsGetDoc,
-  getDocs as fsGetDocs,
-  setDoc as fsSetDoc,
-  deleteDoc as fsDeleteDoc
-} from 'firebase/firestore';
-import { getApps as getAdminApps, initializeApp as initializeAdminApp, cert, App as AdminApp } from 'firebase-admin/app';
-import { getStorage } from 'firebase-admin/storage';
+import { Firestore as AdminFirestore } from 'firebase-admin/firestore';
+import { getFirebaseAdmin, getAdminStorageBucketInstance } from './firebaseAdmin';
 import {
   Product,
   Category,
@@ -599,269 +588,181 @@ const INITIAL_REVIEWS: Review[] = [
 class DataStore {
   private data: DatabaseSchema;
   private saveTimeout: NodeJS.Timeout | null = null;
-  private clientFirestore: ClientFirestore | null = null;
-  private clientApp: ClientFirebaseApp | null = null;
+  private firestore: AdminFirestore | null = null;
   private isFirestoreReady = false;
-  private adminApp: AdminApp | null = null;
+  private lastFirestoreError: string | null = null;
 
   constructor() {
     this.data = this.loadDatabase();
     this.initFirestore().catch(e => {
-      console.warn('[Firestore] Async initialization notice:', e.message);
+      console.warn('[Firestore Admin] Async initialization notice:', e.message);
     });
   }
 
   public async initFirestore(): Promise<boolean> {
     try {
-      const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
-      let config: any = {};
-      if (fs.existsSync(configPath)) {
-        try {
-          config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-        } catch (_) {}
-      }
+      const adminConfig = getFirebaseAdmin();
+      this.firestore = adminConfig.firestore;
 
-      const projectId =
-        process.env.FIREBASE_PROJECT_ID ||
-        process.env.GCLOUD_PROJECT ||
-        process.env.GOOGLE_CLOUD_PROJECT ||
-        config.projectId ||
-        'gen-lang-client-0691323767';
-
-      const storageBucket =
-        process.env.FIREBASE_STORAGE_BUCKET ||
-        config.storageBucket ||
-        `${projectId}.firebasestorage.app`;
-
-      const firestoreDbId =
-        process.env.FIRESTORE_DATABASE_ID ||
-        process.env.FIREBASE_DATABASE_ID ||
-        config.firestoreDatabaseId ||
-        '(default)';
-
-      // Initialize Client App & Firestore
-      if (getClientApps().length > 0) {
-        this.clientApp = getClientApp();
-      } else {
-        this.clientApp = initFirebaseClientApp({
-          apiKey: config.apiKey || process.env.FIREBASE_API_KEY,
-          authDomain: config.authDomain,
-          projectId,
-          storageBucket,
-          messagingSenderId: config.messagingSenderId,
-          appId: config.appId
-        });
-      }
-
-      this.clientFirestore = getClientFirestore(this.clientApp, firestoreDbId);
-
-      // Initialize Firebase Admin App for Storage (if available)
-      try {
-        if (getAdminApps().length > 0) {
-          this.adminApp = getAdminApps()[0] as AdminApp;
-        } else {
-          const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT;
-          if (serviceAccountJson) {
-            const parsed = JSON.parse(serviceAccountJson);
-            this.adminApp = initializeAdminApp({
-              credential: cert(parsed),
-              projectId: parsed.project_id || projectId,
-              storageBucket
-            });
-          } else {
-            this.adminApp = initializeAdminApp({
-              projectId,
-              storageBucket
-            });
-          }
-        }
-      } catch (adminErr: any) {
-        // Admin SDK optional for Storage
-      }
-
-      console.log(`[Firestore] Initialized connection to Firestore database: ${firestoreDbId} in project: ${projectId}`);
+      console.log(`[Firestore Admin] Target database: "${adminConfig.databaseId}" in project "${adminConfig.projectId}" (Auth source: ${adminConfig.source})`);
       await this.reloadFromFirestore();
       this.isFirestoreReady = true;
+      this.lastFirestoreError = null;
       console.log(
-        `[Firestore] Synchronized authoritative catalog: ${this.data.products.length} products, ${this.data.customers.length} customers, ${this.data.orders.length} orders.`
+        `[Firestore Admin] Authoritative catalog synced: ${this.data.products.length} products, ${this.data.customers.length} customers, ${this.data.orders.length} orders.`
       );
       return true;
     } catch (err: any) {
-      console.warn('[Firestore] Initialization notice (relying on active data cache):', err.message);
+      this.isFirestoreReady = false;
+      this.lastFirestoreError = err.message || String(err);
+      console.error('[Firestore Admin] ❌ Connection error:', err.message || err);
       return false;
     }
   }
 
   public getIsFirestoreReady(): boolean {
-    return this.isFirestoreReady && this.clientFirestore !== null;
+    return this.isFirestoreReady && this.firestore !== null;
+  }
+
+  public getLastFirestoreError(): string | null {
+    return this.lastFirestoreError;
   }
 
   public getStorageBucket() {
-    if (!this.adminApp) return null;
-    try {
-      return getStorage(this.adminApp).bucket();
-    } catch {
-      return null;
-    }
+    return getAdminStorageBucketInstance();
   }
 
   public async reloadFromFirestore(): Promise<void> {
-    if (!this.clientFirestore) return;
+    if (!this.firestore) return;
     try {
-      // Check if Firestore has been seeded
-      const metaRef = fsDoc(this.clientFirestore, 'settings', 'db_metadata');
-      const metaDoc = await fsGetDoc(metaRef);
+      // Check if products exist in Firestore
+      const prodSnap = await this.firestore.collection('products').get();
+      if (!prodSnap.empty) {
+        const prods: Product[] = [];
+        prodSnap.forEach(d => prods.push(d.data() as Product));
+        this.data.products = prods;
+      }
 
-      if (!metaDoc.exists()) {
-        console.log('[Firestore] Seeding initial Indima catalog to Firestore...');
-        for (const prod of this.data.products) {
-          await this.setFirestoreDoc('products', prod.id, prod);
-        }
-        for (const cat of this.data.categories) {
-          await this.setFirestoreDoc('categories', cat.id, cat);
-        }
-        for (const rec of this.data.recipes) {
-          await this.setFirestoreDoc('recipes', rec.id, rec);
-        }
-        for (const ban of this.data.banners) {
-          await this.setFirestoreDoc('banners', ban.id, ban);
-        }
-        for (const off of this.data.offers) {
-          await this.setFirestoreDoc('offers', off.id, off);
-        }
-        for (const rev of this.data.reviews) {
-          await this.setFirestoreDoc('reviews', rev.id, rev);
-        }
-        await this.setFirestoreDoc('settings', 'store_settings', this.data.settings);
-        await fsSetDoc(metaRef, {
-          initialized: true,
-          seeded_at: new Date().toISOString(),
-          app_name: 'Indima Spice Co.'
-        });
-        console.log('[Firestore] Initial Firestore seed successfully completed.');
-      } else {
-        // 1. Products
-        const prodSnap = await fsGetDocs(fsCollection(this.clientFirestore, 'products'));
-        if (!prodSnap.empty) {
-          const prods: Product[] = [];
-          prodSnap.forEach(d => prods.push(d.data() as Product));
-          this.data.products = prods;
-        }
+      // 2. Categories
+      const catSnap = await this.firestore.collection('categories').get();
+      if (!catSnap.empty) {
+        const cats: Category[] = [];
+        catSnap.forEach(d => cats.push(d.data() as Category));
+        this.data.categories = cats.sort((a, b) => (a.order || 0) - (b.order || 0));
+      }
 
-        // 2. Categories
-        const catSnap = await fsGetDocs(fsCollection(this.clientFirestore, 'categories'));
-        if (!catSnap.empty) {
-          const cats: Category[] = [];
-          catSnap.forEach(d => cats.push(d.data() as Category));
-          this.data.categories = cats.sort((a, b) => (a.order || 0) - (b.order || 0));
-        }
+      // 3. Orders
+      const orderSnap = await this.firestore.collection('orders').get();
+      if (!orderSnap.empty) {
+        const ords: Order[] = [];
+        orderSnap.forEach(d => ords.push(d.data() as Order));
+        this.data.orders = ords.sort(
+          (a, b) => new Date(b.order_date || b.created_at).getTime() - new Date(a.order_date || a.created_at).getTime()
+        );
+      }
 
-        // 3. Orders
-        const orderSnap = await fsGetDocs(fsCollection(this.clientFirestore, 'orders'));
-        if (!orderSnap.empty) {
-          const ords: Order[] = [];
-          orderSnap.forEach(d => ords.push(d.data() as Order));
-          this.data.orders = ords.sort(
-            (a, b) => new Date(b.order_date || b.created_at).getTime() - new Date(a.order_date || a.created_at).getTime()
-          );
-        }
+      // 4. Customers
+      const custSnap = await this.firestore.collection('customers').get();
+      if (!custSnap.empty) {
+        const custs: Customer[] = [];
+        custSnap.forEach(d => custs.push(d.data() as Customer));
+        this.data.customers = custs;
+      }
 
-        // 4. Customers
-        const custSnap = await fsGetDocs(fsCollection(this.clientFirestore, 'customers'));
-        if (!custSnap.empty) {
-          const custs: Customer[] = [];
-          custSnap.forEach(d => custs.push(d.data() as Customer));
-          this.data.customers = custs;
-        }
+      // 5. Recipes
+      const recSnap = await this.firestore.collection('recipes').get();
+      if (!recSnap.empty) {
+        const recs: Recipe[] = [];
+        recSnap.forEach(d => recs.push(d.data() as Recipe));
+        this.data.recipes = recs;
+      }
 
-        // 5. Recipes
-        const recSnap = await fsGetDocs(fsCollection(this.clientFirestore, 'recipes'));
-        if (!recSnap.empty) {
-          const recs: Recipe[] = [];
-          recSnap.forEach(d => recs.push(d.data() as Recipe));
-          this.data.recipes = recs;
-        }
+      // 6. Banners
+      const banSnap = await this.firestore.collection('banners').get();
+      if (!banSnap.empty) {
+        const bans: Banner[] = [];
+        banSnap.forEach(d => bans.push(d.data() as Banner));
+        this.data.banners = bans;
+      }
 
-        // 6. Banners
-        const banSnap = await fsGetDocs(fsCollection(this.clientFirestore, 'banners'));
-        if (!banSnap.empty) {
-          const bans: Banner[] = [];
-          banSnap.forEach(d => bans.push(d.data() as Banner));
-          this.data.banners = bans;
-        }
+      // 7. Offers
+      const offSnap = await this.firestore.collection('offers').get();
+      if (!offSnap.empty) {
+        const offs: Offer[] = [];
+        offSnap.forEach(d => offs.push(d.data() as Offer));
+        this.data.offers = offs;
+      }
 
-        // 7. Offers
-        const offSnap = await fsGetDocs(fsCollection(this.clientFirestore, 'offers'));
-        if (!offSnap.empty) {
-          const offs: Offer[] = [];
-          offSnap.forEach(d => offs.push(d.data() as Offer));
-          this.data.offers = offs;
-        }
+      // 8. Reviews
+      const revSnap = await this.firestore.collection('reviews').get();
+      if (!revSnap.empty) {
+        const revs: Review[] = [];
+        revSnap.forEach(d => revs.push(d.data() as Review));
+        this.data.reviews = revs;
+      }
 
-        // 8. Reviews
-        const revSnap = await fsGetDocs(fsCollection(this.clientFirestore, 'reviews'));
-        if (!revSnap.empty) {
-          const revs: Review[] = [];
-          revSnap.forEach(d => revs.push(d.data() as Review));
-          this.data.reviews = revs;
-        }
+      // 9. Audit Logs
+      const auditSnap = await this.firestore.collection('audit_logs').get();
+      if (!auditSnap.empty) {
+        const logs: AdminAuditLog[] = [];
+        auditSnap.forEach(d => logs.push(d.data() as AdminAuditLog));
+        this.data.auditLogs = logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      }
 
-        // 9. Audit Logs
-        const auditSnap = await fsGetDocs(fsCollection(this.clientFirestore, 'audit_logs'));
-        if (!auditSnap.empty) {
-          const logs: AdminAuditLog[] = [];
-          auditSnap.forEach(d => logs.push(d.data() as AdminAuditLog));
-          this.data.auditLogs = logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-        }
+      // 10. Leads
+      const leadSnap = await this.firestore.collection('leads').get();
+      if (!leadSnap.empty) {
+        const lds: Lead[] = [];
+        leadSnap.forEach(d => lds.push(d.data() as Lead));
+        this.data.leads = lds;
+      }
 
-        // 10. Leads
-        const leadSnap = await fsGetDocs(fsCollection(this.clientFirestore, 'leads'));
-        if (!leadSnap.empty) {
-          const lds: Lead[] = [];
-          leadSnap.forEach(d => lds.push(d.data() as Lead));
-          this.data.leads = lds;
-        }
-
-        // 11. Settings
-        const setDocRef = fsDoc(this.clientFirestore, 'settings', 'store_settings');
-        const setDocSnap = await fsGetDoc(setDocRef);
-        if (setDocSnap.exists()) {
-          this.data.settings = { ...INITIAL_SETTINGS, ...(setDocSnap.data() as BusinessSettings) };
-        }
+      // 11. Settings
+      const setDoc = await this.firestore.collection('settings').doc('store_settings').get();
+      if (setDoc.exists) {
+        this.data.settings = { ...INITIAL_SETTINGS, ...(setDoc.data() as BusinessSettings) };
       }
 
       this.persistNow(this.data);
     } catch (e: any) {
-      console.warn('[Firestore] Notice reloading from Firestore collections:', e.message);
+      console.warn('[Firestore Admin] Notice loading collections from Firestore:', e.message);
     }
   }
 
-  private async getFirestoreInstance(): Promise<ClientFirestore | null> {
-    if (this.clientFirestore) return this.clientFirestore;
+  private async getFirestoreInstance(): Promise<AdminFirestore | null> {
+    if (this.firestore) return this.firestore;
     await this.initFirestore();
-    return this.clientFirestore;
+    return this.firestore;
   }
 
   public async setFirestoreDoc(collectionName: string, docId: string, itemData: any): Promise<void> {
     try {
       const fsDb = await this.getFirestoreInstance();
-      if (!fsDb) return;
+      if (!fsDb) {
+        const errMsg = `Firestore Admin instance unavailable (${this.lastFirestoreError || 'Not connected'}). Write failed for ${collectionName}/${docId}`;
+        console.error(`[Firestore Admin] ❌ ${errMsg}`);
+        throw new Error(errMsg);
+      }
       const clean = JSON.parse(JSON.stringify(itemData));
-      const docRef = fsDoc(fsDb, collectionName, String(docId));
-      await fsSetDoc(docRef, clean, { merge: true });
+      await fsDb.collection(collectionName).doc(String(docId)).set(clean, { merge: true });
     } catch (err: any) {
-      console.warn(`[Firestore] Notice writing ${collectionName}/${docId}:`, err.message);
+      console.error(`[Firestore Admin] ❌ Error writing document ${collectionName}/${docId}:`, err.message || err);
+      throw err;
     }
   }
 
   public async deleteFirestoreDoc(collectionName: string, docId: string): Promise<void> {
     try {
       const fsDb = await this.getFirestoreInstance();
-      if (!fsDb) return;
-      const docRef = fsDoc(fsDb, collectionName, String(docId));
-      await fsDeleteDoc(docRef);
+      if (!fsDb) {
+        const errMsg = `Firestore Admin instance unavailable (${this.lastFirestoreError || 'Not connected'}). Delete failed for ${collectionName}/${docId}`;
+        console.error(`[Firestore Admin] ❌ ${errMsg}`);
+        throw new Error(errMsg);
+      }
+      await fsDb.collection(collectionName).doc(String(docId)).delete();
     } catch (err: any) {
-      console.warn(`[Firestore] Notice deleting ${collectionName}/${docId}:`, err.message);
+      console.error(`[Firestore Admin] ❌ Error deleting document ${collectionName}/${docId}:`, err.message || err);
+      throw err;
     }
   }
 
@@ -910,25 +811,15 @@ class DataStore {
       clearTimeout(this.saveTimeout);
       this.saveTimeout = null;
     }
-    try {
-      const dir = path.dirname(DB_FILE);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-      const jsonStr = JSON.stringify(data, null, 2);
-      fs.promises.writeFile(DB_FILE, jsonStr, 'utf-8').catch(e => {
-        console.warn('[DataStore] Notice writing backup db.json:', e.message);
-      });
-    } catch (e: any) {
-      console.warn('[DataStore] Notice preparing db.json backup:', e.message);
-    }
+    // data/db.json and data/db.backup.json are strictly preserved as read-only historical assets.
+    // Cloud Firestore is the authoritative database.
   }
 
   public save() {
     if (this.saveTimeout) {
       clearTimeout(this.saveTimeout);
     }
-    // Debounce disk writes by 100ms so multiple rapid state changes write efficiently without blocking the event loop
+    // No disk writes - state is managed in memory and synced directly to Cloud Firestore
     this.saveTimeout = setTimeout(() => {
       this.saveTimeout = null;
       this.persistNow(this.data);
@@ -1215,9 +1106,8 @@ class DataStore {
       const fsDb = await this.getFirestoreInstance();
       if (fsDb) {
         // Try direct doc lookup
-        const docRef = fsDoc(fsDb, 'orders', cleanId);
-        const docSnap = await fsGetDoc(docRef);
-        if (docSnap.exists()) {
+        const docSnap = await fsDb.collection('orders').doc(cleanId).get();
+        if (docSnap.exists) {
           const order = docSnap.data() as Order;
           if (!this.data.orders.some(o => o.id === order.id)) {
             this.data.orders.unshift(order);
@@ -1226,7 +1116,7 @@ class DataStore {
         }
 
         // Try querying by lowercase or alternative ID
-        const orderSnap = await fsGetDocs(fsCollection(fsDb, 'orders'));
+        const orderSnap = await fsDb.collection('orders').get();
         if (!orderSnap.empty) {
           const lowerId = cleanId.toLowerCase();
           for (const doc of orderSnap.docs) {
@@ -1245,7 +1135,7 @@ class DataStore {
         }
       }
     } catch (e: any) {
-      console.warn('[Firestore] Notice fetching order fallback:', e.message);
+      console.warn('[Firestore Admin] Notice fetching order fallback:', e.message);
     }
 
     return undefined;

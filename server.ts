@@ -8,6 +8,7 @@ import heicConvert from 'heic-convert';
 import Razorpay from 'razorpay';
 import { createServer as createViteServer } from 'vite';
 import { db } from './server/dataStore';
+import { runOneTimeFirestoreMigration } from './server/firestoreMigration';
 import { lookupPincode } from './src/data/indiaLocations';
 import { Order, Address } from './src/types';
 
@@ -321,8 +322,11 @@ app.get('/api/health', (req: Request, res: Response) => {
 
 app.get('/api/database/status', (req: Request, res: Response) => {
   res.json({
-    active_database: db.getIsFirestoreReady() ? 'Firebase Firestore' : 'Active Store',
+    active_database: db.getIsFirestoreReady() ? 'Firebase Firestore (Firebase Admin SDK)' : 'Active Store',
     firestore_connected: db.getIsFirestoreReady(),
+    firestore_project_id: process.env.FIREBASE_PROJECT_ID || 'indimaspicea',
+    firestore_database: process.env.FIRESTORE_DATABASE_ID || '(default)',
+    firestore_last_error: db.getLastFirestoreError(),
     counts: {
       products: db.getProducts().length,
       customers: db.getCustomers().length,
@@ -1581,6 +1585,16 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 // ----------------------------------------------------
 
 async function startServer() {
+  // Check and run one-time migration if explicitly requested via RUN_FIRESTORE_MIGRATION=true
+  if (process.env.RUN_FIRESTORE_MIGRATION === 'true') {
+    try {
+      console.log('[Server Startup] RUN_FIRESTORE_MIGRATION=true detected. Executing pre-flight one-time migration...');
+      await runOneTimeFirestoreMigration();
+    } catch (migErr: any) {
+      console.error('[Server Startup] Migration encountered error:', migErr.message);
+    }
+  }
+
   try {
     await db.initFirestore();
   } catch (dbErr: any) {
