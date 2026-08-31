@@ -52,6 +52,11 @@ service cloud.firestore {
       allow write: if isValidId(customerId);
     }
 
+    match /processed_webhook_events/{eventId} {
+      allow read: if true;
+      allow write: if isValidId(eventId);
+    }
+
     match /settings/{settingId} {
       allow read: if true;
       allow write: if isValidId(settingId);
