@@ -73,7 +73,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
         '👩‍🍳 Pressure Cooker Mutton Curry'
       ];
 
-  // Initialize with welcome message
+  // Initialize with stylish welcome message celebrating spice heritage, natural stone-ground process, and FSSAI certification
   useEffect(() => {
     if (messages.length === 0) {
       setMessages([
@@ -81,8 +81,26 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
           id: 'welcome-msg',
           role: 'assistant',
           content: isKn
-            ? `ನಮಸ್ಕಾರ! ನಾನು **ಇಂದಿಮಾ AI** – ನಿಮ್ಮ ವೈಯಕ್ತಿಕ ಮಸಾಲೆ ಮತ್ತು ಪಾಕವಿಧಾನ ಸಹಾಯಕ.\n\nನೀವು ಯಾವುದೇ ಅಡುಗೆ, ಮಸಾಲೆ ಪ್ರಮಾಣ, ಅಥವಾ ಊಟದ ಜನಸಂಖ್ಯೆಗೆ ತಕ್ಕಂತೆ ರೆಸಿಪಿ ಕೇಳಬಹುದು. ಉದಾಹರಣೆಗೆ:\n- *"ಚಿಕನ್ ಬಿರಿಯಾನಿ ಮಾಡಲು ಯಾವ ಮಸಾಲೆ ಬೇಕು ಮತ್ತು ಪೂರ್ಣ ರೆಸಿಪಿ ಕೊಡಿ"*\n- *"೪ ಜನರಿಗೆ ಸಾಂಬಾರ್ ಮಾಡುವ ವಿಧಾನ"*\n- *"ನನ್ನ ಬಳಿ ₹500 ಇದೆ, ಯಾವ ಮಸಾಲೆಗಳನ್ನು ಕೊಳ್ಳಬೇಕು?"*`
-            : `Welcome to **Indima AI – Your Personal Spice & Recipe Assistant**! 🌿\n\nI am here to guide you with authentic Bengaluru stone-ground spices, accurate recipe measurements, custom servings, and cooking techniques.\n\nAsk me anything like:\n- *"I want to prepare Chicken Biryani. What spices do you recommend and give me the complete recipe?"*\n- *"How to make traditional Karnataka Sambar for 6 people?"*\n- *"I have only a pressure cooker. How to adapt the recipe?"*`,
+            ? `ನಮಸ್ಕಾರ! **ಇಂದಿಮಾ ಸ್ಪೈಸ್ ಕಂ (Indima Spice Co.)** ಗೆ ಸುಸ್ವಾಗತ – ಶುದ್ಧತೆ ಮತ್ತು ಕರ್ನಾಟಕದ ಸಾಂಪ್ರದಾಯಿಕ ಪರಂಪರೆಯ ಸಂಗಮ! 🌿✨
+
+ಕರ್ನಾಟಕದ ಮಸಾಲೆ ಸಂಸ್ಕೃತಿಗೆ ಶತಮಾನಗಳ ಭವ್ಯ ಇತಿಹಾಸವಿದೆ. ಪ್ರಾಚೀನ ಕಾಲದಿಂದಲೂ ಗಿಡಮೂಲಿಕೆ ಮತ್ತು ಮಸಾಲೆಗಳನ್ನು ಯಾವುದೇ ಕೃತಕ ತಂತ್ರಜ್ಞಾನವಿಲ್ಲದೆ, ನೈಸರ್ಗಿಕ ಕಲ್ಲಿನಲ್ಲಿ ನಿಧಾನವಾಗಿ ಬೀಸಿ ತಯಾರಿಸುವಾಗ ಅವುಗಳ ನೈಸರ್ಗಿಕ ಸಾರಭೂತ ತೈಲಗಳು (essential oils), ಆಹ್ಲಾದಕರ ಸುವಾಸನೆ ಮತ್ತು ಆಂಟಿಆಕ್ಸಿಡೆಂಟ್‌ಗಳು ಸಂಪೂರ್ಣವಾಗಿ ಉಳಿಯುತ್ತಿದ್ದವು.
+
+**ಇಂದಿಮಾ ಸ್ಪೈಸ್ ಕಂ** ಇದೇ ಪಾರಂಪರಿಕ ಶ್ರೇಷ್ಠತೆಯನ್ನು ಪುನರುಜ್ಜೀವನಗೊಳಿಸಿದೆ:
+- 🌿 **೧೦೦% ನೈಸರ್ಗಿಕ & ಶುದ್ಧ**: ಯಾವುದೇ ಕೃತಕ ಬಣ್ಣ, ಸಂರಕ್ಷಕ (preservatives) ಅಥವಾ ಫಿಲ್ಲರ್‌ಗಳಿಲ್ಲದ ನೈಜ ಮಸಾಲೆಗಳು.
+- 🪨 **ಸಾಂಪ್ರದಾಯಿಕ ಕಲ್ಲಿನ ಬೀಸುವಿಕೆ**: ನಿಧಾನಗತಿಯ ಕಲ್ಲಿನ ಬೀಸುವಿಕೆಯಿಂದ ಮಸಾಲೆಗಳಲ್ಲಿ ನೈಸರ್ಗಿಕ ಪೋಷಕಾಂಶಗಳು ಮತ್ತು ದಟ್ಟ ಪರಿಮಳ ಅಖಂಡವಾಗಿರುತ್ತವೆ.
+- 🛡️ **FSSAI ನಿಂದ ಮಾನ್ಯತೆ ಮತ್ತು ಪ್ರಮಾಣೀಕೃತ**: ಆಹಾರ ಸುರಕ್ಷತೆಯ ಅತ್ಯುನ್ನತ ಗುಣಮಟ್ಟದೊಂದಿಗೆ ತಯಾರಿಸಲ್ಪಟ್ಟಿದೆ (FSSAI Lic. No: **21226194000378**).
+
+ನಾನು ನಿಮ್ಮ ವೈಯಕ್ತಿಕ ಪಾಕವಿಧಾನ ಮತ್ತು ಮಸಾಲೆ ಸಹಾಯಕ. ನೀವು ಯಾವುದೇ ಸಾಂಪ್ರದಾಯಿಕ ಅಡುಗೆ ವಿಧಾನ, ನಿಖರ ಅಳತೆಗಳು ಅಥವಾ ಮಸಾಲೆಗಳ ಬಗ್ಗೆ ಮುಕ್ತವಾಗಿ ಕೇಳಬಹುದು!`
+            : `Welcome to **Indima Spice Co.** – Where Heritage Meets Natural Purity! 🌿✨
+
+For centuries, South India's spice traditions were built on patience, nature, and pure craftsmanship. Spices were harvested at peak potency and slowly stone-ground at cool temperatures, locking in their volatile essential oils, deep earthy aromas, and natural antioxidants without the destructive heat of modern high-speed machines.
+
+At **Indima Spice Co.**, we bring that authentic heritage back to your kitchen:
+- 🌿 **100% Pure & Natural**: Farm-sourced single-origin spices with zero artificial colors, zero chemical preservatives, and zero fillers.
+- 🪨 **Authentic Slow Stone-Ground**: Traditional cool-friction grinding that preserves authentic aroma, rich oils, and regional culinary depth.
+- 🛡️ **Recognized & Certified by FSSAI**: Crafted under strict food safety and hygiene benchmarks (FSSAI Lic. No: **21226194000378**).
+
+I am your personal AI Culinary & Spice Companion. Ask me for authentic Karnataka recipes, cooking secrets, exact spice measurements, or our signature stone-ground blends!`,
           timestamp: Date.now(),
           suggestedFollowUps: starterPrompts.slice(0, 3)
         }

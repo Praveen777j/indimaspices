@@ -42,7 +42,14 @@ function getGenAiClient(): GoogleGenAI | null {
     return null;
   }
   if (!genAiClient) {
-    genAiClient = new GoogleGenAI({ apiKey });
+    genAiClient = new GoogleGenAI({
+      apiKey,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        }
+      }
+    });
   }
   return genAiClient;
 }
@@ -178,9 +185,64 @@ export async function handleAiAssistantRequest(
   // =========================================================================
 
   // Detect Kanglish input
-  const isKanglish = /\b(hegidira|hegidiri|namaskara|namaskar|hege|madodu|maduvudu|beku|idheya|ideya|channagide|dhanyavada|aytu|sari|enu|yenu|ondhu|eradu)\b/i.test(lowerMsg);
+  const isKanglish = /\b(hegidira|hegidiri|namaskara|namaskar|hege|madodu|maduvudu|beku|idheya|ideya|channagide|dhanyavada|aytu|sari|enu|yenu|ondhu|eradu|neevu|nimma|ivattu|yava|kelabahudu)\b/i.test(lowerMsg);
 
-  // Check greetings
+  // 1. Heritage, History of Spices, Creation, Business Natural Philosophy & FSSAI Certification
+  const isHeritageOrBusinessQuery = /\b(history\s*of\s*spices|how\s*(?:are\s*)?spices\s*(?:are\s*)?(?:created|made|prepared)|about\s*(?:indima|business|company|your\s*business)|natural|stone\s*ground|fssai|certified|certification|heritage|licence|license)\b/i.test(lowerMsg) ||
+    /(ಇತಿಹಾಸ|ವ್ಯವಹಾರ|ಪರಂಪರೆ|ನೈಸರ್ಗಿಕ|ಕಲ್ಲಿನ|ಪ್ರಮಾಣೀಕೃತ|ಪ್ರಮಾಣಪತ್ರ|ಎಫ್ಎಸ್ಎಸ್ಎಐ|ಸುರಕ್ಷತೆ)/i.test(rawTrimmed);
+  if (isHeritageOrBusinessQuery) {
+    const heritageReply_en = `**The Heritage of Spices & Indima Spice Co.** 🌿✨
+
+**The Timeless History:**
+For centuries, South India's grand spice traditions were built on patience, nature, and pure craftsmanship. Spices were harvested at peak potency and slowly stone-ground at cool ambient temperatures. Unlike high-speed commercial pulverizers that generate extreme friction heat (over 80°C) and destroy volatile aromatic oils, slow stone grinding preserves the essential oils, delicate fragrance, and natural antioxidants for authentic heritage flavor.
+
+**At Indima Spice Co., We Revive This Legacy:**
+- 🌿 **100% Pure & Natural**: Farm-sourced single-origin spices with zero artificial colors, zero chemical preservatives, and zero fillers.
+- 🪨 **Authentic Slow Stone-Ground**: Traditional cool-friction grinding preserving natural oils, intense aroma, and culinary depth.
+- 🛡️ **Recognized & Certified by FSSAI**: Manufactured under strict food safety and hygiene benchmarks (FSSAI Lic. No: **21226194000378**).
+
+Feel free to ask for authentic Karnataka recipes, cooking secrets, or spice recommendations for any dish!`;
+
+    const heritageReply_kn = `**ಮಸಾಲೆಗಳ ಭವ್ಯ ಇತಿಹಾಸ ಮತ್ತು ಇಂದಿಮಾ ಸ್ಪೈಸ್ ಕಂ** 🌿✨
+
+**ಮಸಾಲೆಗಳ ಪರಂಪರೆ:**
+ಶತಮಾನಗಳಿಂದ ಕರ್ನಾಟಕದ ಅಡುಗೆ ಸಂಸ್ಕೃತಿಯಲ್ಲಿ ಮಸಾಲೆಗಳನ್ನು ನೈಸರ್ಗಿಕ ಕಲ್ಲಿನಲ್ಲಿ ನಿಧಾನವಾಗಿ ಬೀಸಿ ತಯಾರಿಸಲಾಗುತ್ತಿತ್ತು. ಆಧುನಿಕ ಯಂತ್ರಗಳ ಅತಿಯಾದ ಶಾಖಕ್ಕೆ ಮಸಾಲೆಗಳ ನೈಸರ್ಗಿಕ ಸಾರ ಸುಟ್ಟುಹೋಗದೆ, ಕಲ್ಲಿನ ಬೀಸುವಿಕೆಯಿಂದ ನೈಸರ್ಗಿಕ ಸಾರಭೂತ ತೈಲಗಳು (essential oils), ಆಹ್ಲಾದಕರ ಸುವಾಸನೆ ಮತ್ತು ಆಂಟಿಆಕ್ಸಿಡೆಂಟ್‌ಗಳು ಸಂಪೂರ್ಣವಾಗಿ ಉಳಿಯುತ್ತಿದ್ದವು.
+
+**ಇಂದಿಮಾ ಸ್ಪೈಸ್ ಕಂ ವೈಶಿಷ್ಟ್ಯ:**
+- 🌿 **೧೦೦% ಶುದ್ಧ ಮತ್ತು ನೈಸರ್ಗಿಕ**: ಯಾವುದೇ ಕೃತಕ ಬಣ್ಣ, ರಾಸಾಯನಿಕ ಅಥವಾ ಸಂರಕ್ಷಕ (preservatives) ರಹಿತ ಶುದ್ಧ ಮಸಾಲೆಗಳು.
+- 🪨 **ಸಾಂಪ್ರದಾಯಿಕ ಕಲ್ಲಿನ ಬೀಸುವಿಕೆ**: ಮಸಾಲೆಗಳಲ್ಲಿನ ನೈಸರ್ಗಿಕ ಪೋಷಕಾಂಶಗಳು ಮತ್ತು ಸುವಾಸನೆಯನ್ನು ಅಖಂಡವಾಗಿಡುವ ಪ್ರಾಚೀನ ಪದ್ಧತಿ.
+- 🛡️ **FSSAI ನಿಂದ ಮಾನ್ಯತೆ ಮತ್ತು ಪ್ರಮಾಣೀಕೃತ**: ಆಹಾರ ಸುರಕ್ಷತೆಯ ಅತ್ಯುನ್ನತ ಗುಣಮಟ್ಟ (FSSAI Lic. No: **21226194000378**).
+
+ಯಾವುದೇ ಸಾಂಪ್ರದಾಯಿಕ ರೆಸಿಪಿಗಳು ಅಥವಾ ಮಸಾಲೆಗಳ ವಿವರಗಳಿಗಾಗಿ ನನ್ನನ್ನು ಮುಕ್ತವಾಗಿ ಕೇಳಿ!`;
+
+    const heritageReply_kanglish = `**Indima Spice Co. & Masalegala Ithihasa** 🌿✨
+
+**Masalegala Parampara:**
+Karnataka da authentic aduge sampradayadalli masalegalannu kallinalli slow aagi beesi tayarisuttiddaru. Machine heat ninda aromatic essential oils nashta aagade, slow stone-grinding inda natural aroma & nutrients complete aagi ulithave.
+
+**Indima Spice Co. Business Highlights:**
+- 🌿 **100% Pure & Natural**: No artificial colors, no preservatives, no fillers.
+- 🪨 **Traditional Stone-Ground**: Cool-friction process for authentic aroma & taste.
+- 🛡️ **Recognized & Certified by FSSAI**: Safe & hygienic certified (FSSAI Lic. No: **21226194000378**).
+
+Nimage yava recipe athava spices bagge info beku? Kelabahudu!`;
+
+    return {
+      reply: isKn || /[\u0C80-\u0CFF]/.test(rawTrimmed) ? heritageReply_kn : (isKanglish ? heritageReply_kanglish : heritageReply_en),
+      recommendedProducts: [],
+      suggestedFollowUps: isKn ? [
+        'ಉಡುಪಿ ಸಾಂಬಾರ್ ಪುಡಿ',
+        'ಮಲೆನಾಡು ಗರಂ ಮಸಾಲಾ',
+        'ಇಂದಿಮಾ ಮಸಾಲೆಗಳ ಪಟ್ಟಿ'
+      ] : [
+        'What products do you offer?',
+        'Udupi Sambar Recipe',
+        'Chicken Biryani Spices'
+      ]
+    };
+  }
+
+  // 2. Greetings
   const greetingPhrases = [
     'hi', 'hello', 'hey', 'hi there', 'hello there', 'namaste', 'namaskara', 'namaskar',
     'good morning', 'good evening', 'good afternoon', 'good day', 'hi indima', 'hello indima',
@@ -192,11 +254,11 @@ export async function handleAiAssistantRequest(
     /^(hi|hello|hey|namaskara|namaste|ನಮಸ್ಕಾರ|ನಮಸ್ತೆ|ಹಲೋ|ಹಾಯ್)\s*(indima|there|ai|bot|team|sir|madam)?$/i.test(lowerMsg) ||
     lowerMsg === 'ನಮಸ್ಕಾರ' || lowerMsg === 'ನಮಸ್ತೆ' || lowerMsg === 'ಹಲೋ' || lowerMsg === 'ಹಾಯ್'
   ) {
-    let greetingReply = `Hello! 👋 Welcome to Indima Spice Co. I'm your spice and recipe assistant. How can I help you today? Feel free to ask for authentic Karnataka recipes, cooking tips, or details on our traditional stone-ground spices.`;
+    let greetingReply = `Hello! 👋 Welcome to Indima Spice Co. – where authentic heritage meets pure stone-ground spices! I'm your AI recipe and spice assistant. How can I help you today? Feel free to ask for authentic Karnataka recipes, cooking tips, or details on our 100% natural spices!`;
     if (isKn || /[\u0C80-\u0CFF]/.test(rawTrimmed)) {
-      greetingReply = `ನಮಸ್ಕಾರ! 👋 ಇಂದಿಮಾ ಸ್ಪೈಸ್ ಕಂ ಗೆ ಸುಸ್ವಾಗತ. ನಾನು ನಿಮ್ಮ ಮಸಾಲೆ ಮತ್ತು ಅಡುಗೆ ಸಹಾಯಕ. ಇಂದು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ? ನೀವು ಯಾವುದೇ ಸಾಂಪ್ರದಾಯಿಕ ಅಡುಗೆ ವಿಧಾನ, ಅಡುಗೆ ಸಲಹೆಗಳು ಅಥವಾ ಮಸಾಲೆಗಳ ಬಗ್ಗೆ ಕೇಳಬಹುದು.`;
+      greetingReply = `ನಮಸ್ಕಾರ! 👋 ಇಂದಿಮಾ ಸ್ಪೈಸ್ ಕಂ ಗೆ ಸುಸ್ವಾಗತ – ಶುದ್ಧತೆ ಮತ್ತು ಸಾಂಪ್ರದಾಯಿಕ ಕಲ್ಲಿನ ಮಸಾಲೆಗಳ ಸಂಗಮ! ನಾನು ನಿಮ್ಮ ವೈಯಕ್ತಿಕ ಮಸಾಲೆ ಮತ್ತು ಅಡುಗೆ ಸಹಾಯಕ. ಇಂದು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ? ನೀವು ಯಾವುದೇ ಸಾಂಪ್ರದಾಯಿಕ ಅಡುಗೆ ವಿಧಾನ, ಅಡುಗೆ ಸಲಹೆಗಳು ಅಥವಾ ಮಸಾಲೆಗಳ ಬಗ್ಗೆ ಕೇಳಬಹುದು.`;
     } else if (isKanglish) {
-      greetingReply = `Namaskara! 👋 Indima Spice Co ge swagatha. Naanu nimma recipe & spice assistant. Neevu authentic Karnataka recipes, cooking tips athava Indima stone-ground masalegala bagge kelabahudu. Heg sahaya madli?`;
+      greetingReply = `Namaskara! 👋 Indima Spice Co ge swagatha. Naanu nimma recipe & stone-ground spice assistant. Neevu authentic Karnataka recipes, cooking tips athava Indima pure spices bagge kelabahudu. Heg sahaya madli?`;
     }
 
     return {
@@ -214,20 +276,23 @@ export async function handleAiAssistantRequest(
       ] : [
         'Chicken Biryani Recipe',
         'Authentic Udupi Sambar Recipe',
-        'What spices do you offer?',
+        'Tell me about Indima spices',
         'Traditional Bisi Bele Bath Recipe'
       ])
     };
   }
 
-  // Check Casual Conversation: How are you?
-  if (['how are you', 'how r u', 'how do you do', 'hegidira', 'hegidiri', 'how are you doing', 'wassup', 'whatsup'].includes(lowerMsg)) {
+  // 3. Casual Conversation: How are you?
+  const isHowAreYou = /\b(how\s*(?:are|r|re|is)\s*(?:you|u|ya|things|everything|life|it\s*going|your\s*day)|how're\s*you|how's\s*it\s*going|hows\s*it\s*going|how\s*do\s*you\s*do|how\s*are\s*you\s*doing|how\s*are\s*u\s*doing|wassup|what's\s*up|whatsup|how\s*goes\s*it|how\s*is\s*your\s*day|are\s*you\s*(?:good|ok|okay|fine)|hegidira|hegidiri|hegiddira|channagiddira|neevu\s*hegidira|hege\s*idheera|hegiddiri|hegiddeera)\b/i.test(lowerMsg) ||
+    /^(how\s*(?:are|r|re)\s*(?:you|u|ya)|hegidira|hegidiri|hegiddira|channagiddira)[\s?!.]*$/i.test(lowerMsg) ||
+    lowerMsg.includes('ಹೇಗಿದ್ದೀರಾ') || lowerMsg.includes('ಹೇಗಿದ್ದೀರಿ') || lowerMsg.includes('ಚೆನ್ನಾಗಿದ್ದೀರಾ') || lowerMsg.includes('ನೀವು ಹೇಗಿದ್ದೀರಾ');
+  if (isHowAreYou) {
     return {
-      reply: isKn
-        ? `ನಾನು ತುಂಬಾ ಚೆನ್ನಾಗಿದ್ದೇನೆ, ಧನ್ಯವಾದಗಳು! 😊 ಇಂದು ನೀವು ಯಾವ ರುಚಿಕರವಾದ ಅಡುಗೆ ಮಾಡಲು ಯೋಚಿಸುತ್ತಿದ್ದೀರಿ?`
+      reply: isKn || /[\u0C80-\u0CFF]/.test(rawTrimmed)
+        ? `ನಾನು ತುಂಬಾ ಚೆನ್ನಾಗಿದ್ದೇನೆ, ಕೇಳಿದ್ದಕ್ಕೆ ಧನ್ಯವಾದಗಳು! 😊 ಇಂದಿಮಾ ಸ್ಪೈಸ್ ಕಂ ನಲ್ಲಿ ನಿಮ್ಮ ವೈಯಕ್ತಿಕ ಮಸಾಲೆ ಮತ್ತು ಪಾಕವಿಧಾನ ಸಹಾಯಕನಾಗಿ ನಿಮಗೆ ಸಹಾಯ ಮಾಡಲು ಸದಾ ಸಿದ್ಧನಿದ್ದೇನೆ. ನೀವು ಹೇಗಿದ್ದೀರಿ, ಇಂದು ಯಾವ ರುಚಿಕರವಾದ ಅಡುಗೆ ಮಾಡಲು ಯೋಚಿಸುತ್ತಿದ್ದೀರಿ?`
         : (isKanglish
-            ? `Naanu thumba chennagiddene, dhanyavadagalu! 😊 Neevu ivattu yava recipe try madbeku antha idheera?`
-            : `I'm doing great, thank you! 😊 What delicious dish are you planning to cook today?`),
+            ? `Naanu thumba chennagiddene, dhanyavadagalu! 😊 Indima Spice Co nalli nimge sahaya madoke ready iddene. Neevu hegiddira? Ivattu yava dish try madona?`
+            : `I'm doing great, thank you for asking! 😊 As your culinary and spice companion at Indima Spice Co., I'm ready to help you with authentic Karnataka recipes, cooking tips, or our pure stone-ground spices. How are you doing today, and what would you like to cook?`),
       recommendedProducts: [],
       suggestedFollowUps: isKn ? [
         'ಚಿಕನ್ ಬಿರಿಯಾನಿ ರೆಸಿಪಿ',
@@ -241,8 +306,22 @@ export async function handleAiAssistantRequest(
     };
   }
 
-  // Check Casual Conversation: Thanks
-  if (['thanks', 'thank you', 'thank u', 'thanks a lot', 'tq', 'thx', 'dhanyavada', 'dhanyavadagalu', 'dhanyavadha', 'many thanks'].includes(lowerMsg)) {
+  // 4. Who are you / Identity
+  const isIdentityQuery = /\b(who\s*are\s*(you|u)|what\s*is\s*your\s*name|what\s*can\s*you\s*do|tell\s*me\s*about\s*yourself|what\s*are\s*you|neevu\s*yaaru|nimma\s*hesaru)\b/i.test(lowerMsg);
+  if (isIdentityQuery) {
+    return {
+      reply: isKn || /[\u0C80-\u0CFF]/.test(rawTrimmed)
+        ? `ನಾನು **ಇಂದಿಮಾ AI** – ಇಂದಿಮಾ ಸ್ಪೈಸ್ ಕಂ ನ ಅಧಿಕೃತ ಪಾಕವಿಧಾನ ಮತ್ತು ಮಸಾಲೆ ಸಹಾಯಕ! 🌿 ನಾನು ನಿಮಗೆ ಕರ್ನಾಟಕದ ಸಾಂಪ್ರದಾಯಿಕ ಅಡುಗೆ ವಿಧಾನಗಳು, ನಿಖರ ಮಸಾಲೆ ಅಳತೆಗಳು, ಜನಸಂಖ್ಯೆಗೆ ತಕ್ಕಂತೆ ರೆಸಿಪಿ ಹೊಂದಾಣಿಕೆ ಮತ್ತು ಶುದ್ಧ ಕಲ್ಲಿನ ಮಸಾಲೆಗಳ ಬಗ್ಗೆ ಮಾಹಿತಿ ನೀಡಬಲ್ಲೆ.`
+        : (isKanglish
+            ? `Naanu **Indima AI** – Indima Spice Co na official recipe & spice assistant! 🌿 Authentic Karnataka recipes, spice measurements mathu Indima pure stone-ground spices bagge nimage complete guidance kodthini.`
+            : `I am **Indima AI**, the official culinary and spice companion for Indima Spice Co.! 🌿 I can provide step-by-step authentic recipes, calculate exact spice measurements, adjust servings, and recommend our 100% natural, FSSAI-certified stone-ground spices.`),
+      recommendedProducts: [],
+      suggestedFollowUps: isKn ? ['ಇಂದಿಮಾ ಮಸಾಲೆಗಳು', 'ಉಡುಪಿ ಸಾಂಬಾರ್ ರೆಸಿಪಿ'] : ['Tell me about Indima spices', 'Udupi Sambar Recipe']
+    };
+  }
+
+  // 5. Casual Conversation: Thanks
+  if (['thanks', 'thank you', 'thank u', 'thanks a lot', 'tq', 'thx', 'dhanyavada', 'dhanyavadagalu', 'dhanyavadha', 'many thanks'].some(t => lowerMsg.includes(t))) {
     return {
       reply: isKn
         ? `ತುಂಬಾ ಧನ್ಯವಾದಗಳು! 😊 ಇಂದಿಮಾ ಸಾಂಪ್ರದಾಯಿಕ ಕಲ್ಲಿನಲ್ಲಿ ಬೀಸಿದ ಮಸಾಲೆಗಳೊಂದಿಗೆ ನಿಮ್ಮ ಅಡುಗೆ ಸದಾ ಸುವಾಸನೆ ಮತ್ತು ರುಚಿಕರವಾಗಿರಲಿ! ಸಂತೋಷದ ಅಡುಗೆ ನಿಮ್ಮದಾಗಲಿ.`
@@ -260,7 +339,7 @@ export async function handleAiAssistantRequest(
     };
   }
 
-  // Check Casual Conversation: Okay / Got it
+  // 6. Casual Conversation: Okay / Got it
   if (['okay', 'ok', 'k', 'sure', 'alright', 'got it', 'sari', 'aytu', 'gotcha', 'cool', 'noted', 'fine'].includes(lowerMsg)) {
     return {
       reply: isKn
@@ -279,7 +358,7 @@ export async function handleAiAssistantRequest(
     };
   }
 
-  // Check Casual Conversation: Compliments (Nice, Good, Super)
+  // 7. Casual Conversation: Compliments (Nice, Good, Super)
   if (['nice', 'good', 'great', 'awesome', 'super', 'mast', 'channagide', 'tumba channagide', 'perfect', 'wonderful', 'excellent', 'amazing'].includes(lowerMsg)) {
     return {
       reply: isKn
@@ -298,7 +377,7 @@ export async function handleAiAssistantRequest(
     };
   }
 
-  // Check Casual Conversation: Bye
+  // 8. Casual Conversation: Bye
   if (['bye', 'goodbye', 'see you', 'tata', 'good night', 'cya', 'bye bye', 'vidaya'].includes(lowerMsg)) {
     return {
       reply: isKn
@@ -581,9 +660,9 @@ ${productSummaries.map(p => `- **${p.name_kn || p.name_en}** (₹${p.price} • 
     };
   });
 
-  const systemInstruction = `You are "Indima AI – Your Personal Spice & Recipe Assistant", the master culinary chef and spice blender for Indima Spice Co. (Bengaluru, Karnataka).
+  const systemInstruction = `You are "Indima AI – Your Personal Spice & Recipe Assistant", the master culinary companion and spice expert for Indima Spice Co. (Bengaluru, Karnataka).
 
-Indima Spice Co. crafts authentic, traditional stone-ground homemade masala powders and whole spices without preservatives, additives, or artificial colors.
+Indima Spice Co. crafts authentic, traditional stone-ground homemade masala powders and whole spices without preservatives, additives, chemicals, or artificial colors. Recognized and certified by FSSAI (Lic. No: 21226194000378).
 
 ══════════════════════════════════════════════════
 AUTHORITATIVE INDIMA PRODUCT CATALOG (READ-ONLY)
@@ -591,19 +670,26 @@ AUTHORITATIVE INDIMA PRODUCT CATALOG (READ-ONLY)
 ${JSON.stringify(catalogContext, null, 2)}
 
 ══════════════════════════════════════════════════
-BEHAVIOR & CONVERSATION RULES
+BEHAVIOR & CONVERSATION RULES (STRICT CHATGPT / GOOGLE AI RELATABILITY)
 ══════════════════════════════════════════════════
 
-1. GREETINGS & CASUAL MESSAGES:
-- If the customer says "Hi", "Hello", "Hey", "Namaskara", "Good morning", "How are you?", "Thanks", "Okay", "Bye", respond warmly and conversationally as a helpful culinary companion.
-- DO NOT recommend products, spices, or unsolicited recipes on greetings or casual messages.
-- Always output empty <<<RECOMMENDED_PRODUCTS_JSON: []>>> on greetings and casual chat.
+1. CASUAL MESSAGES, GREETINGS & SMALL TALK:
+- If the customer asks "How are you?", "How r u?", "Who are you?", "What is your name?", "What can you do?", or sends greetings ("Hi", "Hello", "Namaskara", "Good morning", "Thanks", "Okay", "Bye"):
+  * Respond directly, politely, and conversationally in the exact same relatable style as ChatGPT or Google AI.
+  * NEVER output unsolicited recipe templates, cooking steps, or product recommendations for casual conversations or greetings.
+  * Always output empty <<<RECOMMENDED_PRODUCTS_JSON: []>>> on casual queries.
 
-2. GENERAL COOKING & SPICE QUESTIONS:
-- If the customer asks a general question (e.g. "What is stone-ground spice?", "Why is Byadgi chilli used?", "How should I store spices?", "What is the difference between Sambar and Rasam?"), answer clearly, accurately, and naturally.
-- Do NOT push or recommend product cards unless they specifically ask which products to buy.
+2. HERITAGE, SPICE HISTORY & BUSINESS INQUIRIES:
+- If the customer asks about the history of spices, how spices are created, the business philosophy, or food safety:
+  * In stylish, evocative English / Kannada, explain how traditional stone-grinding preserves volatile essential oils and rich aroma without harsh machine heat friction.
+  * Emphasize 100% natural, pure farm-sourced ingredients with zero chemicals/preservatives.
+  * Highlight that Indima Spice Co. is **Recognized & Certified by FSSAI** (Lic. No: 21226194000378).
+  * Output empty <<<RECOMMENDED_PRODUCTS_JSON: []>>> unless they specifically ask which products to purchase.
 
-3. RECIPE REQUESTS (WHEN ASKED FOR A RECIPE):
+3. GENERAL QUESTIONS & CULINARY KNOWLEDGE:
+- If the customer asks a general question (e.g., "Why are stone ground spices better?", "What makes Byadgi chillies special?", "How should I store spices?", "What is the difference between Sambar and Rasam?"), answer directly, factually, and concisely without dumping full recipe templates.
+
+4. RECIPE REQUESTS (ONLY WHEN EXPLICITLY ASKED FOR A RECIPE):
 - When the customer asks for a recipe (e.g., "How to make Udupi Sambar?", "Give me chicken biryani recipe", "Melukote puliyogare recipe kodi"):
   * Structure:
     - **Dish Title**: e.g., 🍛 **Traditional Udupi Sambar**
@@ -614,7 +700,7 @@ BEHAVIOR & CONVERSATION RULES
     - **🛒 Recommended Indima Spices** (if applicable): Recommend ONLY verified matching products from the catalog.
   * If an ingredient (like turmeric, ginger-garlic paste, salt) is not in our catalog, note that they can use their pantry spice.
 
-4. SPICE / PRODUCT INQUIRIES (WHAT TO USE OR BUY):
+5. SPICE / PRODUCT INQUIRIES (WHAT TO USE OR BUY):
 - When the customer asks which spices to buy or use for a dish (e.g., "What spices do I need for chicken biryani?", "What products do you have?"):
   * Recommend ONLY genuine matching Indima products from the catalog.
   * Strict dish matching:
@@ -627,20 +713,20 @@ BEHAVIOR & CONVERSATION RULES
     - Jolada Rotti / Chutney -> North Karnataka Shenga Chutney Pudi.
     - Complete Gift / Pantry Box -> Karnataka Grand Festive Spice Box (ONLY when asked for combos, gifts, or bundles).
 
-5. ZERO PRODUCT HALLUCINATION:
+6. ZERO PRODUCT HALLUCINATION:
 - NEVER invent products, prices, weights, stock counts, or offers not in the catalog.
 - Use exact product names, prices (₹), MRP, and weights from the catalog.
 
-6. CONVERSATION CONTEXT & FOLLOW-UPS:
+7. CONVERSATION CONTEXT & FOLLOW-UPS:
 - Understand follow-up requests using the recent conversation history (e.g., "make it for 8 people" -> scale ingredient quantities; "make it less spicy" -> reduce chillies & pepper; "how long to cook in pressure cooker?" -> answer for the previous dish).
 
-7. MULTILINGUAL SUPPORT (ENGLISH, KANNADA, KANGLISH):
+8. MULTILINGUAL SUPPORT (ENGLISH, KANNADA, KANGLISH):
 - Respond in the language used by the customer:
   * English -> English
   * Kannada (ಕನ್ನಡ ಲಿಪಿ) -> Authentic, polite Kannada
   * Kanglish (Kannada in Latin script, e.g. "biryani hege madodu?") -> Friendly, natural Kanglish or Kannada-aware English.
 
-8. MANDATORY JSON METADATA AT END OF RESPONSE:
+9. MANDATORY JSON METADATA AT END OF RESPONSE:
 <<<RECOMMENDED_PRODUCTS_JSON: ["prod-id-1", "prod-id-2"]>>>
 (or empty array <<<RECOMMENDED_PRODUCTS_JSON: []>>> if no products to buy/recommend)
 <<<FOLLOW_UPS_JSON: ["Suggested question 1", "Suggested question 2", "Suggested question 3"]>>>`;
@@ -675,16 +761,34 @@ BEHAVIOR & CONVERSATION RULES
       setTimeout(() => reject(new Error('AI response timed out')), 20000)
     );
 
-    const generatePromise = ai.models.generateContent({
-      model: 'gemini-3.7-flash',
-      contents: formattedContents,
-      config: {
-        systemInstruction,
-        temperature: 0.2
+    let response;
+    try {
+      const generatePromise = ai.models.generateContent({
+        model: 'gemini-3.7-flash',
+        contents: formattedContents,
+        config: {
+          systemInstruction,
+          temperature: 0.2
+        }
+      });
+      response = await Promise.race([generatePromise, timeoutPromise]);
+    } catch (primaryErr: any) {
+      const errStr = primaryErr?.message || JSON.stringify(primaryErr);
+      if (errStr.includes('429') || primaryErr?.status === 'RESOURCE_EXHAUSTED' || primaryErr?.code === 429) {
+        console.warn('[Indima AI] 429 quota reached on primary model, attempting lightweight model fallback...');
+        const liteGeneratePromise = ai.models.generateContent({
+          model: 'gemini-3.1-flash-lite',
+          contents: formattedContents,
+          config: {
+            systemInstruction,
+            temperature: 0.2
+          }
+        });
+        response = await Promise.race([liteGeneratePromise, timeoutPromise]);
+      } else {
+        throw primaryErr;
       }
-    });
-
-    const response = await Promise.race([generatePromise, timeoutPromise]);
+    }
 
     const fullText = response.text || '';
 
@@ -758,7 +862,7 @@ BEHAVIOR & CONVERSATION RULES
       suggestedFollowUps
     };
   } catch (apiErr: any) {
-    console.error('[Indima AI] Gemini API notice / fallback:', apiErr.message || apiErr);
+    console.warn('[Indima AI] Gemini API note (seamlessly transitioning to verified local recipe & spice engine):', apiErr.message || apiErr);
     // Fallback gracefully to our dish-aware, catalog-verified recommendation engine
     return getOfflineFallbackResponse(message, activeProducts, language, history);
   }
@@ -791,6 +895,29 @@ function getOfflineFallbackResponse(
 ): AiAssistantResponse {
   const isKn = language === 'kn' || /[\u0C80-\u0CFF]/.test(message);
   const q = message.toLowerCase().trim();
+
+  // Check if message is a casual conversation or how are you
+  const isCasualHowAreYou = /\b(how\s*(?:are|r|re|is)\s*(?:you|u|ya|things|everything|life|it\s*going|your\s*day)|how're\s*you|how's\s*it\s*going|hows\s*it\s*going|how\s*do\s*you\s*do|how\s*are\s*you\s*doing|hegidira|hegidiri|hegiddira|channagiddira|neevu\s*hegidira)\b/i.test(q) ||
+    /^(how\s*(?:are|r|re)\s*(?:you|u|ya)|hegidira|hegidiri|hegiddira|channagiddira)[\s?!.]*$/i.test(q) ||
+    q.includes('ಹೇಗಿದ್ದೀರಾ') || q.includes('ಹೇಗಿದ್ದೀರಿ') || q.includes('ಚೆನ್ನಾಗಿದ್ದೀರಾ');
+  if (isCasualHowAreYou) {
+    return {
+      reply: isKn
+        ? `ನಾನು ತುಂಬಾ ಚೆನ್ನಾಗಿದ್ದೇನೆ, ಕೇಳಿದ್ದಕ್ಕೆ ಧನ್ಯವಾದಗಳು! 😊 ಇಂದಿಮಾ ಸ್ಪೈಸ್ ಕಂ ನಲ್ಲಿ ನಿಮ್ಮ ವೈಯಕ್ತಿಕ ಮಸಾಲೆ ಮತ್ತು ಪಾಕವಿಧಾನ ಸಹಾಯಕನಾಗಿ ನಿಮಗೆ ಸಹಾಯ ಮಾಡಲು ಸದಾ ಸಿದ್ಧನಿದ್ದೇನೆ. ನೀವು ಹೇಗಿದ್ದೀರಿ, ಇಂದು ಯಾವ ರುಚಿಕರವಾದ ಅಡುಗೆ ಮಾಡಲು ಯೋಚಿಸುತ್ತಿದ್ದೀರಿ?`
+        : `I'm doing great, thank you for asking! 😊 As your culinary and spice companion at Indima Spice Co., I'm ready to help you with authentic Karnataka recipes, cooking tips, or our pure stone-ground spices. How are you doing today, and what would you like to cook?`,
+      recommendedProducts: [],
+      suggestedFollowUps: isKn ? [
+        'ಚಿಕನ್ ಬಿರಿಯಾನಿ ರೆಸಿಪಿ',
+        'ಉಡುಪಿ ಸಾಂಬಾರ್ ರೆಸಿಪಿ',
+        'ಇಂದಿಮಾ ಮಸಾಲೆಗಳನ್ನು ತೋರಿಸಿ'
+      ] : [
+        'Chicken Biryani Recipe',
+        'Udupi Sambar Recipe',
+        'Show Indima Spices'
+      ]
+    };
+  }
+
   const matchedAffinity = findDishAffinity(message, history);
 
   // =========================================================================
@@ -886,6 +1013,28 @@ function getOfflineFallbackResponse(
       q.includes(p.name_en.toLowerCase()) || (p.name_kn && q.includes(p.name_kn.toLowerCase()))
     );
     targetProductIds = directMatches.map(p => p.id);
+
+    // If no direct product matches and no recipe intent, provide a clean relatable conversational answer
+    if (directMatches.length === 0) {
+      const isRecipeIntent = /(recipe|how\s*to|make|cook|prepare|madodu|maduvudu|kodi|steps|ingredients|dish|curry|sambar|rasam|biryani|bath|pudi|masala|spices)/i.test(q);
+      if (!isRecipeIntent) {
+        return {
+          reply: isKn
+            ? `ನಮಸ್ಕಾರ! ನಾನು ಇಂದಿಮಾ AI – ನಿಮ್ಮ ವೈಯಕ್ತಿಕ ಪಾಕವಿಧಾನ ಮತ್ತು ಮಸಾಲೆ ಸಹಾಯಕ. ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ? ನೀವು ಯಾವುದೇ ಸಾಂಪ್ರದಾಯಿಕ ಕರ್ನಾಟಕ ರೆಸಿಪಿ, ಅಡುಗೆ ಸಲಹೆಗಳು ಅಥವಾ ನಮ್ಮ ಶುದ್ಧ ಕಲ್ಲಿನ ಮಸಾಲೆಗಳ ಬಗ್ಗೆ ಕೇಳಬಹುದು.`
+            : `Hello! I'm Indima AI, your personal culinary and spice assistant at Indima Spice Co. How can I help you today? Feel free to ask for authentic Karnataka recipes, cooking tips, or details about our 100% natural, FSSAI-certified stone-ground spices.`,
+          recommendedProducts: [],
+          suggestedFollowUps: isKn ? [
+            'ಉಡುಪಿ ಸಾಂಬಾರ್ ರೆಸಿಪಿ',
+            'ಚಿಕನ್ ಬಿರಿಯಾನಿ ಮಸಾಲೆಗಳು',
+            'ಇಂದಿಮಾ ಉತ್ಪನ್ನಗಳ ಪಟ್ಟಿ'
+          ] : [
+            'Udupi Sambar Recipe',
+            'Spices for Chicken Biryani',
+            'Show Indima Products'
+          ]
+        };
+      }
+    }
   }
 
   // Filter products by availability and exclude any irrelevant products
