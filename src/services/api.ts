@@ -145,6 +145,30 @@ export const api = {
     }, { error: 'Failed to verify payment with server' });
   },
 
+  // Indima AI Assistant (Read-only culinary and spice guide)
+  askAiAssistant: async (payload: {
+    message: string;
+    history?: { role: 'user' | 'assistant'; content: string }[];
+    language?: 'en' | 'kn';
+  }): Promise<{
+    success: boolean;
+    reply: string;
+    recommendedProducts: any[];
+    suggestedFollowUps: string[];
+    error?: string;
+  }> => {
+    return safeFetchJson<any>('/api/ai/assistant', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }, {
+      success: false,
+      reply: 'Unable to reach Indima AI. Please check your internet connection.',
+      recommendedProducts: [],
+      suggestedFollowUps: []
+    });
+  },
+
   createOrder: async (orderPayload: any): Promise<any> => {
     return safeFetchJson<any>('/api/orders/create', {
       method: 'POST',

@@ -8,6 +8,7 @@ import heicConvert from 'heic-convert';
 import Razorpay from 'razorpay';
 import { createServer as createViteServer } from 'vite';
 import { db } from './server/dataStore';
+import { handleAiAssistantRequest } from './server/aiAssistant';
 import { runOneTimeFirestoreMigration } from './server/firestoreMigration';
 import { lookupPincode } from './src/data/indiaLocations';
 import { Order, Address } from './src/types';
@@ -540,6 +541,33 @@ app.get('/api/payments/config', (req: Request, res: Response) => {
     is_configured: isConfigured,
     mode: isConfigured ? 'live_gateway' : 'test_gateway'
   });
+});
+
+// 10d. Indima AI - Personal Spice & Recipe Assistant (Safe Read-Only)
+app.post('/api/ai/assistant', async (req: Request, res: Response) => {
+  try {
+    const { message, history, language } = req.body;
+    if (!message || typeof message !== 'string' || !message.trim()) {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+
+    const result = await handleAiAssistantRequest({
+      message: message.trim(),
+      history: Array.isArray(history) ? history : [],
+      language: language === 'kn' ? 'kn' : 'en'
+    });
+
+    res.json({
+      success: true,
+      ...result
+    });
+  } catch (err: any) {
+    console.error('[Indima AI API Error]:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message || 'Unable to process culinary request. Please try again.'
+    });
+  }
 });
 
 // Helper for server-side order calculation & Razorpay order creation

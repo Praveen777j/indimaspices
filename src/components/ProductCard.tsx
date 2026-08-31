@@ -136,30 +136,30 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
       </div>
 
       {/* Card Body */}
-      <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-3">
+      <div className="p-3 sm:p-4 lg:p-5 flex-1 flex flex-col justify-between space-y-2.5 sm:space-y-3">
         <div>
           {/* Weight & Rating */}
-          <div className="flex items-center justify-between text-xs text-[#5C483B] mb-1.5">
-            <span className="font-semibold px-2 py-0.5 bg-[#FAF7F2] border border-[#DFCFC0] rounded-full text-[#5C483B] text-[10px]">
+          <div className="flex items-center justify-between text-xs text-[#5C483B] mb-1.5 gap-1">
+            <span className="font-semibold px-2 py-0.5 bg-[#FAF7F2] border border-[#DFCFC0] rounded-full text-[#5C483B] text-[10px] truncate">
               {product.weight}
             </span>
-            <div className="flex items-center space-x-1 text-[#C27803] font-bold text-xs">
-              <Star className="w-3.5 h-3.5 fill-[#C27803] text-[#C27803]" />
+            <div className="flex items-center space-x-1 text-[#C27803] font-bold text-[11px] sm:text-xs shrink-0">
+              <Star className="w-3 sm:w-3.5 h-3 sm:h-3.5 fill-[#C27803] text-[#C27803]" />
               <span>{product.rating}</span>
-              <span className="text-[#8C7667] font-normal">({product.review_count})</span>
+              <span className="text-[#8C7667] font-normal text-[10px] sm:text-xs">({product.review_count})</span>
             </div>
           </div>
 
           {/* Product Name */}
           <h3
             onClick={() => onOpenDetails(product)}
-            className="font-serif text-sm sm:text-base font-bold text-[#1F1610] line-clamp-1 hover:text-[#8B3214] cursor-pointer transition-colors"
+            className="font-serif text-xs sm:text-sm lg:text-base font-bold text-[#1F1610] line-clamp-2 hover:text-[#8B3214] cursor-pointer transition-colors leading-snug"
           >
             {isKn ? product.name_kn : product.name_en}
           </h3>
 
           {/* Short Description */}
-          <p className="text-[11px] sm:text-xs text-[#7A6455] line-clamp-2 mt-1 leading-relaxed font-normal">
+          <p className="text-[10px] sm:text-xs text-[#7A6455] line-clamp-2 mt-1 leading-relaxed font-normal">
             {isKn ? product.description_kn : product.description_en}
           </p>
 
@@ -167,20 +167,20 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
           {isLowStock && (
             <p className="text-[10px] text-[#8B3214] font-bold mt-1.5 flex items-center gap-1">
               <span>⚠️</span>
-              <span>{t('onlyLeft', { count: product.stock })}</span>
+              <span className="truncate">{t('onlyLeft', { count: product.stock })}</span>
             </p>
           )}
         </div>
 
         {/* Pricing & Add Controls */}
-        <div className="pt-3 border-t border-[#F0E6D8] flex items-center justify-between gap-2">
-          <div>
-            <div className="flex items-baseline space-x-1.5">
-              <span className="text-base sm:text-lg font-bold text-[#8B3214]">
+        <div className="pt-2 sm:pt-3 border-t border-[#F0E6D8] flex items-center justify-between gap-1.5 sm:gap-2">
+          <div className="min-w-0">
+            <div className="flex items-baseline space-x-1 sm:space-x-1.5">
+              <span className="text-sm sm:text-base lg:text-lg font-bold text-[#8B3214] whitespace-nowrap">
                 ₹{product.price}
               </span>
               {product.mrp > product.price && (
-                <span className="text-xs text-[#9C8778] line-through">
+                <span className="text-[10px] sm:text-xs text-[#9C8778] line-through whitespace-nowrap">
                   ₹{product.mrp}
                 </span>
               )}
@@ -188,11 +188,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
           </div>
 
           {/* Interactive ADD / − 1 + Button */}
-          <div>
+          <div className="shrink-0">
             {isOutOfStock ? (
               <button
                 disabled
-                className="px-3 py-1.5 rounded-full bg-[#FAF7F2] text-[#9C8778] text-xs font-bold uppercase cursor-not-allowed border border-[#DFCFC0]"
+                className="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-[#FAF7F2] text-[#9C8778] text-[10px] sm:text-xs font-bold uppercase cursor-not-allowed border border-[#DFCFC0]"
               >
                 {t('outOfStock')}
               </button>
@@ -200,27 +200,27 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
               <button
                 onClick={() => addItem(product, 1)}
                 id={`add-btn-${product.id}`}
-                className="px-3.5 py-1.5 rounded-full border border-[#8B3214] bg-[#FAF7F2] text-[#8B3214] hover:bg-[#8B3214] hover:text-white font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-2xs cursor-pointer active:scale-95 flex items-center space-x-1"
+                className="px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full border border-[#8B3214] bg-[#FAF7F2] text-[#8B3214] hover:bg-[#8B3214] hover:text-white font-bold text-[11px] sm:text-xs uppercase tracking-wider transition-all duration-200 shadow-2xs cursor-pointer active:scale-95 flex items-center space-x-1 min-h-[30px] sm:min-h-[34px]"
               >
                 <span>{t('add')}</span>
                 <Plus className="w-3 h-3" />
               </button>
             ) : (
-              <div className="flex items-center bg-[#8B3214] text-white rounded-full shadow-sm overflow-hidden border border-[#6E240D]">
+              <div className="flex items-center bg-[#8B3214] text-white rounded-full shadow-sm overflow-hidden border border-[#6E240D] min-h-[30px] sm:min-h-[34px]">
                 <button
                   onClick={() => updateQuantity(product.id, -1)}
-                  className="px-2.5 py-1.5 hover:bg-[#6E240D] transition-colors cursor-pointer"
+                  className="px-2 sm:px-2.5 py-1 sm:py-1.5 hover:bg-[#6E240D] transition-colors cursor-pointer"
                   title="Decrease quantity"
                 >
                   <Minus className="w-3 h-3" />
                 </button>
-                <span className="px-2 py-1 text-xs font-bold select-none">
+                <span className="px-1.5 sm:px-2 py-0.5 text-xs font-bold select-none min-w-[18px] text-center">
                   {qtyInCart}
                 </span>
                 <button
                   onClick={() => updateQuantity(product.id, 1)}
                   disabled={qtyInCart >= product.stock}
-                  className="px-2.5 py-1.5 hover:bg-[#6E240D] disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  className="px-2 sm:px-2.5 py-1 sm:py-1.5 hover:bg-[#6E240D] disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
                   title="Increase quantity"
                 >
                   <Plus className="w-3 h-3" />

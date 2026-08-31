@@ -21,6 +21,7 @@ import { AncientSpiceHistorySection } from './components/AncientSpiceHistorySect
 import { CustomerReviewsSection } from './components/CustomerReviewsSection';
 import { WishlistModal } from './components/WishlistModal';
 import { FloatingWhatsApp } from './components/FloatingWhatsApp';
+import { AiAssistantModal } from './components/AiAssistantModal';
 import { LeadPopup } from './components/LeadPopup';
 import { PolicyModal } from './components/PolicyModal';
 import { Footer } from './components/Footer';
@@ -57,6 +58,7 @@ const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToA
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const [isTrackOrderOpen, setIsTrackOrderOpen] = useState(false);
+  const [isAiAssistantOpen, setIsAiAssistantOpen] = useState(false);
   const [confirmedOrder, setConfirmedOrder] = useState<Order | null>(null);
   const [policyModalType, setPolicyModalType] = useState<'privacy' | 'terms' | 'refund' | 'shipping' | null>(null);
 
@@ -179,6 +181,7 @@ const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToA
         onOpenProduct={setSelectedProduct}
         onOpenWishlist={() => setIsWishlistOpen(true)}
         onOpenTrackOrder={() => setIsTrackOrderOpen(true)}
+        onOpenAiAssistant={() => setIsAiAssistantOpen(true)}
         onNavigateToSection={scrollToSection}
         onNavigateToAdmin={onNavigateToAdmin}
       />
@@ -323,6 +326,23 @@ const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToA
       {/* Floating WhatsApp Quick Ordering Button */}
       <FloatingWhatsApp settings={fallbackSettings} />
 
+      {/* Floating Indima AI Quick Assistant Button */}
+      <div className="fixed bottom-20 right-4 sm:bottom-24 sm:right-6 z-35">
+        <button
+          onClick={() => setIsAiAssistantOpen(true)}
+          id="floating-indima-ai-btn"
+          className="flex items-center space-x-2 px-3.5 py-2.5 sm:px-4 sm:py-3 bg-linear-to-r from-amber-500 via-[#8B3214] to-[#6E240D] text-white rounded-full shadow-xl hover:shadow-2xl border border-amber-300/40 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer group"
+          aria-label="Ask Indima AI"
+        >
+          <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-amber-200 shrink-0">
+            <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+          </div>
+          <span className="font-serif font-bold text-xs sm:text-sm tracking-wide pr-1">
+            {isKn ? 'ಇಂದಿಮಾ AI ಕೇಳಿ' : 'Ask Indima AI'}
+          </span>
+        </button>
+      </div>
+
       {/* Mobile Floating Cart Bar - Generous and always accessible */}
       {totalItems > 0 && !isCheckoutOpen && (
         <div className="fixed bottom-4 left-4 right-4 sm:hidden z-35 animate-in slide-in-from-bottom-4 duration-200">
@@ -405,6 +425,14 @@ const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToA
         type={policyModalType}
         settings={fallbackSettings}
         onClose={() => setPolicyModalType(null)}
+      />
+
+      {/* Indima AI Assistant Modal */}
+      <AiAssistantModal
+        isOpen={isAiAssistantOpen}
+        onClose={() => setIsAiAssistantOpen(false)}
+        products={products}
+        onOpenProductDetails={prod => setSelectedProduct(prod)}
       />
     </div>
   );
