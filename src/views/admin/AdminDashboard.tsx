@@ -540,12 +540,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
   };
 
   // Inventory Quick Update (Optimistic)
-  const handleUpdateStock = async (id: string, newStock: number) => {
+  const handleUpdateStock = async (id: string, newStock: number, threshold?: number) => {
     if (!token) return;
-    setProducts(prev => prev.map(p => p.id === id ? { ...p, stock: newStock } : p));
-    showSuccess('Stock updated');
+    const currentProd = products.find(p => p.id === id);
+    const targetThreshold = threshold !== undefined ? threshold : (currentProd?.low_stock_threshold ?? 5);
+    setProducts(prev => prev.map(p => p.id === id ? { ...p, stock: newStock, low_stock_threshold: targetThreshold } : p));
+    showSuccess('Inventory updated');
     try {
-      await api.updateInventory(token, id, newStock);
+      await api.updateInventory(token, id, newStock, targetThreshold);
     } catch (e) {
       console.error(e);
     }
@@ -1092,15 +1094,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
                               <span className="text-neutral-400 line-through ml-1.5 text-[11px]">₹{prod.mrp}</span>
                             </td>
                             <td className="p-3">
-                              <span
-                                className={`font-bold px-2 py-0.5 rounded-full ${
-                                  prod.stock <= prod.low_stock_threshold
-                                    ? 'bg-red-100 text-red-700'
-                                    : 'bg-emerald-100 text-emerald-800'
-                                }`}
-                              >
-                                {prod.stock} in stock
-                              </span>
+                              {prod.stock <= 0 ? (
+                                <span className="font-bold text-[11px] px-2.5 py-1 rounded-full bg-red-100 text-red-800 border border-red-200 inline-flex items-center gap-1">
+                                  <AlertTriangle className="w-3 h-3 text-red-600 shrink-0" />
+                                  <span>Out of Stock (0)</span>
+                                </span>
+                              ) : prod.stock <= (prod.low_stock_threshold ?? 5) ? (
+                                <span className="font-bold text-[11px] px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 inline-flex items-center gap-1">
+                                  <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
+                                  <span>Low: {prod.stock} left</span>
+                                </span>
+                              ) : (
+                                <span className="font-bold text-[11px] px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 inline-flex items-center gap-1">
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                                  <span>{prod.stock} in stock</span>
+                                </span>
+                              )}
                             </td>
                             <td className="p-3">
                               <span
@@ -1156,63 +1165,110 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
                   <thead className="bg-[#FAF6EE] border-b border-[#F0E6D2] text-neutral-600 uppercase font-semibold">
                     <tr>
                       <th className="p-3">Product</th>
+                      <th className="p-3">Status</th>
                       <th className="p-3">Current Stock</th>
                       <th className="p-3">Alert Threshold</th>
                       <th className="p-3">Quick Restock</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#F0E6D2]">
-                    {(products || []).map(prod => (
-                      <tr key={prod.id} className="hover:bg-[#FAF6EE]/50">
-                        <td className="p-3 flex items-center space-x-3">
-                          <img
-                            src={(prod.images && prod.images[0]) || '/indima-logo.svg'}
-                            alt={prod.name_en}
-                            className="w-10 h-10 rounded-lg object-cover border border-amber-100"
-                          />
-                          <div>
-                            <p className="font-bold text-neutral-900">{prod.name_en}</p>
-                            <p className="text-neutral-500 text-[11px]">{prod.weight} • {prod.sku}</p>
-                          </div>
-                        </td>
-                        <td className="p-3">
-                          <input
-                            type="number"
-                            min={0}
-                            value={prod.stock}
-                            onChange={e => {
-                              const val = Number(e.target.value);
-                              setProducts(prev => prev.map(p => p.id === prod.id ? { ...p, stock: val } : p));
-                            }}
-                            onBlur={e => handleUpdateStock(prod.id, Number(e.target.value))}
-                            className="w-24 px-3 py-1.5 bg-white border-2 border-[#D9C4A2] hover:border-[#993300] focus:border-[#993300] focus:ring-2 focus:ring-[#993300]/20 rounded-lg font-black font-mono text-neutral-900 text-sm shadow-2xs transition-all"
-                          />
-                        </td>
-                        <td className="p-3 font-semibold text-neutral-600">
-                          {prod.low_stock_threshold} units
-                        </td>
-                        <td className="p-3 space-x-1.5">
-                          <button
-                            onClick={() => handleUpdateStock(prod.id, prod.stock + 25)}
-                            className="px-2.5 py-1 bg-[#FAF6EE] hover:bg-[#EADBCA] border border-[#D9C4A2] rounded-lg font-bold text-[#993300] cursor-pointer"
-                          >
-                            +25
-                          </button>
-                          <button
-                            onClick={() => handleUpdateStock(prod.id, prod.stock + 50)}
-                            className="px-2.5 py-1 bg-[#FAF6EE] hover:bg-[#EADBCA] border border-[#D9C4A2] rounded-lg font-bold text-[#993300] cursor-pointer"
-                          >
-                            +50
-                          </button>
-                          <button
-                            onClick={() => handleUpdateStock(prod.id, prod.stock + 100)}
-                            className="px-2.5 py-1 bg-[#FAF6EE] hover:bg-[#EADBCA] border border-[#D9C4A2] rounded-lg font-bold text-[#993300] cursor-pointer"
-                          >
-                            +100
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {(products || []).map(prod => {
+                      const threshold = typeof prod.low_stock_threshold === 'number' ? prod.low_stock_threshold : 5;
+                      const isOutOfStock = prod.stock <= 0;
+                      const isLow = !isOutOfStock && prod.stock <= threshold;
+
+                      return (
+                        <tr key={prod.id} className="hover:bg-[#FAF6EE]/50">
+                          <td className="p-3 flex items-center space-x-3">
+                            <img
+                              src={(prod.images && prod.images[0]) || '/indima-logo.svg'}
+                              alt={prod.name_en}
+                              className="w-10 h-10 rounded-lg object-cover border border-amber-100"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                if (!target.src.includes('indima-logo.svg')) {
+                                  target.src = '/indima-logo.svg';
+                                }
+                              }}
+                            />
+                            <div>
+                              <p className="font-bold text-neutral-900">{prod.name_en}</p>
+                              <p className="text-neutral-500 text-[11px]">{prod.weight} • {prod.sku}</p>
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            {isOutOfStock ? (
+                              <span className="font-bold text-[11px] px-2.5 py-1 rounded-full bg-red-100 text-red-800 border border-red-200 inline-flex items-center gap-1">
+                                <AlertTriangle className="w-3 h-3 text-red-600 shrink-0" />
+                                <span>Out of Stock</span>
+                              </span>
+                            ) : isLow ? (
+                              <span className="font-bold text-[11px] px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 inline-flex items-center gap-1">
+                                <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
+                                <span>Low Stock</span>
+                              </span>
+                            ) : (
+                              <span className="font-bold text-[11px] px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 inline-flex items-center gap-1">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                                <span>In Stock</span>
+                              </span>
+                            )}
+                          </td>
+                          <td className="p-3">
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                type="number"
+                                min={0}
+                                value={prod.stock}
+                                onChange={e => {
+                                  const val = Math.max(0, Number(e.target.value));
+                                  setProducts(prev => prev.map(p => p.id === prod.id ? { ...p, stock: val } : p));
+                                }}
+                                onBlur={e => handleUpdateStock(prod.id, Math.max(0, Number(e.target.value)), threshold)}
+                                className="w-20 px-3 py-1.5 bg-white border-2 border-[#D9C4A2] hover:border-[#993300] focus:border-[#993300] focus:ring-2 focus:ring-[#993300]/20 rounded-lg font-black font-mono text-neutral-900 text-sm shadow-2xs transition-all"
+                              />
+                              <span className="text-[11px] text-neutral-500 font-medium">units</span>
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                type="number"
+                                min={0}
+                                value={threshold}
+                                onChange={e => {
+                                  const val = Math.max(0, Number(e.target.value));
+                                  setProducts(prev => prev.map(p => p.id === prod.id ? { ...p, low_stock_threshold: val } : p));
+                                }}
+                                onBlur={e => handleUpdateStock(prod.id, prod.stock, Math.max(0, Number(e.target.value)))}
+                                className="w-20 px-3 py-1.5 bg-white border-2 border-[#D9C4A2] hover:border-[#993300] focus:border-[#993300] focus:ring-2 focus:ring-[#993300]/20 rounded-lg font-black font-mono text-neutral-900 text-sm shadow-2xs transition-all"
+                              />
+                              <span className="text-[11px] text-neutral-500 font-medium">units</span>
+                            </div>
+                          </td>
+                          <td className="p-3 space-x-1.5">
+                            <button
+                              onClick={() => handleUpdateStock(prod.id, prod.stock + 25, threshold)}
+                              className="px-2.5 py-1 bg-[#FAF6EE] hover:bg-[#EADBCA] border border-[#D9C4A2] rounded-lg font-bold text-[#993300] cursor-pointer text-xs"
+                            >
+                              +25
+                            </button>
+                            <button
+                              onClick={() => handleUpdateStock(prod.id, prod.stock + 50, threshold)}
+                              className="px-2.5 py-1 bg-[#FAF6EE] hover:bg-[#EADBCA] border border-[#D9C4A2] rounded-lg font-bold text-[#993300] cursor-pointer text-xs"
+                            >
+                              +50
+                            </button>
+                            <button
+                              onClick={() => handleUpdateStock(prod.id, prod.stock + 100, threshold)}
+                              className="px-2.5 py-1 bg-[#FAF6EE] hover:bg-[#EADBCA] border border-[#D9C4A2] rounded-lg font-bold text-[#993300] cursor-pointer text-xs"
+                            >
+                              +100
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

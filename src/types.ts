@@ -158,6 +158,7 @@ export interface Order {
   expected_delivery?: string;
   whatsapp_notification_status?: 'Sent' | 'Pending' | 'Failed' | 'sent' | 'pending' | 'failed';
   whatsapp_notification_error?: string;
+  stock_restored?: boolean;
   created_at: string;
   order_date?: string;
   updated_at?: string;

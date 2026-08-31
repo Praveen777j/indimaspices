@@ -120,16 +120,16 @@ export async function runOneTimeFirestoreMigration(): Promise<MigrationResult> {
     items: any[];
     getId: (item: any) => string;
   }[] = [
-    { collectionName: 'products', items: Array.isArray(dbData.products) ? dbData.products : [], getId: i => i.id },
-    { collectionName: 'categories', items: Array.isArray(dbData.categories) ? dbData.categories : [], getId: i => i.id },
-    { collectionName: 'orders', items: Array.isArray(dbData.orders) ? dbData.orders : [], getId: i => i.id },
-    { collectionName: 'customers', items: Array.isArray(dbData.customers) ? dbData.customers : [], getId: i => i.id },
-    { collectionName: 'recipes', items: Array.isArray(dbData.recipes) ? dbData.recipes : [], getId: i => i.id },
-    { collectionName: 'banners', items: Array.isArray(dbData.banners) ? dbData.banners : [], getId: i => i.id },
-    { collectionName: 'offers', items: Array.isArray(dbData.offers) ? dbData.offers : [], getId: i => i.id },
-    { collectionName: 'reviews', items: Array.isArray(dbData.reviews) ? dbData.reviews : [], getId: i => i.id },
-    { collectionName: 'leads', items: Array.isArray(dbData.leads) ? dbData.leads : [], getId: i => i.id },
-    { collectionName: 'audit_logs', items: Array.isArray(dbData.auditLogs) ? dbData.auditLogs : (Array.isArray(dbData.audit_logs) ? dbData.audit_logs : []), getId: i => i.id }
+    { collectionName: 'products', items: Array.isArray(dbData.products) ? dbData.products : [], getId: i => (i && i.id !== undefined && i.id !== null ? String(i.id) : '') },
+    { collectionName: 'categories', items: Array.isArray(dbData.categories) ? dbData.categories : [], getId: i => (i && i.id !== undefined && i.id !== null ? String(i.id) : '') },
+    { collectionName: 'orders', items: Array.isArray(dbData.orders) ? dbData.orders : [], getId: i => (i && i.id !== undefined && i.id !== null ? String(i.id) : '') },
+    { collectionName: 'customers', items: Array.isArray(dbData.customers) ? dbData.customers : [], getId: i => (i && i.id !== undefined && i.id !== null ? String(i.id) : '') },
+    { collectionName: 'recipes', items: Array.isArray(dbData.recipes) ? dbData.recipes : [], getId: i => (i && i.id !== undefined && i.id !== null ? String(i.id) : '') },
+    { collectionName: 'banners', items: Array.isArray(dbData.banners) ? dbData.banners : [], getId: i => (i && i.id !== undefined && i.id !== null ? String(i.id) : '') },
+    { collectionName: 'offers', items: Array.isArray(dbData.offers) ? dbData.offers : [], getId: i => (i && i.id !== undefined && i.id !== null ? String(i.id) : '') },
+    { collectionName: 'reviews', items: Array.isArray(dbData.reviews) ? dbData.reviews : [], getId: i => (i && i.id !== undefined && i.id !== null ? String(i.id) : '') },
+    { collectionName: 'leads', items: Array.isArray(dbData.leads) ? dbData.leads : [], getId: i => (i && i.id !== undefined && i.id !== null ? String(i.id) : '') },
+    { collectionName: 'audit_logs', items: Array.isArray(dbData.auditLogs) ? dbData.auditLogs : (Array.isArray(dbData.audit_logs) ? dbData.audit_logs : []), getId: i => (i && i.id !== undefined && i.id !== null ? String(i.id) : '') }
   ];
 
   // Dynamic discovery of any other array properties in db.json not explicitly listed

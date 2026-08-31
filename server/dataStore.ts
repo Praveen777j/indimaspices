@@ -1013,10 +1013,13 @@ class DataStore {
     product.updated_at = new Date().toISOString();
     this.save();
 
-    Promise.allSettled([
-      this.setFirestoreDoc('products', id, product),
-      this.logAudit(adminUser, 'INVENTORY_STOCK_UPDATE', id, `Updated stock to ${newStock} for ${product.name_en}`)
-    ]).catch(() => {});
+    await this.setFirestoreDoc('products', id, product);
+    await this.logAudit(
+      adminUser,
+      'INVENTORY_STOCK_UPDATE',
+      id,
+      `Updated stock to ${product.stock} (Threshold: ${product.low_stock_threshold ?? 5}) for ${product.name_en}`
+    );
 
     return product;
   }
@@ -1150,33 +1153,204 @@ class DataStore {
       );
   }
 
-  public async createOrder(order: Order): Promise<Order> {
-    this.data.orders.unshift(order);
+  /**
+   * Atomically verifies stock and creates an order inside a Firestore Transaction.
+   * If any product has insufficient stock or is inactive, the transaction throws an error and no stock is changed.
+   * If Firestore is available, it guarantees race-free stock reservation and prevents simultaneous overselling.
+   */
+  public async createOrderWithAtomicStock(order: Order): Promise<Order> {
+    const fsDb = await this.getFirestoreInstance();
+    const nowIso = new Date().toISOString();
 
-    // Update customer stats
-    const customer = this.findCustomerByPhone(order.customer_phone);
-    if (customer) {
-      customer.total_orders += 1;
-      customer.total_spent += order.total_amount;
-      customer.saved_address = order.address_snapshot;
-      customer.updated_at = new Date().toISOString();
-      await this.setFirestoreDoc('customers', customer.id, customer);
+    if (fsDb) {
+      try {
+        await fsDb.runTransaction(async (transaction) => {
+          // 1. Read all product docs within the transaction
+          const productRefs = order.items.map(item => ({
+            item,
+            ref: fsDb.collection('products').doc(String(item.product_id))
+          }));
+
+          const productDocs = await Promise.all(
+            productRefs.map(({ ref }) => transaction.get(ref))
+          );
+
+          // 2. Validate stock and availability for each item
+          const stockUpdates: { ref: FirebaseFirestore.DocumentReference; newStock: number; updatedProd: Product }[] = [];
+
+          for (let i = 0; i < productRefs.length; i++) {
+            const { item, ref } = productRefs[i];
+            const docSnap = productDocs[i];
+
+            if (!docSnap.exists) {
+              throw new Error(`Product "${item.name_en || item.product_id}" is no longer available in the store.`);
+            }
+
+            const prodData = docSnap.data() as Product;
+
+            if (prodData.active === false) {
+              throw new Error(`Product "${prodData.name_en || item.name_en}" is currently inactive.`);
+            }
+
+            const currentStock = typeof prodData.stock === 'number' ? prodData.stock : 0;
+            const requestedQty = Math.max(1, Math.floor(Number(item.quantity) || 1));
+
+            if (currentStock < requestedQty) {
+              throw new Error(
+                `Insufficient stock for "${prodData.name_en || item.name_en}". Requested: ${requestedQty}, Available in stock: ${currentStock}.`
+              );
+            }
+
+            const newStock = Math.max(0, currentStock - requestedQty);
+            const updatedProd: Product = {
+              ...prodData,
+              stock: newStock,
+              updated_at: nowIso
+            };
+
+            stockUpdates.push({ ref, newStock, updatedProd });
+          }
+
+          // 3. Write product stock updates inside transaction
+          for (const update of stockUpdates) {
+            transaction.update(update.ref, {
+              stock: update.newStock,
+              updated_at: nowIso
+            });
+          }
+
+          // 4. Save Customer within transaction
+          const cleanPhone = order.customer_phone.replace(/\D/g, '').slice(-10);
+          const customerRef = fsDb.collection('customers').doc(`cust-${cleanPhone}`);
+          const custDoc = await transaction.get(customerRef);
+
+          let updatedCust: Customer;
+          if (custDoc.exists) {
+            const existing = custDoc.data() as Customer;
+            updatedCust = {
+              ...existing,
+              name: order.customer_name || existing.name,
+              email: order.customer_email || existing.email,
+              total_orders: (existing.total_orders || 0) + 1,
+              total_spent: (existing.total_spent || 0) + order.total_amount,
+              saved_address: order.address_snapshot || existing.saved_address,
+              updated_at: nowIso
+            };
+          } else {
+            updatedCust = {
+              id: `cust-${cleanPhone}`,
+              phone: cleanPhone,
+              name: order.customer_name,
+              email: order.customer_email,
+              total_orders: 1,
+              total_spent: order.total_amount,
+              saved_address: order.address_snapshot,
+              created_at: nowIso,
+              updated_at: nowIso
+            };
+          }
+          transaction.set(customerRef, JSON.parse(JSON.stringify(updatedCust)), { merge: true });
+
+          // 5. Save Order within transaction
+          const orderRef = fsDb.collection('orders').doc(order.id);
+          const cleanOrder = JSON.parse(JSON.stringify(order));
+          transaction.set(orderRef, cleanOrder, { merge: true });
+
+          // 6. Record Audit Log
+          const auditRef = fsDb.collection('audit_logs').doc(`log-${Date.now()}-${Math.floor(Math.random() * 1000)}`);
+          const auditPayload: AdminAuditLog = {
+            id: auditRef.id,
+            timestamp: nowIso,
+            admin_username: 'System',
+            action_type: 'ORDER_CREATED',
+            target_id: order.id,
+            details: `Atomic order of ₹${order.total_amount} placed by ${order.customer_name}`
+          };
+          transaction.set(auditRef, JSON.parse(JSON.stringify(auditPayload)), { merge: true });
+        });
+
+        // 7. Synchronize in-memory cache accurately upon successful transaction commit
+        for (const item of order.items) {
+          const prod = this.getProductById(item.product_id);
+          if (prod) {
+            prod.stock = Math.max(0, prod.stock - item.quantity);
+            prod.updated_at = nowIso;
+          }
+        }
+
+        const customer = this.findCustomerByPhone(order.customer_phone);
+        if (customer) {
+          customer.total_orders = (customer.total_orders || 0) + 1;
+          customer.total_spent = (customer.total_spent || 0) + order.total_amount;
+          customer.saved_address = order.address_snapshot;
+          customer.updated_at = nowIso;
+        } else {
+          this.data.customers.push({
+            id: `cust-${order.customer_phone.replace(/\D/g, '').slice(-10)}`,
+            phone: order.customer_phone.replace(/\D/g, '').slice(-10),
+            name: order.customer_name,
+            email: order.customer_email,
+            total_orders: 1,
+            total_spent: order.total_amount,
+            saved_address: order.address_snapshot,
+            created_at: nowIso,
+            updated_at: nowIso
+          });
+        }
+
+        this.data.orders.unshift(order);
+        this.save();
+        return order;
+      } catch (txErr: any) {
+        console.error('[Firestore Admin] ❌ Atomic order transaction failed:', txErr.message);
+        throw txErr;
+      }
+    } else {
+      const errMsg = `Firestore database is unavailable (${this.lastFirestoreError || 'Connection failed'}). Cannot safely process order.`;
+      console.error(`[Firestore Admin] ❌ ${errMsg}`);
+      throw new Error(errMsg);
     }
+  }
 
-    // Atomically decrement inventory for ordered items
+  public async createOrder(order: Order): Promise<Order> {
+    return this.createOrderWithAtomicStock(order);
+  }
+
+  /**
+   * Restores inventory if an order is cancelled or deleted before fulfillment
+   */
+  public async restoreOrderStock(order: Order, reason = 'Order cancelled'): Promise<void> {
+    if (order.stock_restored) {
+      return; // Already restored
+    }
+    const fsDb = await this.getFirestoreInstance();
+    const nowIso = new Date().toISOString();
+
     for (const item of order.items) {
       const prod = this.getProductById(item.product_id);
       if (prod) {
-        prod.stock = Math.max(0, prod.stock - item.quantity);
-        prod.updated_at = new Date().toISOString();
-        await this.setFirestoreDoc('products', prod.id, prod);
+        prod.stock += item.quantity;
+        prod.updated_at = nowIso;
+        if (fsDb) {
+          try {
+            await fsDb.collection('products').doc(prod.id).update({
+              stock: prod.stock,
+              updated_at: nowIso
+            });
+          } catch (e: any) {
+            console.error(`Failed to restore stock for product ${prod.id}:`, e.message);
+          }
+        }
       }
     }
 
-    await this.logAudit('System', 'ORDER_CREATED', order.id, `Order of ₹${order.total_amount} placed by ${order.customer_name}`);
-    await this.setFirestoreDoc('orders', order.id, order);
+    order.stock_restored = true;
+    order.updated_at = nowIso;
+    if (fsDb) {
+      await fsDb.collection('orders').doc(order.id).set(JSON.parse(JSON.stringify(order)), { merge: true });
+    }
+    await this.logAudit('System', 'INVENTORY_STOCK_RESTORED', order.id, `Restored stock for order ${order.id}: ${reason}`);
     this.save();
-    return order;
   }
 
   public async updateOrderStatus(
@@ -1201,9 +1375,17 @@ class DataStore {
         : orderStatus.toLowerCase().includes('process')
         ? 'confirmed'
         : order.status;
+
+      // If status is cancelled, restore stock safely
+      if (orderStatus.toLowerCase().includes('cancel')) {
+        await this.restoreOrderStock(order, `Status updated to ${orderStatus} by ${adminUser}`);
+      }
     }
     if (paymentStatus) {
       order.payment_status = paymentStatus;
+      if (paymentStatus.toLowerCase().includes('fail')) {
+        await this.restoreOrderStock(order, `Payment marked as ${paymentStatus}`);
+      }
     }
     if (trackingNumber !== undefined) order.tracking_number = trackingNumber;
     if (expectedDelivery !== undefined) order.expected_delivery = expectedDelivery;
@@ -1276,8 +1458,12 @@ class DataStore {
   public async deleteOrder(orderId: string, adminUser = 'Admin'): Promise<boolean> {
     const idx = this.data.orders.findIndex(o => o.id === orderId);
     if (idx === -1) return false;
+    const order = this.data.orders[idx];
+    if (order.order_status !== 'Delivered' && order.order_status !== 'Shipped') {
+      await this.restoreOrderStock(order, `Order deleted by ${adminUser}`);
+    }
     this.data.orders.splice(idx, 1);
-    await this.logAudit(adminUser, 'ORDER_DELETED', orderId, `Deleted test order ${orderId}`);
+    await this.logAudit(adminUser, 'ORDER_DELETED', orderId, `Deleted order ${orderId}`);
     await this.deleteFirestoreDoc('orders', orderId);
     this.save();
     return true;
@@ -1450,6 +1636,46 @@ class DataStore {
 
   public getLeads(): Lead[] {
     return this.data.leads;
+  }
+
+  // --- Webhook Idempotency Event Tracking (Firestore backed) ---
+  public async isWebhookEventProcessed(eventId: string): Promise<boolean> {
+    if (!eventId || typeof eventId !== 'string') return false;
+    const cleanId = eventId.trim();
+    try {
+      const fsDb = await this.getFirestoreInstance();
+      if (fsDb) {
+        const docSnap = await fsDb.collection('processed_webhook_events').doc(cleanId).get();
+        if (docSnap.exists) {
+          return true;
+        }
+      }
+    } catch (e: any) {
+      console.warn('[Webhook Idempotency] Notice checking event doc:', e.message);
+    }
+    return false;
+  }
+
+  public async recordProcessedWebhookEvent(
+    eventId: string,
+    eventType: string,
+    orderId: string,
+    paymentId?: string
+  ): Promise<void> {
+    if (!eventId || typeof eventId !== 'string') return;
+    const cleanId = eventId.trim();
+    const payload = {
+      event_id: cleanId,
+      event_type: eventType,
+      order_id: orderId,
+      payment_id: paymentId || '',
+      processed_at: new Date().toISOString()
+    };
+    try {
+      await this.setFirestoreDoc('processed_webhook_events', cleanId, payload);
+    } catch (e: any) {
+      console.warn('[Webhook Idempotency] Notice persisting event doc:', e.message);
+    }
   }
 
   // --- Audit Logs ---
