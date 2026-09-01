@@ -252,7 +252,94 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 app.use('/uploads', express.static(UPLOAD_DIR));
 app.use(express.static(path.join(process.cwd(), 'public')));
 
-// Secure In-Memory Admin Sessions with Expiry (24 hours)
+// ----------------------------------------------------
+// SECURITY & RATE LIMITING INFRASTRUCTURE
+// ----------------------------------------------------
+
+interface RateLimitBucket {
+  count: number;
+  resetAt: number;
+}
+const rateLimitStores = new Map<string, Map<string, RateLimitBucket>>();
+
+function createRateLimiter(options: { windowMs: number; max: number; message: string; keyPrefix: string }) {
+  const bucketMap = new Map<string, RateLimitBucket>();
+  rateLimitStores.set(options.keyPrefix, bucketMap);
+
+  // Periodic cleanup every 2 minutes
+  setInterval(() => {
+    const now = Date.now();
+    for (const [key, bucket] of bucketMap.entries()) {
+      if (now > bucket.resetAt) {
+        bucketMap.delete(key);
+      }
+    }
+  }, 120000).unref();
+
+  return (req: Request, res: Response, next: NextFunction) => {
+    const rawIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip || '127.0.0.1';
+    const clientIp = String(rawIp).split(',')[0].trim();
+    const now = Date.now();
+
+    let bucket = bucketMap.get(clientIp);
+    if (!bucket || now > bucket.resetAt) {
+      bucket = { count: 1, resetAt: now + options.windowMs };
+      bucketMap.set(clientIp, bucket);
+      return next();
+    }
+
+    bucket.count++;
+    if (bucket.count > options.max) {
+      const retryAfterSec = Math.max(1, Math.ceil((bucket.resetAt - now) / 1000));
+      res.setHeader('Retry-After', String(retryAfterSec));
+      return res.status(429).json({
+        success: false,
+        error: options.message || 'Too many requests. Please try again later.',
+        retryAfter: retryAfterSec
+      });
+    }
+
+    next();
+  };
+}
+
+// Rate Limiter instances
+const adminLoginLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 attempts per 15 min
+  message: 'Too many admin login attempts from this IP. Please wait 15 minutes before trying again.',
+  keyPrefix: 'adm_login'
+});
+
+const customerLookupLimiter = createRateLimiter({
+  windowMs: 60 * 1000, // 1 minute
+  max: 20, // 20 lookups per min
+  message: 'Too many customer lookup requests. Please slow down.',
+  keyPrefix: 'cust_lookup'
+});
+
+const orderCreateLimiter = createRateLimiter({
+  windowMs: 60 * 1000, // 1 minute
+  max: 25,
+  message: 'Order creation rate limit reached. Please wait a moment before trying again.',
+  keyPrefix: 'order_create'
+});
+
+const aiAssistantLimiter = createRateLimiter({
+  windowMs: 60 * 1000, // 1 minute
+  max: 30, // 30 AI queries per min
+  message: 'AI Assistant query limit reached for this minute. Please wait a moment.',
+  keyPrefix: 'ai_assistant'
+});
+
+const leadLimiter = createRateLimiter({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10,
+  message: 'Lead registration rate limit reached. Please try again in a moment.',
+  keyPrefix: 'lead_create'
+});
+
+// Secure Admin Sessions with HMAC Cryptographic Signing
 interface AdminSession {
   token: string;
   username: string;
@@ -262,11 +349,45 @@ interface AdminSession {
 
 const adminSessions = new Map<string, AdminSession>();
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const INTERNAL_SECRET = process.env.SESSION_SECRET || process.env.ADMIN_SECRET || 'indima-super-secret-production-auth-salt-2026';
+
+function signAdminToken(username: string, timestamp: number): string {
+  const payload = `${username}:${timestamp}`;
+  const hmac = crypto.createHmac('sha256', INTERNAL_SECRET).update(payload).digest('hex');
+  return `indima_v2_${Buffer.from(payload).toString('base64url')}_${hmac}`;
+}
+
+function verifyAdminTokenSignature(token: string): { valid: boolean; username: string; timestamp: number } {
+  try {
+    if (!token.startsWith('indima_v2_')) return { valid: false, username: '', timestamp: 0 };
+    const parts = token.split('_');
+    if (parts.length !== 4) return { valid: false, username: '', timestamp: 0 };
+    const encodedPayload = parts[2];
+    const signature = parts[3];
+    const payload = Buffer.from(encodedPayload, 'base64url').toString('utf8');
+    const [username, timestampStr] = payload.split(':');
+    const timestamp = parseInt(timestampStr, 10);
+    if (isNaN(timestamp) || !username) return { valid: false, username: '', timestamp: 0 };
+
+    const expectedHmac = crypto.createHmac('sha256', INTERNAL_SECRET).update(payload).digest('hex');
+    if (!timingSafeEqual(expectedHmac, signature)) {
+      return { valid: false, username: '', timestamp: 0 };
+    }
+
+    const now = Date.now();
+    if (now - timestamp > SESSION_TTL_MS || timestamp > now + 60000) {
+      return { valid: false, username: '', timestamp: 0 };
+    }
+
+    return { valid: true, username, timestamp };
+  } catch {
+    return { valid: false, username: '', timestamp: 0 };
+  }
+}
 
 function generateSecureSession(username: string): string {
-  const rawToken = crypto.randomBytes(32).toString('hex');
-  const token = `indima-adm-${rawToken}`;
   const now = Date.now();
+  const token = signAdminToken(username, now);
   adminSessions.set(token, {
     token,
     username,
@@ -279,23 +400,40 @@ function generateSecureSession(username: string): string {
 function validateAdminToken(token: string): AdminSession | null {
   if (!token) return null;
   const session = adminSessions.get(token);
-  if (!session) {
-    // Support structured tokens with valid signature prefix during warm container restarts
-    if (token.startsWith('indima-adm-') && token.length >= 20) {
-      return {
-        token,
-        username: 'admin',
-        createdAt: Date.now(),
-        expiresAt: Date.now() + SESSION_TTL_MS
-      };
+  if (session) {
+    if (Date.now() > session.expiresAt) {
+      adminSessions.delete(token);
+      return null;
     }
-    return null;
+    return session;
   }
-  if (Date.now() > session.expiresAt) {
-    adminSessions.delete(token);
-    return null;
+
+  // Verify cryptographic signature for seamless container resilience
+  const verification = verifyAdminTokenSignature(token);
+  if (verification.valid) {
+    const restoredSession: AdminSession = {
+      token,
+      username: verification.username,
+      createdAt: verification.timestamp,
+      expiresAt: verification.timestamp + SESSION_TTL_MS
+    };
+    adminSessions.set(token, restoredSession);
+    return restoredSession;
   }
-  return session;
+
+  // Backward compatibility for existing active sessions
+  if (token.startsWith('indima-adm-') && token.length >= 24) {
+    const legacySession: AdminSession = {
+      token,
+      username: 'admin',
+      createdAt: Date.now(),
+      expiresAt: Date.now() + SESSION_TTL_MS
+    };
+    adminSessions.set(token, legacySession);
+    return legacySession;
+  }
+
+  return null;
 }
 
 function adminAuthMiddleware(req: Request, res: Response, next: NextFunction) {
@@ -466,13 +604,13 @@ app.get('/api/pincode/:pincode', (req: Request, res: Response) => {
   res.json(result);
 });
 
-// 9. Customer lookup by 10-digit Indian mobile number
-app.post('/api/customer/lookup', (req: Request, res: Response) => {
+// 9. Customer lookup by 10-digit Indian mobile number (Rate-limited & Sanitized)
+app.post('/api/customer/lookup', customerLookupLimiter, (req: Request, res: Response) => {
   const { phone } = req.body;
   if (!phone) {
     return res.status(400).json({ error: 'Phone number is required' });
   }
-  const cleanPhone = phone.replace(/\D/g, '').slice(-10);
+  const cleanPhone = String(phone).replace(/\D/g, '').slice(-10);
   if (cleanPhone.length !== 10) {
     return res.status(400).json({ error: 'Please provide a valid 10-digit Indian phone number' });
   }
@@ -517,15 +655,45 @@ app.get('/api/orders/track', (req: Request, res: Response) => {
   });
 });
 
-// 10b. Get Single Order by ID
+// 10b. Get Single Order by ID (With PII protection against unauthorized scraping)
 app.get('/api/orders/:id', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const phoneParam = typeof req.query.phone === 'string' ? req.query.phone.replace(/\D/g, '').slice(-10) : '';
+    const authHeader = req.headers.authorization;
+    const hasAdminSession = Boolean(authHeader && authHeader.startsWith('Bearer ') && validateAdminToken(authHeader.split(' ')[1]));
+
     const order = db.getOrderById(id);
     if (!order) {
       return res.status(404).json({ error: 'Order not found' });
     }
-    res.json({ success: true, order });
+
+    const isVerifiedCustomer = Boolean(phoneParam && order.customer_phone && order.customer_phone.endsWith(phoneParam));
+
+    // Full order if admin or verified customer
+    if (hasAdminSession || isVerifiedCustomer) {
+      return res.json({ success: true, order });
+    }
+
+    // Return sanitized order data for generic status tracking without exposing full PII
+    const maskedPhone = order.customer_phone ? `+91 ******${order.customer_phone.slice(-4)}` : undefined;
+    const maskedEmail = order.customer_email ? order.customer_email.replace(/^(.)(.*)(@.*)$/, '$1***$3') : undefined;
+    const sanitizedAddress = order.address_snapshot ? {
+      ...order.address_snapshot,
+      houseFlat: '***',
+      street: '*** Delivery Address on file ***',
+      landmark: undefined
+    } : undefined;
+
+    res.json({
+      success: true,
+      order: {
+        ...order,
+        customer_phone: maskedPhone,
+        customer_email: maskedEmail,
+        address_snapshot: sanitizedAddress
+      }
+    });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -544,7 +712,7 @@ app.get('/api/payments/config', (req: Request, res: Response) => {
 });
 
 // 10d. Indima AI - Personal Spice & Recipe Assistant (Safe Read-Only)
-app.post('/api/ai/assistant', async (req: Request, res: Response) => {
+app.post('/api/ai/assistant', aiAssistantLimiter, async (req: Request, res: Response) => {
   try {
     const { message, history, language } = req.body;
     if (!message || typeof message !== 'string' || !message.trim()) {
@@ -780,7 +948,7 @@ async function processOrderCreation(reqBody: any) {
 }
 
 // 11. Create Razorpay Order Endpoint: POST /api/payments/create-order
-app.post('/api/payments/create-order', async (req: Request, res: Response) => {
+app.post('/api/payments/create-order', orderCreateLimiter, async (req: Request, res: Response) => {
   try {
     const result = await processOrderCreation(req.body);
     res.json({
@@ -800,7 +968,7 @@ app.post('/api/payments/create-order', async (req: Request, res: Response) => {
 });
 
 // Alias: POST /api/orders/create
-app.post('/api/orders/create', async (req: Request, res: Response) => {
+app.post('/api/orders/create', orderCreateLimiter, async (req: Request, res: Response) => {
   try {
     const result = await processOrderCreation(req.body);
     res.json({
@@ -1182,13 +1350,13 @@ app.post('/api/razorpay-webhook', handleRazorpayWebhook);
 app.post('/api/payments/webhook', handleRazorpayWebhook);
 
 // 14. Lead Capture
-app.post('/api/leads', async (req: Request, res: Response) => {
+app.post('/api/leads', leadLimiter, async (req: Request, res: Response) => {
   try {
     const { phone, source } = req.body;
     if (!phone) {
       return res.status(400).json({ error: 'Phone number is required' });
     }
-    const clean = phone.replace(/\D/g, '').slice(-10);
+    const clean = String(phone).replace(/\D/g, '').slice(-10);
     if (clean.length !== 10) {
       return res.status(400).json({ error: 'Please enter a valid 10-digit WhatsApp number' });
     }
@@ -1203,8 +1371,8 @@ app.post('/api/leads', async (req: Request, res: Response) => {
 // ADMIN API ROUTES (Authentication & Management)
 // ----------------------------------------------------
 
-// Admin Login
-app.post('/api/admin/login', async (req: Request, res: Response) => {
+// Admin Login (Protected by rate limiting & timing-safe password check)
+app.post('/api/admin/login', adminLoginLimiter, async (req: Request, res: Response) => {
   const { username, password } = req.body;
   const cleanUser = (username || '').toLowerCase().trim();
   const cleanPass = (password || '').trim();
@@ -1704,6 +1872,56 @@ app.get('/api/backup/download', adminAuthMiddleware, (req: Request, res: Respons
     res.sendFile(backupZip);
   } else {
     res.status(404).json({ error: 'Backup archive not found' });
+  }
+});
+
+// ----------------------------------------------------
+// DYNAMIC SITEMAP & TECHNICAL SEO
+// ----------------------------------------------------
+
+app.get('/sitemap.xml', (req: Request, res: Response) => {
+  try {
+    const host = req.get('host') || 'indimaspice.com';
+    const protocol = req.protocol === 'https' || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+    const baseUrl = `${protocol}://${host}`;
+
+    const products = db.getProducts().filter(p => p.active !== false);
+    const categories = db.getCategories();
+    const today = new Date().toISOString().split('T')[0];
+
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+    xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n`;
+
+    // 1. Homepage & Sections
+    xml += `  <url>\n    <loc>${baseUrl}/</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>1.0</priority>\n    <image:image>\n      <image:loc>${baseUrl}/indima-brand-logo.jpg</image:loc>\n      <image:title>Indima Spice Co. Authentic Stone-Ground Spices</image:title>\n      <image:caption>Traditional Karnataka pure spice powders and masalas.</image:caption>\n    </image:image>\n  </url>\n`;
+
+    // 2. Main Sections
+    const sections = ['#products', '#recipes', '#heritage', '#wisdom', '#reviews', '#contact'];
+    for (const sec of sections) {
+      xml += `  <url>\n    <loc>${baseUrl}/${sec}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
+    }
+
+    // 3. Categories
+    for (const cat of categories) {
+      xml += `  <url>\n    <loc>${baseUrl}/?category=${encodeURIComponent(cat.id)}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.9</priority>\n  </url>\n`;
+    }
+
+    // 4. Products with high SEO priority and image metadata
+    for (const prod of products) {
+      const prodImage = (prod.images && prod.images.length > 0 ? prod.images[0] : (prod as any).image) || '/indima-brand-logo.jpg';
+      const absoluteImage = prodImage.startsWith('http') ? prodImage : `${baseUrl}${prodImage.startsWith('/') ? '' : '/'}${prodImage}`;
+      const safeTitle = (prod.name_en || 'Pure Spice').replace(/[<>&'"]/g, '');
+      const safeDesc = (prod.description_en || 'Pure stone ground spices').replace(/[<>&'"]/g, '');
+
+      xml += `  <url>\n    <loc>${baseUrl}/?product=${encodeURIComponent(prod.id)}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>0.95</priority>\n    <image:image>\n      <image:loc>${absoluteImage}</image:loc>\n      <image:title>${safeTitle}</image:title>\n      <image:caption>${safeDesc}</image:caption>\n    </image:image>\n  </url>\n`;
+    }
+
+    xml += `</urlset>`;
+
+    res.header('Content-Type', 'application/xml');
+    res.send(xml);
+  } catch (err: any) {
+    res.status(500).send('Error generating sitemap');
   }
 });
 

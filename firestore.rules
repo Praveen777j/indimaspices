@@ -5,66 +5,78 @@ service cloud.firestore {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
+    function isValidRating(rating) {
+      return rating is number && rating >= 1 && rating <= 5;
+    }
+
     // Public catalog & content collections (read allowed for store visitors)
     match /products/{productId} {
       allow read: if true;
-      allow write: if isValidId(productId);
+      allow write: if false; // Managed exclusively via server Firebase Admin SDK
     }
 
     match /categories/{categoryId} {
       allow read: if true;
-      allow write: if isValidId(categoryId);
+      allow write: if false; // Managed exclusively via server Firebase Admin SDK
     }
 
     match /recipes/{recipeId} {
       allow read: if true;
-      allow write: if isValidId(recipeId);
+      allow write: if false; // Managed exclusively via server Firebase Admin SDK
     }
 
     match /banners/{bannerId} {
       allow read: if true;
-      allow write: if isValidId(bannerId);
+      allow write: if false; // Managed exclusively via server Firebase Admin SDK
     }
 
     match /offers/{offerId} {
       allow read: if true;
-      allow write: if isValidId(offerId);
+      allow write: if false; // Managed exclusively via server Firebase Admin SDK
     }
 
     match /reviews/{reviewId} {
       allow read: if true;
-      allow create: if isValidId(reviewId) && request.resource.data.rating >= 1 && request.resource.data.rating <= 5;
-      allow update, delete: if isValidId(reviewId);
+      allow create: if isValidId(reviewId) && 
+        request.resource.data.rating is number &&
+        isValidRating(request.resource.data.rating) &&
+        request.resource.data.customer_name is string &&
+        request.resource.data.customer_name.size() > 0 &&
+        request.resource.data.customer_name.size() <= 100 &&
+        request.resource.data.comment_en is string &&
+        request.resource.data.comment_en.size() > 0 &&
+        request.resource.data.comment_en.size() <= 1000;
+      allow update, delete: if false; // Moderated via server Admin API
     }
 
     match /leads/{leadId} {
-      allow read: if true;
-      allow create, update: if isValidId(leadId);
+      allow read: if false; // Private lead data protected
+      allow create: if isValidId(leadId) &&
+        request.resource.data.phone is string &&
+        request.resource.data.phone.size() >= 10 &&
+        request.resource.data.phone.size() <= 15;
+      allow update, delete: if false;
     }
 
     match /orders/{orderId} {
-      allow read: if true;
-      allow create, update: if isValidId(orderId);
+      allow read, write: if false; // Managed exclusively via server APIs to protect PII
     }
 
     match /customers/{customerId} {
-      allow read: if true;
-      allow write: if isValidId(customerId);
+      allow read, write: if false; // Managed exclusively via server APIs to protect PII
     }
 
     match /processed_webhook_events/{eventId} {
-      allow read: if true;
-      allow write: if isValidId(eventId);
+      allow read, write: if false; // Server internal idempotency tracking
     }
 
     match /settings/{settingId} {
       allow read: if true;
-      allow write: if isValidId(settingId);
+      allow write: if false; // Managed via server Admin API
     }
 
     match /audit_logs/{logId} {
-      allow read: if true;
-      allow create, write: if isValidId(logId);
+      allow read, write: if false; // Server internal audit trail
     }
 
     match /system/{docId} {
@@ -76,3 +88,4 @@ service cloud.firestore {
     }
   }
 }
+
