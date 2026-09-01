@@ -8,7 +8,7 @@ import heicConvert from 'heic-convert';
 import Razorpay from 'razorpay';
 import { createServer as createViteServer } from 'vite';
 import { db } from './server/dataStore';
-import { handleAiAssistantRequest } from './server/aiAssistant';
+import { handleAiAssistantRequest, getOfflineFallbackResponse } from './server/aiAssistant';
 import { runOneTimeFirestoreMigration } from './server/firestoreMigration';
 import { lookupPincode } from './src/data/indiaLocations';
 import { Order, Address } from './src/types';
@@ -753,10 +753,22 @@ app.post('/api/ai/assistant', aiAssistantLimiter, async (req: Request, res: Resp
       ...result
     });
   } catch (err: any) {
-    console.error('[Indima AI API Error]:', err);
-    res.status(500).json({
-      success: false,
-      error: err.message || 'Unable to process culinary request. Please try again.'
+    const sanitizedError = (err?.message || String(err))
+      .replace(/AIza[0-9A-Za-z-_]{35}/g, '[REDACTED_API_KEY]')
+      .replace(/key=[^&\s]+/g, 'key=[REDACTED]');
+    console.warn('[Indima AI Assistant Endpoint] ⚠️ Error caught, responding with verified fallback engine:', sanitizedError);
+
+    const activeProds = db.getProducts()?.filter(p => p.active !== false) || [];
+    const fallback = getOfflineFallbackResponse(
+      req.body?.message || 'help',
+      activeProds,
+      req.body?.language === 'kn' ? 'kn' : 'en',
+      Array.isArray(req.body?.history) ? req.body.history : []
+    );
+
+    res.json({
+      success: true,
+      ...fallback
     });
   }
 });

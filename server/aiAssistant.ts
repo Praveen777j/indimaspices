@@ -35,21 +35,42 @@ interface AiAssistantResponse {
 // Lazy initialization for Gemini API client
 let genAiClient: GoogleGenAI | null = null;
 
+// Safe error sanitizer to prevent any secret or API key leakage in server logs
+function sanitizeErrorForLog(err: any): string {
+  if (!err) return 'Unknown error';
+  const raw = err.message || (typeof err === 'object' ? JSON.stringify(err) : String(err));
+  return raw
+    .replace(/AIza[0-9A-Za-z-_]{35}/g, '[REDACTED_API_KEY]')
+    .replace(/key=[^&\s]+/g, 'key=[REDACTED]')
+    .replace(/bearer\s+[a-zA-Z0-9._-]+/gi, 'Bearer [REDACTED_TOKEN]');
+}
+
+function safeLogAiWarning(context: string, err: any) {
+  const sanitized = sanitizeErrorForLog(err);
+  const status = err?.status || err?.statusCode || err?.code || (sanitized.includes('503') ? 503 : sanitized.includes('429') ? 429 : sanitized.includes('500') ? 500 : 'TEMP_UNAVAILABLE');
+  console.warn(`[Indima AI Assistant] ⚠️ ${context} (Status/Code: ${status}): ${sanitized}`);
+}
+
 function getGenAiClient(): GoogleGenAI | null {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    console.warn('[Indima AI] ⚠️ GEMINI_API_KEY is not set in environment variables.');
+    console.warn('[Indima AI] ⚠️ GEMINI_API_KEY is not set in environment variables. Running in offline recipe & recommendation mode.');
     return null;
   }
   if (!genAiClient) {
-    genAiClient = new GoogleGenAI({
-      apiKey,
-      httpOptions: {
-        headers: {
-          'User-Agent': 'aistudio-build',
+    try {
+      genAiClient = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          }
         }
-      }
-    });
+      });
+    } catch (clientInitErr) {
+      safeLogAiWarning('Client initialization error', clientInitErr);
+      return null;
+    }
   }
   return genAiClient;
 }
@@ -756,41 +777,69 @@ BEHAVIOR & CONVERSATION RULES (STRICT CHATGPT / GOOGLE AI RELATABILITY)
       parts: [{ text: message }]
     });
 
-    // 20 second timeout for Gemini API
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('AI response timed out')), 20000)
-    );
+    // 10 second timeout for primary Gemini API request
+    const createTimeout = (ms: number, desc: string) => {
+      return new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`${desc} timed out after ${ms}ms`)), ms)
+      );
+    };
 
-    let response;
+    let response: any = null;
     try {
       const generatePromise = ai.models.generateContent({
-        model: 'gemini-3.7-flash',
+        model: 'gemini-2.5-flash',
         contents: formattedContents,
         config: {
           systemInstruction,
           temperature: 0.2
         }
       });
-      response = await Promise.race([generatePromise, timeoutPromise]);
+      response = await Promise.race([generatePromise, createTimeout(10000, 'Primary model (gemini-2.5-flash)')]);
     } catch (primaryErr: any) {
-      const errStr = primaryErr?.message || JSON.stringify(primaryErr);
-      if (errStr.includes('429') || primaryErr?.status === 'RESOURCE_EXHAUSTED' || primaryErr?.code === 429) {
-        console.warn('[Indima AI] 429 quota reached on primary model, attempting lightweight model fallback...');
-        const liteGeneratePromise = ai.models.generateContent({
-          model: 'gemini-3.1-flash-lite',
-          contents: formattedContents,
-          config: {
-            systemInstruction,
-            temperature: 0.2
-          }
-        });
-        response = await Promise.race([liteGeneratePromise, timeoutPromise]);
+      safeLogAiWarning('Primary model temporarily unavailable or overloaded, trying fast fallback model', primaryErr);
+
+      // Single fallback attempt to lightweight model if primary is overloaded (503), rate-limited (429), or timed out
+      const errStr = sanitizeErrorForLog(primaryErr).toLowerCase();
+      const isTransientError =
+        errStr.includes('503') ||
+        errStr.includes('429') ||
+        errStr.includes('500') ||
+        errStr.includes('overloaded') ||
+        errStr.includes('unavailable') ||
+        errStr.includes('timed out') ||
+        errStr.includes('resource_exhausted') ||
+        primaryErr?.status === 503 ||
+        primaryErr?.status === 429 ||
+        primaryErr?.status === 500 ||
+        primaryErr?.code === 503 ||
+        primaryErr?.code === 429;
+
+      if (isTransientError) {
+        try {
+          const liteGeneratePromise = ai.models.generateContent({
+            model: 'gemini-2.5-flash-lite',
+            contents: formattedContents,
+            config: {
+              systemInstruction,
+              temperature: 0.2
+            }
+          });
+          response = await Promise.race([liteGeneratePromise, createTimeout(8000, 'Fallback model (gemini-2.5-flash-lite)')]);
+        } catch (secondaryErr: any) {
+          safeLogAiWarning('Secondary model also unavailable, seamlessly utilizing local recipe & catalog engine', secondaryErr);
+          return getOfflineFallbackResponse(message, activeProducts, language, history);
+        }
       } else {
-        throw primaryErr;
+        safeLogAiWarning('Non-transient error on primary model, seamlessly utilizing local recipe & catalog engine', primaryErr);
+        return getOfflineFallbackResponse(message, activeProducts, language, history);
       }
     }
 
-    const fullText = response.text || '';
+    const fullText = response?.text || '';
+    if (!fullText || typeof fullText !== 'string' || !fullText.trim()) {
+      safeLogAiWarning('Empty text received from model, using local recipe engine', { message: 'Empty response text' });
+      return getOfflineFallbackResponse(message, activeProducts, language, history);
+    }
 
     // Extract Recommended Products JSON block
     let recommendedIds: string[] = [];
@@ -862,7 +911,7 @@ BEHAVIOR & CONVERSATION RULES (STRICT CHATGPT / GOOGLE AI RELATABILITY)
       suggestedFollowUps
     };
   } catch (apiErr: any) {
-    console.warn('[Indima AI] Gemini API note (seamlessly transitioning to verified local recipe & spice engine):', apiErr.message || apiErr);
+    safeLogAiWarning('AI assistant request encountered error, seamlessly transitioning to verified local recipe & spice engine', apiErr);
     // Fallback gracefully to our dish-aware, catalog-verified recommendation engine
     return getOfflineFallbackResponse(message, activeProducts, language, history);
   }
@@ -887,7 +936,7 @@ function findDishAffinity(message: string, history: ChatMessage[] = []): DishAff
 }
 
 // Fallback intelligent response generator following all strict catalog & intent rules
-function getOfflineFallbackResponse(
+export function getOfflineFallbackResponse(
   message: string,
   products: Product[],
   language: 'en' | 'kn',
