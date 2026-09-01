@@ -71,8 +71,7 @@ service cloud.firestore {
     }
 
     match /settings/{settingId} {
-      allow read: if true;
-      allow write: if false; // Managed via server Admin API
+      allow read, write: if false; // Managed & sanitized exclusively via server APIs
     }
 
     match /audit_logs/{logId} {

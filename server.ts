@@ -339,6 +339,20 @@ const leadLimiter = createRateLimiter({
   keyPrefix: 'lead_create'
 });
 
+const orderTrackLimiter = createRateLimiter({
+  windowMs: 60 * 1000, // 1 minute
+  max: 15,
+  message: 'Too many order tracking requests. Please slow down.',
+  keyPrefix: 'order_track'
+});
+
+const paymentVerifyLimiter = createRateLimiter({
+  windowMs: 60 * 1000, // 1 minute
+  max: 20,
+  message: 'Too many payment verification attempts. Please wait a moment.',
+  keyPrefix: 'payment_verify'
+});
+
 // Secure Admin Sessions with HMAC Cryptographic Signing
 interface AdminSession {
   token: string;
@@ -421,18 +435,6 @@ function validateAdminToken(token: string): AdminSession | null {
     return restoredSession;
   }
 
-  // Backward compatibility for existing active sessions
-  if (token.startsWith('indima-adm-') && token.length >= 24) {
-    const legacySession: AdminSession = {
-      token,
-      username: 'admin',
-      createdAt: Date.now(),
-      expiresAt: Date.now() + SESSION_TTL_MS
-    };
-    adminSessions.set(token, legacySession);
-    return legacySession;
-  }
-
   return null;
 }
 
@@ -454,19 +456,15 @@ function adminAuthMiddleware(req: Request, res: Response, next: NextFunction) {
 // PUBLIC API ROUTES
 // ----------------------------------------------------
 
-// Health & Database Status
+// Minimal Public Health Endpoint (No sensitive infrastructure or count leakage)
 app.get('/api/health', (req: Request, res: Response) => {
   res.json({
-    status: 'ok',
-    database: db.getIsFirestoreReady() ? 'Firestore (Firebase Admin SDK)' : 'Active Store',
-    firestore_connected: db.getIsFirestoreReady(),
-    products_count: db.getProducts().length,
-    orders_count: db.getOrders().length,
-    customers_count: db.getCustomers().length
+    status: 'ok'
   });
 });
 
-app.get('/api/database/status', (req: Request, res: Response) => {
+// Detailed Database Status (Protected behind verified Admin Authentication)
+app.get('/api/database/status', adminAuthMiddleware, (req: Request, res: Response) => {
   res.json({
     active_database: db.getIsFirestoreReady() ? 'Firebase Firestore (Firebase Admin SDK)' : 'Active Store',
     firestore_connected: db.getIsFirestoreReady(),
@@ -631,8 +629,8 @@ app.post('/api/customer/lookup', customerLookupLimiter, (req: Request, res: Resp
   });
 });
 
-// 10. Track Orders by Phone & Optional Order ID
-app.get('/api/orders/track', (req: Request, res: Response) => {
+// 10. Track Orders by Phone & Optional Order ID (Rate-limited & Sanitized PII)
+app.get('/api/orders/track', orderTrackLimiter, (req: Request, res: Response) => {
   const { phone, order_id } = req.query;
   if (!phone || typeof phone !== 'string') {
     return res.status(400).json({ error: 'Please enter a valid 10-digit phone number' });
@@ -643,15 +641,40 @@ app.get('/api/orders/track', (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Please enter a valid 10-digit phone number' });
   }
 
-  let orders = db.getOrdersByPhone(cleanPhone);
+  const authHeader = req.headers.authorization;
+  const hasAdminSession = Boolean(authHeader && authHeader.startsWith('Bearer ') && validateAdminToken(authHeader.split(' ')[1]));
+
+  let rawOrders = db.getOrdersByPhone(cleanPhone);
   if (order_id && typeof order_id === 'string') {
-    orders = orders.filter(o => o.id.toLowerCase() === order_id.toLowerCase().trim());
+    rawOrders = rawOrders.filter(o => o.id.toLowerCase() === order_id.toLowerCase().trim());
   }
 
+  // Return full orders for admin sessions, otherwise sanitize sensitive PII (mask phone/email/street)
+  const sanitizedOrders = rawOrders.map(order => {
+    if (hasAdminSession) return order;
+
+    const maskedPhone = order.customer_phone ? `+91 ******${order.customer_phone.slice(-4)}` : `+91 ******${cleanPhone.slice(-4)}`;
+    const maskedEmail = order.customer_email ? order.customer_email.replace(/^(.)(.*)(@.*)$/, '$1***$3') : undefined;
+    const sanitizedAddress = order.address_snapshot ? {
+      ...order.address_snapshot,
+      phone: maskedPhone,
+      houseFlat: '***',
+      street: '*** Delivery Address on file ***',
+      landmark: undefined
+    } : undefined;
+
+    return {
+      ...order,
+      customer_phone: maskedPhone,
+      customer_email: maskedEmail,
+      address_snapshot: sanitizedAddress
+    };
+  });
+
   res.json({
-    phone: cleanPhone,
-    count: orders.length,
-    orders
+    phone: `+91 ******${cleanPhone.slice(-4)}`,
+    count: sanitizedOrders.length,
+    orders: sanitizedOrders
   });
 });
 
@@ -1040,26 +1063,29 @@ async function verifyPaymentInternal(body: any) {
     return { success: true, message: 'Payment already verified', order };
   }
 
-  // Case A: Manual UTR / Bank Reference or Offline Payment Proof submission
+  // Case A: Manual UTR / Bank Reference or Offline Payment Proof submission (Queued for Admin Verification)
   if (utr_reference && !razorpay_signature) {
     const nowIso = new Date().toISOString();
-    order.payment_status = 'Successful';
-    order.order_status = 'Payment Confirmed';
-    order.status = 'confirmed';
+    order.payment_status = 'Pending Verification';
+    order.order_status = 'Payment Verification Pending';
+    order.status = 'pending_verification';
     order.payment_method = 'UPI / Bank Transfer (Manual Reference)';
     order.utr_reference = utr_reference;
     order.transaction_id = utr_reference;
-    order.paid_at = nowIso;
-    order.payment_timestamp = nowIso;
     order.updated_at = nowIso;
     order.payment_details = {
       method: 'Manual UPI / UTR',
-      utr_reference
+      utr_reference,
+      submitted_at: nowIso
     };
 
     const updatedOrder = await db.updateOrder(order);
-    await db.logAudit('Customer', 'PAYMENT_PROOF_SUBMITTED', order.id, `UTR Reference ${utr_reference} submitted`);
-    return { success: true, message: 'Payment reference submitted and verified', order: updatedOrder };
+    await db.logAudit('Customer', 'PAYMENT_PROOF_SUBMITTED', order.id, `UTR Reference ${utr_reference} submitted (Pending Admin Verification)`);
+    return {
+      success: true,
+      message: 'Payment reference received. Your payment is pending verification by our team.',
+      order: updatedOrder
+    };
   }
 
   // Case B: Standard Razorpay Cryptographic Verification
@@ -1080,16 +1106,19 @@ async function verifyPaymentInternal(body: any) {
       .digest('hex');
     isSignatureValid = timingSafeEqual(generatedSignature, razorpay_signature);
   } else {
+    // In production, reject unconfigured / simulated payment signatures
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Payment gateway configuration is missing or inactive for live verification.');
+    }
     // Development / Test mode validation
     const isTestSignature =
       razorpay_payment_id.startsWith('pay_sim_') ||
       razorpay_signature.startsWith('sim_sig_') ||
-      effectiveRzpOrderId.startsWith('order_') ||
-      !isConfigured;
+      effectiveRzpOrderId.startsWith('order_');
     isSignatureValid = isTestSignature && Boolean(razorpay_payment_id);
   }
 
-  if (!isSignatureValid && razorpay_signature) {
+  if (!isSignatureValid) {
     order.payment_status = 'Failed';
     order.order_status = 'Payment Failed';
     await db.updateOrder(order);
@@ -1141,7 +1170,7 @@ async function verifyPaymentInternal(body: any) {
 }
 
 // 12. Server-Side Payment Verification: POST /api/payments/verify
-app.post('/api/payments/verify', async (req: Request, res: Response) => {
+app.post('/api/payments/verify', paymentVerifyLimiter, async (req: Request, res: Response) => {
   try {
     const result = await verifyPaymentInternal(req.body);
     res.json(result);
@@ -1152,7 +1181,7 @@ app.post('/api/payments/verify', async (req: Request, res: Response) => {
 });
 
 // Alias: POST /api/orders/verify-payment
-app.post('/api/orders/verify-payment', async (req: Request, res: Response) => {
+app.post('/api/orders/verify-payment', paymentVerifyLimiter, async (req: Request, res: Response) => {
   try {
     const result = await verifyPaymentInternal(req.body);
     res.json(result);
@@ -1163,7 +1192,7 @@ app.post('/api/orders/verify-payment', async (req: Request, res: Response) => {
 });
 
 // Alias: POST /api/orders/submit-payment-proof
-app.post('/api/orders/submit-payment-proof', async (req: Request, res: Response) => {
+app.post('/api/orders/submit-payment-proof', paymentVerifyLimiter, async (req: Request, res: Response) => {
   try {
     const result = await verifyPaymentInternal(req.body);
     res.json(result);

@@ -79,8 +79,10 @@ export type OrderStatus =
   | 'delivered'
   | 'cancelled'
   | 'payment_failed'
+  | 'pending_verification'
   | 'Order Placed'
   | 'Payment Confirmed'
+  | 'Payment Verification Pending'
   | 'Processing'
   | 'Packed'
   | 'Shipped'
@@ -91,7 +93,9 @@ export type OrderStatus =
 
 export type PaymentStatus =
   | 'Pending'
+  | 'Pending Verification'
   | 'Payment Pending'
+  | 'Payment Verification Pending'
   | 'Processing'
   | 'Successful'
   | 'PAID'
@@ -153,6 +157,7 @@ export interface Order {
     utr_reference?: string;
     transaction_id?: string;
     method?: string;
+    submitted_at?: string;
   };
   tracking_number?: string;
   expected_delivery?: string;
