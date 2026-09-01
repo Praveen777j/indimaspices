@@ -37,7 +37,11 @@ export const RecipeSection: React.FC<RecipeSectionProps> = ({
     : current.instructions_en || current.instructions_kn;
   const instructions = Array.isArray(rawInstructions) ? rawInstructions : [];
 
-  const relatedProductIds = Array.isArray(current.related_product_ids) ? current.related_product_ids : [];
+  const relatedProductIds = Array.isArray(current.featured_spice_ids)
+    ? current.featured_spice_ids
+    : Array.isArray((current as any).related_product_ids)
+    ? (current as any).related_product_ids
+    : [];
 
   return (
     <section id="recipes-section" className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">

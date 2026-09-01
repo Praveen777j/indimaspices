@@ -12,7 +12,9 @@ import {
   Sparkles,
   Play,
   Film,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Share2,
+  Check
 } from 'lucide-react';
 import { Product } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -34,12 +36,39 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
 
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   if (!product) return null;
 
   const isKn = language === 'kn';
   const qtyInCart = getItemQuantity(product.id);
   const isWished = isInWishlist(product.id);
+
+  const handleShareProduct = async () => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://indimaspice.com';
+    const shareUrl = `${origin}/?product=${encodeURIComponent(product.id)}`;
+    const shareTitle = `${isKn ? product.name_kn : product.name_en} | Indima Spice Co.`;
+    const shareText = `Check out authentic stone-ground ${isKn ? product.name_kn : product.name_en} from Indima Spice Co.!`;
+
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: shareTitle,
+          text: shareText,
+          url: shareUrl
+        });
+        return;
+      } catch (err) {
+        // Fallback to clipboard
+      }
+    }
+
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    }
+  };
 
   const images = Array.isArray(product.images) && product.images.length > 0
     ? product.images
@@ -271,6 +300,18 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                     title={t('wishlist')}
                   >
                     <Heart className={`w-5 h-5 ${isWished ? 'fill-[#C05621] text-[#C05621]' : ''}`} />
+                  </button>
+
+                  <button
+                    onClick={handleShareProduct}
+                    className="p-3.5 rounded-2xl border border-[#EADBCA] bg-[#FAF6EE] hover:bg-[#F3EAD7] text-neutral-700 transition-all cursor-pointer flex items-center justify-center relative group"
+                    title={isKn ? 'ಹಂಚಿಕೊಳ್ಳಿ' : 'Share Spice'}
+                  >
+                    {copiedLink ? (
+                      <Check className="w-5 h-5 text-emerald-600 animate-in zoom-in-50" />
+                    ) : (
+                      <Share2 className="w-5 h-5 text-neutral-700 group-hover:text-[#993300]" />
+                    )}
                   </button>
                 </div>
 

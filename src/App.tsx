@@ -31,6 +31,7 @@ import { AdminDashboard } from './views/admin/AdminDashboard';
 
 import { api } from './services/api';
 import { Product, Category, Banner, Recipe, Offer, Review, BusinessSettings, Order } from './types';
+import { useDynamicSeo } from './utils/useDynamicSeo';
 import { Sparkles, SlidersHorizontal, Search, RefreshCw, ShoppingBag, ArrowRight } from 'lucide-react';
 
 const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToAdmin }) => {
@@ -62,7 +63,38 @@ const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToA
   const [confirmedOrder, setConfirmedOrder] = useState<Order | null>(null);
   const [policyModalType, setPolicyModalType] = useState<'privacy' | 'terms' | 'refund' | 'shipping' | null>(null);
 
-  // Initial Data Fetch
+  // Active Category Object for Dynamic SEO
+  const activeCategory = (categories || []).find(c => c.id === selectedCategoryId) || null;
+
+  // Reactively Inject Dynamic Meta Tags (Title, Description, OpenGraph, Twitter, JSON-LD)
+  useDynamicSeo({
+    product: selectedProduct,
+    category: activeCategory,
+    settings,
+    locale: language
+  });
+
+  // Sync URL search params when viewing specific product or category for social sharing & bookmarking
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+
+    if (selectedProduct) {
+      url.searchParams.set('product', selectedProduct.id);
+    } else {
+      url.searchParams.delete('product');
+    }
+
+    if (selectedCategoryId) {
+      url.searchParams.set('category', selectedCategoryId);
+    } else {
+      url.searchParams.delete('category');
+    }
+
+    window.history.replaceState({}, '', url.toString());
+  }, [selectedProduct, selectedCategoryId]);
+
+  // Initial Data Fetch & Deep Link Resolution
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -76,13 +108,37 @@ const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToA
         api.getSettings()
       ]);
 
-      setProducts(prods || []);
-      setCategories(cats || []);
+      const loadedProds = prods || [];
+      const loadedCats = cats || [];
+
+      setProducts(loadedProds);
+      setCategories(loadedCats);
       setBanners(bans || []);
       setRecipes(recs || []);
       setOffers(offs || []);
       setReviews(revs || []);
       setSettings(sets || null);
+
+      // Deep link resolution from URL query params (e.g. ?product=prod_123 or ?category=cat_456)
+      if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const prodParam = urlParams.get('product');
+        const catParam = urlParams.get('category');
+
+        if (prodParam) {
+          const matchedProd = loadedProds.find(p => p.id === prodParam || p.sku === prodParam);
+          if (matchedProd) {
+            setSelectedProduct(matchedProd);
+          }
+        }
+
+        if (catParam) {
+          const matchedCat = loadedCats.find(c => c.id === catParam);
+          if (matchedCat) {
+            setSelectedCategoryId(matchedCat.id);
+          }
+        }
+      }
     } catch (e) {
       console.error('Error loading storefront data:', e);
     } finally {

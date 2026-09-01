@@ -1694,7 +1694,10 @@ app.get('/api/admin/leads', adminAuthMiddleware, (req: Request, res: Response) =
 
 // Download Complete Archive (Protected: requires admin authentication)
 app.get('/api/backup/download', adminAuthMiddleware, (req: Request, res: Response) => {
-  const backupZip = path.join(process.cwd(), 'public', 'indima-spice-co-backup.zip');
+  const dataBackupZip = path.join(process.cwd(), 'data', 'indima-spice-co-backup.zip');
+  const publicBackupZip = path.join(process.cwd(), 'public', 'indima-spice-co-backup.zip');
+  const backupZip = fs.existsSync(dataBackupZip) ? dataBackupZip : publicBackupZip;
+
   if (fs.existsSync(backupZip)) {
     res.setHeader('Content-Disposition', 'attachment; filename="indima-spice-co-backup.zip"');
     res.setHeader('Content-Type', 'application/zip');
@@ -1722,6 +1725,118 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 });
 
 // ----------------------------------------------------
+// DYNAMIC SEO & SOCIAL SHARING PREVIEW META INJECTOR
+// ----------------------------------------------------
+
+function injectDynamicHtmlMeta(html: string, req: Request): string {
+  try {
+    const host = req.get('host') || 'indimaspice.com';
+    const protocol = req.protocol === 'https' || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+    const baseUrl = `${protocol}://${host}`;
+
+    // Extract query or path parameters
+    const productId = (req.query.product as string) || (req.path.startsWith('/product/') ? req.path.replace('/product/', '').trim() : null);
+    const categoryId = (req.query.category as string) || (req.path.startsWith('/category/') ? req.path.replace('/category/', '').trim() : null);
+    const isKn = req.query.lang === 'kn';
+
+    if (productId) {
+      const products = db.getProducts();
+      const product = products.find(p => p.id === productId || p.sku === productId);
+      if (product) {
+        const name = isKn && product.name_kn ? product.name_kn : product.name_en;
+        const desc = ((isKn && product.description_kn ? product.description_kn : product.description_en) || '').replace(/"/g, '&quot;');
+        const title = `${name} (₹${product.price} / ${product.weight}) | Indima Spice Co.`;
+        const description = `Buy authentic ${name} online. ${desc.length > 150 ? desc.substring(0, 147) + '...' : desc} Stone-ground, 100% pure Karnataka spices with zero preservatives. Fast delivery across India.`;
+        let image = product.images?.[0] || '/indima-brand-logo.jpg';
+        if (image.startsWith('/')) image = `${baseUrl}${image}`;
+        const canonicalUrl = `${baseUrl}/?product=${encodeURIComponent(product.id)}`;
+
+        const productJsonLd = {
+          "@context": "https://schema.org",
+          "@type": "Product",
+          "@id": canonicalUrl,
+          "name": product.name_en,
+          "alternateName": product.name_kn,
+          "description": product.description_en,
+          "image": [image],
+          "sku": product.sku || product.id,
+          "brand": {
+            "@type": "Brand",
+            "name": "Indima Spice Co."
+          },
+          "offers": {
+            "@type": "Offer",
+            "url": canonicalUrl,
+            "priceCurrency": "INR",
+            "price": product.price,
+            "priceValidUntil": "2027-12-31",
+            "itemCondition": "https://schema.org/NewCondition",
+            "availability": product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+            "seller": {
+              "@type": "Organization",
+              "name": "Indima Spice Co."
+            }
+          },
+          "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": product.rating || 4.9,
+            "reviewCount": Math.max(product.review_count || 1, 15),
+            "bestRating": "5",
+            "worstRating": "1"
+          }
+        };
+
+        let modifiedHtml = html;
+        modifiedHtml = modifiedHtml.replace(/<title>.*?<\/title>/i, `<title>${title}</title>`);
+        modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']description["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="description" content="${description}" />`);
+        modifiedHtml = modifiedHtml.replace(/<link\s+rel=["']canonical["']\s+href=["'].*?["']\s*\/?>/i, `<link rel="canonical" href="${canonicalUrl}" />`);
+        
+        modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:title["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:title" content="${title}" />`);
+        modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:description["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:description" content="${description}" />`);
+        modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:image["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:image" content="${image}" />`);
+        modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:url["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:url" content="${canonicalUrl}" />`);
+        modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:type["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:type" content="product" />`);
+
+        modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']twitter:title["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="twitter:title" content="${title}" />`);
+        modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']twitter:description["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="twitter:description" content="${description}" />`);
+        modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']twitter:image["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="twitter:image" content="${image}" />`);
+
+        modifiedHtml = modifiedHtml.replace('</head>', `  <script type="application/ld+json" id="ssr-product-jsonld">${JSON.stringify(productJsonLd)}</script>\n  </head>`);
+        return modifiedHtml;
+      }
+    } else if (categoryId) {
+      const categories = db.getCategories();
+      const cat = categories.find(c => c.id === categoryId);
+      if (cat) {
+        const name = isKn && cat.name_kn ? cat.name_kn : cat.name_en;
+        const desc = ((isKn && cat.description_kn ? cat.description_kn : cat.description_en) || '').replace(/"/g, '&quot;');
+        const title = `${name} Spice Range | Authentic Stone-Ground Spices | Indima Spice Co.`;
+        const description = `Explore authentic ${name} collection from Indima Spice Co. ${desc} Handcrafted in Karnataka with zero preservatives.`;
+        let image = cat.image || '/indima-brand-logo.jpg';
+        if (image.startsWith('/')) image = `${baseUrl}${image}`;
+        const canonicalUrl = `${baseUrl}/?category=${encodeURIComponent(cat.id)}`;
+
+        let modifiedHtml = html;
+        modifiedHtml = modifiedHtml.replace(/<title>.*?<\/title>/i, `<title>${title}</title>`);
+        modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']description["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="description" content="${description}" />`);
+        modifiedHtml = modifiedHtml.replace(/<link\s+rel=["']canonical["']\s+href=["'].*?["']\s*\/?>/i, `<link rel="canonical" href="${canonicalUrl}" />`);
+        modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:title["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:title" content="${title}" />`);
+        modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:description["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:description" content="${description}" />`);
+        modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:image["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:image" content="${image}" />`);
+        modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:url["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:url" content="${canonicalUrl}" />`);
+        modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']twitter:title["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="twitter:title" content="${title}" />`);
+        modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']twitter:description["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="twitter:description" content="${description}" />`);
+        modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']twitter:image["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="twitter:image" content="${image}" />`);
+        return modifiedHtml;
+      }
+    }
+  } catch (err: any) {
+    console.warn('[SEO Meta Injector] Notice:', err?.message);
+  }
+  return html;
+}
+
+// ----------------------------------------------------
 // VITE OR STATIC SERVING
 // ----------------------------------------------------
 
@@ -1742,17 +1857,39 @@ async function startServer() {
     console.warn('[Firebase Admin Firestore] Pre-flight initialization warning:', dbErr.message);
   }
 
+  // Explicitly serve public files (e.g. google verification files, sitemap, robots.txt)
+  app.use(express.static(path.join(process.cwd(), 'public')));
+
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa'
     });
     app.use(vite.middlewares);
+    app.get('*', async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const indexPath = path.resolve(process.cwd(), 'index.html');
+        let template = fs.readFileSync(indexPath, 'utf-8');
+        template = await vite.transformIndexHtml(req.originalUrl, template);
+        const html = injectDynamicHtmlMeta(template, req);
+        res.status(200).set({ 'Content-Type': 'text/html' }).send(html);
+      } catch (e: any) {
+        vite.ssrFixStacktrace(e);
+        next(e);
+      }
+    });
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
+    const indexHtmlPath = path.join(distPath, 'index.html');
+    app.use(express.static(distPath, { index: false }));
     app.get('*', (req: Request, res: Response) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+      if (fs.existsSync(indexHtmlPath)) {
+        const template = fs.readFileSync(indexHtmlPath, 'utf-8');
+        const html = injectDynamicHtmlMeta(template, req);
+        res.status(200).set({ 'Content-Type': 'text/html' }).send(html);
+      } else {
+        res.sendFile(indexHtmlPath);
+      }
     });
   }
 

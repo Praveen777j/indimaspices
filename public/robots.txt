@@ -1,0 +1,13 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+Allow: /public/
+Allow: /assets/
+
+# Disallow indexing admin and internal API endpoints
+Disallow: /admin
+Disallow: /admin/
+Disallow: /api/
+
+# Sitemap location
+Sitemap: https://indimaspice.com/sitemap.xml
