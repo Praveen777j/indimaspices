@@ -15,6 +15,17 @@ import {
 async function safeFetchJson<T>(url: string, options?: RequestInit, fallback?: T): Promise<T> {
   try {
     const res = await fetch(url, options);
+    if (!res.ok) {
+      if ((res.status === 401 || res.status === 403) && typeof window !== 'undefined') {
+        const hasAuth = options?.headers && (
+          (typeof options.headers === 'object' && 'Authorization' in (options.headers as any)) ||
+          (options.headers instanceof Headers && options.headers.has('Authorization'))
+        );
+        if (hasAuth || url.includes('/api/admin/')) {
+          window.dispatchEvent(new CustomEvent('indima:admin_auth_expired'));
+        }
+      }
+    }
     const contentType = res.headers.get('content-type') || '';
     if (!contentType.includes('application/json')) {
       const text = await res.text();

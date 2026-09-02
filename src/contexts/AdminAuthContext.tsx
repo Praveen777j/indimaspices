@@ -22,6 +22,41 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   });
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    const handleAuthExpired = () => {
+      setToken(null);
+      setAdminUser(null);
+      localStorage.removeItem('indima_admin_token');
+      localStorage.removeItem('indima_admin_user');
+    };
+
+    window.addEventListener('indima:admin_auth_expired', handleAuthExpired);
+    return () => {
+      window.removeEventListener('indima:admin_auth_expired', handleAuthExpired);
+    };
+  }, []);
+
+  // Validate session on initial load
+  useEffect(() => {
+    const currentToken = localStorage.getItem('indima_admin_token');
+    if (currentToken) {
+      fetch('/api/admin/me', {
+        headers: { Authorization: `Bearer ${currentToken}` }
+      })
+        .then(res => {
+          if (!res.ok) {
+            setToken(null);
+            setAdminUser(null);
+            localStorage.removeItem('indima_admin_token');
+            localStorage.removeItem('indima_admin_user');
+          }
+        })
+        .catch(() => {
+          // Keep state on network glitch
+        });
+    }
+  }, []);
+
   const login = async (credentials: { username: string; password: string }): Promise<boolean> => {
     setLoading(true);
     try {

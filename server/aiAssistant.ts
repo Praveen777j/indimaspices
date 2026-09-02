@@ -787,14 +787,14 @@ BEHAVIOR & CONVERSATION RULES (STRICT CHATGPT / GOOGLE AI RELATABILITY)
     let response: any = null;
     try {
       const generatePromise = ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.7-flash',
         contents: formattedContents,
         config: {
           systemInstruction,
           temperature: 0.2
         }
       });
-      response = await Promise.race([generatePromise, createTimeout(10000, 'Primary model (gemini-2.5-flash)')]);
+      response = await Promise.race([generatePromise, createTimeout(10000, 'Primary model (gemini-3.7-flash)')]);
     } catch (primaryErr: any) {
       safeLogAiWarning('Primary model temporarily unavailable or overloaded, trying fast fallback model', primaryErr);
 
@@ -817,14 +817,14 @@ BEHAVIOR & CONVERSATION RULES (STRICT CHATGPT / GOOGLE AI RELATABILITY)
       if (isTransientError) {
         try {
           const liteGeneratePromise = ai.models.generateContent({
-            model: 'gemini-2.5-flash-lite',
+            model: 'gemini-3.1-flash-lite',
             contents: formattedContents,
             config: {
               systemInstruction,
               temperature: 0.2
             }
           });
-          response = await Promise.race([liteGeneratePromise, createTimeout(8000, 'Fallback model (gemini-2.5-flash-lite)')]);
+          response = await Promise.race([liteGeneratePromise, createTimeout(8000, 'Fallback model (gemini-3.1-flash-lite)')]);
         } catch (secondaryErr: any) {
           safeLogAiWarning('Secondary model also unavailable, seamlessly utilizing local recipe & catalog engine', secondaryErr);
           return getOfflineFallbackResponse(message, activeProducts, language, history);

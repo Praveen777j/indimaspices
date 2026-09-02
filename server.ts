@@ -1434,6 +1434,10 @@ app.post('/api/admin/login', adminLoginLimiter, async (req: Request, res: Respon
   if (isUserValid && isPassValid) {
     const token = generateSecureSession(cleanUser || 'admin');
     await db.logAudit(cleanUser || 'admin', 'ADMIN_LOGIN', 'auth', 'Admin logged in successfully');
+    
+    // Refresh authoritative Firestore cache asynchronously on login
+    db.reloadFromFirestore().catch(e => console.warn('[Firestore] Background reload on admin login notice:', e?.message));
+
     return res.json({
       success: true,
       token,
