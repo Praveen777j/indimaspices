@@ -36,7 +36,11 @@ export const HeroBannerManager: React.FC<HeroBannerManagerProps> = ({
   onBannerUpdated,
   onShowSuccess
 }) => {
-  const currentBanner = heroBanner || banners.find(b => b.type === 'hero') || banners[0];
+  const [selectedBannerId, setSelectedBannerId] = useState<string>(
+    heroBanner?.id || banners.find(b => b.type === 'hero')?.id || banners[0]?.id || 'ban-main-hero'
+  );
+
+  const currentBanner = banners.find(b => b.id === selectedBannerId) || heroBanner || banners[0];
 
   // Media Type: image or video
   const [mediaType, setMediaType] = useState<'image' | 'video'>(
@@ -52,16 +56,19 @@ export const HeroBannerManager: React.FC<HeroBannerManagerProps> = ({
   );
 
   // Text details
-  const [titleEn, setTitleEn] = useState(currentBanner?.title_en || 'From Nature to Your Kitchen — With Purity, Care & Tradition');
-  const [titleKn, setTitleKn] = useState(currentBanner?.title_kn || 'ಪ್ರಕೃತಿಯಿಂದ ನಿಮ್ಮ ಅಡುಗೆಮನೆಗೆ — ಪರಿಶುದ್ಧತೆ, ಪ್ರೀತಿ ಮತ್ತು ಸಂಪ್ರದಾಯ');
-  const [subtitleEn, setSubtitleEn] = useState(currentBanner?.subtitle_en || 'Handcrafted Karnataka spice blends, stone-ground with motherly love and authentic traditional recipes.');
-  const [subtitleKn, setSubtitleKn] = useState(currentBanner?.subtitle_kn || 'ತಾಯಿಯ ಕೈರುಚಿಯಂತೆ, ಸಾಂಪ್ರದಾಯಿಕ ಕಲ್ಲಿನ ಬೀಸುವ ಪದ್ಧತಿಯಲ್ಲಿ ತಯಾರಿಸಲಾದ ಕರ್ನಾಟಕದ ಅಪ್ಪಟ ಮಸಾಲೆಗಳು.');
-  const [badgeEn, setBadgeEn] = useState(currentBanner?.badge_en || 'Festival of Flavours • ಹಬ್ಬದ ಸಂಭ್ರಮ');
-  const [badgeKn, setBadgeKn] = useState(currentBanner?.badge_kn || 'ಸುವಾಸನೆಗಳ ಹಬ್ಬ • ಪಾರಂಪರಿಕ ಮಸಾಲೆ');
-  const [offerTextEn, setOfferTextEn] = useState(currentBanner?.offer_text_en || 'Festive Special: FREE Delivery on orders above ₹499 + Up to 25% OFF');
-  const [offerTextKn, setOfferTextKn] = useState(currentBanner?.offer_text_kn || 'ವಿಶೇಷ ಹಬ್ಬದ ಕೊಡುಗೆ: ₹೪೯೯ ಕ್ಕಿಂತ ಹೆಚ್ಚಿನ ಆರ್ಡರ್‌ಗಳಿಗೆ ಉಚಿತ ಡೆಲಿವರಿ + ೨೫% ವರೆಗೆ ರಿಯಾಯಿತಿ');
+  const [titleEn, setTitleEn] = useState(currentBanner?.title_en || 'Authentic Pure Spices from Traditional Karnataka Kitchens');
+  const [titleKn, setTitleKn] = useState(currentBanner?.title_kn || 'ಕರ್ನಾಟಕದ ಮನೆ ಮನೆಗಳ ಸಾಂಪ್ರದಾಯಿಕ ಪರಿಶುದ್ಧ ಮಸಾಲೆಗಳು');
+  const [subtitleEn, setSubtitleEn] = useState(currentBanner?.subtitle_en || 'Hand-roasted spices with zero preservatives, colorants, or synthetic flavour enhancers. Freshly packed in Basavanagudi.');
+  const [subtitleKn, setSubtitleKn] = useState(currentBanner?.subtitle_kn || 'ಯಾವುದೇ ರಾಸಾಯನಿಕ ಅಥವಾ ಕೃತಕ ಬಣ್ಣಗಳಿಲ್ಲದ, ಅಜ್ಜಿ ಮನೆಯ ಕೈರುಚಿಯ ಅಪ್ಪಟ ಸುವಾಸನೆ.');
+  const [badgeEn, setBadgeEn] = useState(currentBanner?.badge_en || '100% Heritage Stone Ground');
+  const [badgeKn, setBadgeKn] = useState(currentBanner?.badge_kn || '೧೦೦% ನೈಸರ್ಗಿಕ ಕಲ್ಲಿನಿಂದ ಬೀಸಿದ ಮಸಾಲೆಗಳು');
+  const [offerTextEn, setOfferTextEn] = useState(currentBanner?.offer_text_en || 'Special Festive Offer: Flat 10% OFF on Orders Above ₹399 • Code: INDIMA10');
+  const [offerTextKn, setOfferTextKn] = useState(currentBanner?.offer_text_kn || 'ಹಬ್ಬದ ವಿಶೇಷ ರಿಯಾಯಿತಿ: ₹೩೯೯ ಕ್ಕಿಂತ ಹೆಚ್ಚಿನ ಆರ್ಡರ್‌ಗಳ ಮೇಲೆ 10% ರಿಯಾಯಿತಿ • ಕೋಡ್: INDIMA10');
   const [primaryBtnEn, setPrimaryBtnEn] = useState(currentBanner?.primary_btn_text_en || 'Shop Pure Spices');
+  const [primaryBtnKn, setPrimaryBtnKn] = useState(currentBanner?.primary_btn_text_kn || 'ಮಸಾಲೆಗಳನ್ನು ಖರೀದಿಸಿ');
   const [secondaryBtnEn, setSecondaryBtnEn] = useState(currentBanner?.secondary_btn_text_en || 'View Combos & Offers');
+  const [secondaryBtnKn, setSecondaryBtnKn] = useState(currentBanner?.secondary_btn_text_kn || 'ಕೊಡುಗೆಗಳನ್ನು ನೋಡಿ');
+  const [isEnabled, setIsEnabled] = useState<boolean>(currentBanner ? (currentBanner.enabled !== false && currentBanner.active !== false) : true);
 
   // Preview & Upload state
   const [isUploading, setIsUploading] = useState(false);
@@ -83,7 +90,10 @@ export const HeroBannerManager: React.FC<HeroBannerManagerProps> = ({
       setOfferTextEn(currentBanner.offer_text_en || '');
       setOfferTextKn(currentBanner.offer_text_kn || '');
       setPrimaryBtnEn(currentBanner.primary_btn_text_en || 'Shop Pure Spices');
+      setPrimaryBtnKn(currentBanner.primary_btn_text_kn || 'ಮಸಾಲೆಗಳನ್ನು ಖರೀದಿಸಿ');
       setSecondaryBtnEn(currentBanner.secondary_btn_text_en || 'View Combos & Offers');
+      setSecondaryBtnKn(currentBanner.secondary_btn_text_kn || 'ಕೊಡುಗೆಗಳನ್ನು ನೋಡಿ');
+      setIsEnabled(currentBanner.enabled !== false && currentBanner.active !== false);
     }
   }, [currentBanner?.id, currentBanner?.media_url, currentBanner?.title_en]);
 
@@ -129,9 +139,10 @@ export const HeroBannerManager: React.FC<HeroBannerManagerProps> = ({
 
     setIsSaving(true);
     try {
+      const targetId = currentBanner?.id || heroBanner?.id || 'ban-main-hero';
       const payload: Partial<Banner> = {
-        id: heroBanner?.id || 'ban-hero-main',
-        type: 'hero',
+        id: targetId,
+        type: currentBanner?.type || 'hero',
         media_type: mediaType,
         media_url: mediaUrl.trim(),
         fallback_image: (fallbackImage || mediaUrl).trim(),
@@ -144,19 +155,21 @@ export const HeroBannerManager: React.FC<HeroBannerManagerProps> = ({
         offer_text_en: offerTextEn.trim(),
         offer_text_kn: offerTextKn.trim(),
         primary_btn_text_en: primaryBtnEn.trim(),
-        primary_btn_text_kn: heroBanner?.primary_btn_text_kn || 'ಮಸಾಲೆಗಳನ್ನು ಖರೀದಿಸಿ',
+        primary_btn_text_kn: primaryBtnKn.trim(),
         primary_btn_action: '#products-section',
         secondary_btn_text_en: secondaryBtnEn.trim(),
-        secondary_btn_text_kn: heroBanner?.secondary_btn_text_kn || 'ಕೊಡುಗೆಗಳನ್ನು ನೋಡಿ',
+        secondary_btn_text_kn: secondaryBtnKn.trim(),
         secondary_btn_action: '#offers-section',
-        enabled: true
+        enabled: isEnabled,
+        active: isEnabled
       };
 
-      const res = await api.saveBanner(token, payload, !!currentBanner?.id);
+      const isEdit = !!currentBanner?.id;
+      const res = await api.saveBanner(token, payload, isEdit);
       if (res.success && res.banner) {
         if (onBannerSaved) onBannerSaved(res.banner);
         if (onBannerUpdated) onBannerUpdated(res.banner);
-        onShowSuccess('Hero Banner background & settings saved successfully! Homepage updated.');
+        onShowSuccess('Banner & storefront media saved successfully! Homepage updated.');
       } else {
         alert('Failed to save banner: ' + (res.error || 'Unknown error'));
       }
@@ -189,23 +202,36 @@ export const HeroBannerManager: React.FC<HeroBannerManagerProps> = ({
               </div>
               <div>
                 <h2 className="font-serif text-xl font-bold text-zinc-100">
-                  Hero Banner Background Management
+                  Storefront Banner Management
                 </h2>
                 <p className="text-xs text-zinc-400 mt-0.5">
-                  Control the visual background media (Image or Video) shown on the homepage "Festival of Flavours" hero section.
+                  Control the visual background media (Image or Video) and copy shown on the storefront hero and festive sections.
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Live Toggle */}
+            <label className="flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-zinc-950 border border-zinc-700/80 text-xs cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isEnabled}
+                onChange={e => setIsEnabled(e.target.checked)}
+                className="w-3.5 h-3.5 rounded text-amber-500 bg-zinc-900 border-zinc-700 focus:ring-amber-500"
+              />
+              <span className={`font-semibold ${isEnabled ? 'text-emerald-400' : 'text-zinc-500'}`}>
+                {isEnabled ? 'Live on Store' : 'Inactive'}
+              </span>
+            </label>
+
             {/* Active Status Badge */}
             <div className="px-3.5 py-1.5 rounded-full bg-zinc-950 border border-zinc-700/80 flex items-center space-x-2 text-xs">
-              <span className="text-zinc-400 font-medium">Active Type:</span>
+              <span className="text-zinc-400 font-medium">Type:</span>
               <span className="font-bold text-amber-400 uppercase tracking-wider">
                 {mediaType}
               </span>
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <div className={`w-2 h-2 rounded-full ${isEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-600'}`} />
             </div>
 
             <button
@@ -227,6 +253,27 @@ export const HeroBannerManager: React.FC<HeroBannerManagerProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Banner Selector Tabs */}
+        {banners.length > 0 && (
+          <div className="mt-4 pb-4 border-b border-zinc-800/80 flex flex-wrap items-center gap-2">
+            <span className="text-xs text-zinc-400 font-medium mr-1">Select Banner:</span>
+            {banners.map(b => (
+              <button
+                key={b.id}
+                type="button"
+                onClick={() => setSelectedBannerId(b.id)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                  selectedBannerId === b.id
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 ring-1 ring-amber-500/30'
+                    : 'bg-zinc-950 text-zinc-400 hover:text-zinc-200 border border-zinc-800'
+                }`}
+              >
+                {b.type === 'hero' ? '⭐ Hero Banner (Main)' : `🎉 ${b.title_en?.slice(0, 24)}...`}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* 1. Background Type Switcher */}
         <div className="mt-6">
@@ -513,11 +560,71 @@ export const HeroBannerManager: React.FC<HeroBannerManagerProps> = ({
             </div>
 
             <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1">Top Badge / Pill (Kannada)</label>
+              <input
+                type="text"
+                value={badgeKn}
+                onChange={e => setBadgeKn(e.target.value)}
+                className="w-full px-3 py-2 text-xs bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-100 focus:outline-hidden focus:border-amber-500"
+              />
+            </div>
+
+            <div>
               <label className="block text-xs font-medium text-zinc-400 mb-1">Festive Offer Bento Strip (English)</label>
               <input
                 type="text"
                 value={offerTextEn}
                 onChange={e => setOfferTextEn(e.target.value)}
+                className="w-full px-3 py-2 text-xs bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-100 focus:outline-hidden focus:border-amber-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1">Festive Offer Bento Strip (Kannada)</label>
+              <input
+                type="text"
+                value={offerTextKn}
+                onChange={e => setOfferTextKn(e.target.value)}
+                className="w-full px-3 py-2 text-xs bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-100 focus:outline-hidden focus:border-amber-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1">Primary Button (English)</label>
+              <input
+                type="text"
+                value={primaryBtnEn}
+                onChange={e => setPrimaryBtnEn(e.target.value)}
+                className="w-full px-3 py-2 text-xs bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-100 focus:outline-hidden focus:border-amber-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1">Primary Button (Kannada)</label>
+              <input
+                type="text"
+                value={primaryBtnKn}
+                onChange={e => setPrimaryBtnKn(e.target.value)}
+                className="w-full px-3 py-2 text-xs bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-100 focus:outline-hidden focus:border-amber-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1">Secondary Button (English)</label>
+              <input
+                type="text"
+                value={secondaryBtnEn}
+                onChange={e => setSecondaryBtnEn(e.target.value)}
+                className="w-full px-3 py-2 text-xs bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-100 focus:outline-hidden focus:border-amber-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1">Secondary Button (Kannada)</label>
+              <input
+                type="text"
+                value={secondaryBtnKn}
+                onChange={e => setSecondaryBtnKn(e.target.value)}
                 className="w-full px-3 py-2 text-xs bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-100 focus:outline-hidden focus:border-amber-500"
               />
             </div>

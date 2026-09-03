@@ -250,6 +250,7 @@ export interface Banner {
   secondary_btn_text_kn: string;
   secondary_btn_action: string;
   enabled: boolean;
+  active?: boolean;
   start_date?: string;
   end_date?: string;
 }

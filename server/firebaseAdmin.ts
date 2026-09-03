@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { getApps as getAdminApps, initializeApp as initializeAdminApp, cert, App as AdminApp, applicationDefault } from 'firebase-admin/app';
-import { getFirestore, Firestore as AdminFirestore } from 'firebase-admin/firestore';
+import { getApps as getAdminApps, initializeApp as initializeAdminApp, cert, type App as AdminApp, applicationDefault } from 'firebase-admin/app';
+import { getFirestore, type Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 
 export interface FirebaseAdminConfig {
@@ -13,6 +13,27 @@ export interface FirebaseAdminConfig {
 }
 
 let cachedConfig: FirebaseAdminConfig | null = null;
+let isStorageVerified: boolean | null = null;
+let lastStorageCheck = 0;
+let hasLoggedStorageNotice = false;
+
+function getLocalFirebaseConfig(): { projectId?: string; storageBucket?: string; databaseId?: string } {
+  try {
+    const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
+    if (fs.existsSync(configPath)) {
+      const raw = fs.readFileSync(configPath, 'utf-8');
+      const parsed = JSON.parse(raw);
+      return {
+        projectId: parsed.projectId,
+        storageBucket: parsed.storageBucket,
+        databaseId: parsed.firestoreDatabaseId
+      };
+    }
+  } catch {
+    // Ignore error
+  }
+  return {};
+}
 
 /**
  * Robustly parses FIREBASE_SERVICE_ACCOUNT from environment.
@@ -61,33 +82,34 @@ export function parseServiceAccountCredentials(): { parsed: any; error?: string 
 
 /**
  * Initializes and returns the authoritative Firebase Admin SDK instances.
- * Target: Firebase Project "indimaspicea", Firestore Database "(default)"
  */
 export function getFirebaseAdmin(): FirebaseAdminConfig {
   if (cachedConfig) {
     return cachedConfig;
   }
 
+  const localConfig = getLocalFirebaseConfig();
   const { parsed: serviceAccount, error: parseError } = parseServiceAccountCredentials();
   if (parseError) {
-    console.error(`[Firebase Admin] ⚠️ ${parseError}`);
+    console.warn(`[Firebase Admin] Notice on credentials parsing: ${parseError}`);
   }
 
   // Determine Project ID:
-  // Priority: 1. service_account.project_id, 2. FIREBASE_PROJECT_ID, 3. 'indimaspicea' (production default)
+  // Priority: 1. service_account.project_id, 2. FIREBASE_PROJECT_ID, 3. firebase-applet-config.json, 4. fallback
   const projectId =
     serviceAccount?.project_id ||
     process.env.FIREBASE_PROJECT_ID ||
-    'indimaspicea';
+    localConfig.projectId ||
+    'gen-lang-client-0691323767';
 
   // Determine Database ID:
-  // Standard default Firestore database is "(default)".
-  const rawDbId = process.env.FIRESTORE_DATABASE_ID || process.env.FIREBASE_DATABASE_ID || '';
+  const rawDbId = process.env.FIRESTORE_DATABASE_ID || process.env.FIREBASE_DATABASE_ID || localConfig.databaseId || '';
   const isDefaultDb = !rawDbId || rawDbId === '(default)';
   const databaseId = isDefaultDb ? '(default)' : rawDbId;
 
   const storageBucket =
     process.env.FIREBASE_STORAGE_BUCKET ||
+    localConfig.storageBucket ||
     `${projectId}.firebasestorage.app`;
 
   let app: AdminApp;
@@ -107,7 +129,7 @@ export function getFirebaseAdmin(): FirebaseAdminConfig {
       source = 'FIREBASE_SERVICE_ACCOUNT';
       console.log(`[Firebase Admin] ✅ Initialized with service account for project: "${projectId}"`);
     } catch (e: any) {
-      console.error(`[Firebase Admin] ❌ Error initializing with FIREBASE_SERVICE_ACCOUNT: ${e.message}`);
+      console.warn(`[Firebase Admin] Notice initializing with FIREBASE_SERVICE_ACCOUNT: ${e.message}`);
       throw new Error(`Failed to initialize Firebase Admin with service account: ${e.message}`);
     }
   } else if (process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY) {
@@ -125,7 +147,7 @@ export function getFirebaseAdmin(): FirebaseAdminConfig {
       source = 'FIREBASE_CLIENT_EMAIL_KEY';
       console.log(`[Firebase Admin] ✅ Initialized with FIREBASE_CLIENT_EMAIL for project: "${projectId}"`);
     } catch (e: any) {
-      console.error(`[Firebase Admin] ❌ Error initializing with CLIENT_EMAIL: ${e.message}`);
+      console.warn(`[Firebase Admin] Notice initializing with CLIENT_EMAIL: ${e.message}`);
       throw new Error(`Failed to initialize Firebase Admin with client email: ${e.message}`);
     }
   } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS && fs.existsSync(process.env.GOOGLE_APPLICATION_CREDENTIALS)) {
@@ -138,7 +160,7 @@ export function getFirebaseAdmin(): FirebaseAdminConfig {
       source = 'GOOGLE_APPLICATION_CREDENTIALS';
       console.log(`[Firebase Admin] ✅ Initialized with GOOGLE_APPLICATION_CREDENTIALS for project: "${projectId}"`);
     } catch (e: any) {
-      console.error(`[Firebase Admin] ❌ Error initializing with GOOGLE_APPLICATION_CREDENTIALS: ${e.message}`);
+      console.warn(`[Firebase Admin] Notice initializing with GOOGLE_APPLICATION_CREDENTIALS: ${e.message}`);
       throw new Error(`Failed to initialize Firebase Admin with GOOGLE_APPLICATION_CREDENTIALS: ${e.message}`);
     }
   } else {
@@ -162,8 +184,6 @@ export function getFirebaseAdmin(): FirebaseAdminConfig {
   }
 
   // Get Firestore instance:
-  // For the default database, getFirestore(app) connects directly to "(default)".
-  // For named custom databases, getFirestore(app, databaseId) is passed.
   let firestore: AdminFirestore;
   if (isDefaultDb) {
     firestore = getFirestore(app);
@@ -186,11 +206,59 @@ export function getAdminFirestoreInstance(): AdminFirestore {
   return getFirebaseAdmin().firestore;
 }
 
+/**
+ * Returns the Google Cloud Storage bucket instance ONLY if it is configured and accessible.
+ * If storage is not configured or previous upload attempts indicated lack of bucket/permissions,
+ * returns null so caller gracefully uses local disk storage without Gaxios errors.
+ */
 export function getAdminStorageBucketInstance() {
-  const { app } = getFirebaseAdmin();
+  if (isStorageVerified === false) {
+    return null;
+  }
   try {
+    const { app } = getFirebaseAdmin();
     return getStorage(app).bucket();
   } catch {
+    isStorageVerified = false;
     return null;
+  }
+}
+
+/**
+ * Proactively checks if Cloud Storage bucket is available.
+ * Caches result to avoid repeated checks.
+ */
+export async function isCloudStorageAvailable(): Promise<boolean> {
+  if (isStorageVerified !== null && Date.now() - lastStorageCheck < 300000) {
+    return isStorageVerified;
+  }
+  try {
+    const { app } = getFirebaseAdmin();
+    const bucket = getStorage(app).bucket();
+    if (!bucket || !bucket.name) {
+      isStorageVerified = false;
+      return false;
+    }
+    const [exists] = await bucket.exists();
+    isStorageVerified = Boolean(exists);
+    lastStorageCheck = Date.now();
+    return isStorageVerified;
+  } catch {
+    isStorageVerified = false;
+    lastStorageCheck = Date.now();
+    return false;
+  }
+}
+
+/**
+ * Marks Cloud Storage as unavailable so subsequent file uploads
+ * immediately use local persistent storage without making failing GCS network requests.
+ */
+export function markStorageUnavailable(reason?: string) {
+  isStorageVerified = false;
+  lastStorageCheck = Date.now();
+  if (!hasLoggedStorageNotice) {
+    hasLoggedStorageNotice = true;
+    console.info(`[Media Storage] Cloud Storage is not active or accessible (${reason || 'Bucket not found'}). Application seamlessly stores uploaded media to local disk (/uploads).`);
   }
 }

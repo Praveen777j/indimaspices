@@ -246,7 +246,7 @@ const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToA
       <main className="flex-1">
         {/* Hero Section */}
         <HeroBanner
-          banner={(banners || []).find(b => b.active) || banners?.[0]}
+          banner={(banners || []).find(b => b.type === 'hero' && b.active !== false && b.enabled !== false) || (banners || []).find(b => b.active !== false && b.enabled !== false) || banners?.[0]}
           onShopClick={() => scrollToSection('products-section')}
           onOffersClick={() => scrollToSection('offers-section')}
         />

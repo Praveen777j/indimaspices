@@ -40,6 +40,14 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
     ? (banner?.primary_btn_text_kn || banner?.primary_btn_text_en || 'ಶುದ್ಧ ಮಸಾಲೆಗಳನ್ನು ಖರೀದಿಸಿ')
     : (banner?.primary_btn_text_en || banner?.primary_btn_text_kn || 'Explore Pure Spices');
 
+  const secondaryBtnText = isKn
+    ? (banner?.secondary_btn_text_kn || banner?.secondary_btn_text_en || 'ಕೊಡುಗೆಗಳನ್ನು ನೋಡಿ')
+    : (banner?.secondary_btn_text_en || banner?.secondary_btn_text_kn || 'View Festive Offers');
+
+  const offerText = isKn
+    ? (banner?.offer_text_kn || banner?.offer_text_en)
+    : (banner?.offer_text_en || banner?.offer_text_kn);
+
   const bgImage = banner?.media_url || 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=1600&auto=format&fit=crop&q=80';
   const fallbackImg = banner?.fallback_image || bgImage;
 
@@ -99,6 +107,25 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
               </div>
             </div>
 
+            {/* Offer highlight strip if configured */}
+            {offerText && (
+              <div className="bg-[#FAF3E0] border border-[#DFC7A2] rounded-2xl p-3 max-w-xl flex items-center space-x-3 shadow-2xs">
+                <div className="p-2 rounded-xl bg-[#8B3214]/10 text-[#8B3214] shrink-0">
+                  <Flame className="w-4 h-4 text-[#8B3214]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-[#1F1610]">{offerText}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={onOffersClick}
+                  className="text-xs font-bold text-[#8B3214] hover:underline shrink-0 cursor-pointer"
+                >
+                  {isKn ? 'ಕೊಡುಗೆ ನೋಡಿ →' : 'View Offers →'}
+                </button>
+              </div>
+            )}
+
             {/* Call to Action Buttons */}
             <div className="pt-2 flex flex-wrap items-center gap-3.5">
               <button
@@ -109,6 +136,17 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                 <span>{primaryBtnText}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
+
+              {secondaryBtnText && (
+                <button
+                  onClick={onOffersClick}
+                  id="hero-offers-btn"
+                  className="px-5 py-3 rounded-full bg-[#FAF7F2] hover:bg-[#F3ECE0] text-[#8B3214] border border-[#DFCFC0] font-bold text-xs sm:text-sm transition-all flex items-center space-x-2 cursor-pointer active:scale-95"
+                >
+                  <Tag className="w-4 h-4 text-[#8B3214]" />
+                  <span>{secondaryBtnText}</span>
+                </button>
+              )}
 
               <button
                 onClick={scrollToHealth}

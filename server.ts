@@ -8,6 +8,7 @@ import heicConvert from 'heic-convert';
 import Razorpay from 'razorpay';
 import { createServer as createViteServer } from 'vite';
 import { db } from './server/dataStore';
+import { isCloudStorageAvailable } from './server/firebaseAdmin';
 import { handleAiAssistantRequest, getOfflineFallbackResponse } from './server/aiAssistant';
 import { runOneTimeFirestoreMigration } from './server/firestoreMigration';
 import { lookupPincode } from './src/data/indiaLocations';
@@ -142,8 +143,8 @@ async function processMediaFile(file: Express.Multer.File): Promise<string> {
       })) as Buffer;
       finalFileName = `${baseName}.jpg`;
       finalContentType = 'image/jpeg';
-    } catch (heicErr) {
-      console.error('[HEIC conversion error]:', heicErr);
+    } catch (heicErr: any) {
+      console.info('[HEIC conversion notice]:', heicErr?.message || 'Using original file');
       finalBuffer = fs.readFileSync(filePath);
     }
   } else if (originalExt === '.svg' || mime.includes('svg')) {
@@ -159,13 +160,13 @@ async function processMediaFile(file: Express.Multer.File): Promise<string> {
         .toBuffer();
       finalFileName = `${baseName}.jpg`;
       finalContentType = 'image/jpeg';
-    } catch (sharpErr) {
-      console.warn('[Sharp optimization fallback]:', sharpErr);
+    } catch (sharpErr: any) {
+      console.info('[Sharp optimization notice]:', sharpErr?.message || 'Using original image buffer');
       finalBuffer = fs.readFileSync(filePath);
     }
   }
 
-  // Attempt Firebase Storage upload if bucket is available
+  // Attempt Firebase Storage upload if bucket is verified & available
   const bucket = db.getStorageBucket();
   if (bucket) {
     try {
@@ -187,8 +188,9 @@ async function processMediaFile(file: Express.Multer.File): Promise<string> {
         } catch (_) {}
       }
       return publicUrl;
-    } catch (storageErr) {
-      console.warn('[Firebase Storage upload fallback to local disk]:', storageErr);
+    } catch (storageErr: any) {
+      db.markStorageUnavailable(storageErr?.message || 'Cloud storage upload unavailable');
+      console.info(`[Media Storage] Cloud storage unavailable (${storageErr?.message || 'Upload failed'}). Stored to local disk: /uploads/${finalFileName}`);
     }
   }
 
@@ -2117,8 +2119,11 @@ async function startServer() {
   try {
     await db.initFirestore();
   } catch (dbErr: any) {
-    console.warn('[Firebase Admin Firestore] Pre-flight initialization warning:', dbErr.message);
+    console.info('[Firebase Admin Firestore] Pre-flight initialization notice:', dbErr?.message || dbErr);
   }
+
+  // Pre-flight check storage availability in background without blocking startup
+  isCloudStorageAvailable().catch(() => {});
 
   // Explicitly serve public files (e.g. google verification files, sitemap, robots.txt)
   app.use(express.static(path.join(process.cwd(), 'public')));

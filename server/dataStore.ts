@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { Firestore as AdminFirestore } from 'firebase-admin/firestore';
-import { getFirebaseAdmin, getAdminStorageBucketInstance } from './firebaseAdmin';
+import { getFirebaseAdmin, getAdminStorageBucketInstance, markStorageUnavailable } from './firebaseAdmin';
 import {
   Product,
   Category,
@@ -496,7 +496,8 @@ const INITIAL_BANNERS: Banner[] = [
     secondary_btn_text_en: 'View Combos & Offers',
     secondary_btn_text_kn: 'ಕೊಡುಗೆಗಳನ್ನು ನೋಡಿ',
     secondary_btn_action: '#offers-section',
-    enabled: true
+    enabled: true,
+    active: true
   },
   {
     id: 'ban-fest-diwali',
@@ -517,7 +518,8 @@ const INITIAL_BANNERS: Banner[] = [
     secondary_btn_text_en: 'Chat on WhatsApp',
     secondary_btn_text_kn: 'ವಾಟ್ಸಾಪ್‌ನಲ್ಲಿ ವಿಚಾರಿಸಿ',
     secondary_btn_action: 'whatsapp',
-    enabled: true
+    enabled: true,
+    active: true
   }
 ];
 
@@ -615,7 +617,7 @@ class DataStore {
     } catch (err: any) {
       this.isFirestoreReady = false;
       this.lastFirestoreError = err.message || String(err);
-      console.error('[Firestore Admin] ❌ Connection error:', err.message || err);
+      console.info(`[Firestore Admin] Notice: Firestore is offline or not provisioned (${err.message || err}). Application running with local store.`);
       return false;
     }
   }
@@ -630,6 +632,10 @@ class DataStore {
 
   public getStorageBucket() {
     return getAdminStorageBucketInstance();
+  }
+
+  public markStorageUnavailable(reason?: string) {
+    markStorageUnavailable(reason);
   }
 
   public async reloadFromFirestore(): Promise<void> {
@@ -1539,18 +1545,35 @@ class DataStore {
   }
 
   public async updateBanner(id: string, updates: Partial<Banner>, adminUser = 'Admin'): Promise<Banner | null> {
-    const idx = this.data.banners.findIndex(b => b.id === id);
+    let idx = this.data.banners.findIndex(b => b.id === id);
+    if (idx === -1 && updates.type === 'hero') {
+      idx = this.data.banners.findIndex(b => b.type === 'hero');
+    }
     if (idx === -1) return null;
-    this.data.banners[idx] = { ...this.data.banners[idx], ...updates };
+
+    const normalizedUpdates = { ...updates };
+    if (normalizedUpdates.enabled !== undefined && normalizedUpdates.active === undefined) {
+      normalizedUpdates.active = normalizedUpdates.enabled;
+    } else if (normalizedUpdates.active !== undefined && normalizedUpdates.enabled === undefined) {
+      normalizedUpdates.enabled = normalizedUpdates.active;
+    }
+
+    this.data.banners[idx] = { ...this.data.banners[idx], ...normalizedUpdates };
     const updated = this.data.banners[idx];
-    await this.logAudit(adminUser, 'BANNER_UPDATED', id, `Updated banner ${updated.title_en}`);
-    await this.setFirestoreDoc('banners', id, updated);
+    await this.logAudit(adminUser, 'BANNER_UPDATED', updated.id, `Updated banner ${updated.title_en}`);
+    await this.setFirestoreDoc('banners', updated.id, updated);
     this.save();
     return updated;
   }
 
   public async addBanner(banner: Omit<Banner, 'id'>, adminUser = 'Admin'): Promise<Banner> {
-    const newBanner: Banner = { ...banner, id: 'ban-' + Date.now() };
+    const isEnabled = banner.enabled ?? banner.active ?? true;
+    const newBanner: Banner = {
+      ...banner,
+      id: 'ban-' + Date.now(),
+      enabled: isEnabled,
+      active: isEnabled
+    };
     this.data.banners.push(newBanner);
     await this.logAudit(adminUser, 'BANNER_CREATED', newBanner.id, `Added banner ${newBanner.title_en}`);
     await this.setFirestoreDoc('banners', newBanner.id, newBanner);
