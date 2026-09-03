@@ -1,6 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
 import crypto from 'crypto';
 import multer from 'multer';
 import sharp from 'sharp';
@@ -11,6 +12,13 @@ import { db } from './server/dataStore';
 import { isCloudStorageAvailable } from './server/firebaseAdmin';
 import { handleAiAssistantRequest, getOfflineFallbackResponse } from './server/aiAssistant';
 import { runOneTimeFirestoreMigration } from './server/firestoreMigration';
+import {
+  initCloudinary,
+  getCloudinaryStatus,
+  uploadMediaToCloudinary,
+  migrateLocalMediaToCloudinary,
+  CloudinaryUploadResult
+} from './server/cloudinary';
 import { lookupPincode } from './src/data/indiaLocations';
 import { Order, Address } from './src/types';
 
@@ -73,12 +81,17 @@ function timingSafeEqual(a: string, b: string): boolean {
   return crypto.timingSafeEqual(bufA, bufB);
 }
 
-// Multer Storage Configuration
+// Multer Storage Configuration - Temporary disk storage for processing only
+const TEMP_UPLOAD_DIR = path.join(os.tmpdir(), 'indima-uploads-temp');
+if (!fs.existsSync(TEMP_UPLOAD_DIR)) {
+  fs.mkdirSync(TEMP_UPLOAD_DIR, { recursive: true });
+}
+
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, UPLOAD_DIR);
+  destination: (_req, _file, cb) => {
+    cb(null, TEMP_UPLOAD_DIR);
   },
-  filename: (req, file, cb) => {
+  filename: (_req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
     const baseName = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9_-]/g, '_');
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e6);
@@ -113,96 +126,105 @@ const upload = multer({
 });
 
 /**
- * Normalizes uploaded media files: converts HEIC/HEIF to JPEG,
- * auto-rotates EXIF orientation from mobile phone cameras,
- * optimizes image sizes, and uploads to Firebase Storage or local disk.
+ * Normalizes uploaded media files:
+ * - Direct video stream to Cloudinary using video resource type
+ * - Converts HEIC/HEIF to JPEG
+ * - Auto-rotates EXIF orientation from mobile phone cameras
+ * - Optimizes image sizes with sharp
+ * - Directly uploads to Cloudinary
+ * - Cleans up temporary files immediately after upload
  */
-async function processMediaFile(file: Express.Multer.File): Promise<string> {
+async function processMediaFile(
+  file: Express.Multer.File,
+  options: { folder?: string; resourceType?: 'auto' | 'image' | 'video' } = {}
+): Promise<CloudinaryUploadResult> {
   const filePath = file.path;
   const originalExt = path.extname(file.originalname || file.filename).toLowerCase();
   const baseName = path.basename(file.filename, path.extname(file.filename));
   const mime = (file.mimetype || '').toLowerCase();
 
-  let finalBuffer: Buffer;
-  let finalContentType = mime || 'image/jpeg';
-  let finalFileName = file.filename;
+  const isVideo =
+    options.resourceType === 'video' ||
+    /mp4|webm|mov|quicktime/.test(mime) ||
+    /^\.(mp4|webm|mov|mkv|avi)$/i.test(originalExt);
 
-  const isVideo = /mp4|webm|mov|quicktime/.test(mime) || /mp4|webm|mov/.test(originalExt);
-
-  if (isVideo) {
-    finalBuffer = fs.readFileSync(filePath);
-    finalContentType = mime || 'video/mp4';
-  } else if (originalExt === '.heic' || originalExt === '.heif' || mime.includes('heic') || mime.includes('heif')) {
-    // Handle HEIC / HEIF from mobile cameras
-    try {
-      const inputBuffer = fs.readFileSync(filePath);
-      finalBuffer = (await heicConvert({
-        buffer: inputBuffer,
-        format: 'JPEG',
-        quality: 0.88
-      })) as Buffer;
-      finalFileName = `${baseName}.jpg`;
-      finalContentType = 'image/jpeg';
-    } catch (heicErr: any) {
-      console.info('[HEIC conversion notice]:', heicErr?.message || 'Using original file');
-      finalBuffer = fs.readFileSync(filePath);
-    }
-  } else if (originalExt === '.svg' || mime.includes('svg')) {
-    finalBuffer = fs.readFileSync(filePath);
-    finalContentType = 'image/svg+xml';
-  } else {
-    // Process standard images with sharp
-    try {
-      finalBuffer = await sharp(filePath)
-        .rotate()
-        .resize({ width: 2400, height: 2400, fit: 'inside', withoutEnlargement: true })
-        .jpeg({ quality: 88, progressive: true })
-        .toBuffer();
-      finalFileName = `${baseName}.jpg`;
-      finalContentType = 'image/jpeg';
-    } catch (sharpErr: any) {
-      console.info('[Sharp optimization notice]:', sharpErr?.message || 'Using original image buffer');
-      finalBuffer = fs.readFileSync(filePath);
-    }
-  }
-
-  // Attempt Firebase Storage upload if bucket is verified & available
-  const bucket = db.getStorageBucket();
-  if (bucket) {
-    try {
-      const storagePath = `media/${finalFileName}`;
-      const bucketFile = bucket.file(storagePath);
-      await bucketFile.save(finalBuffer, {
-        metadata: {
-          contentType: finalContentType,
-          cacheControl: 'public, max-age=31536000'
-        }
+  try {
+    if (isVideo) {
+      // Direct stream/upload video to Cloudinary from temporary file without reading whole video into memory
+      const uploadResult = await uploadMediaToCloudinary({
+        filePath,
+        originalName: file.originalname || file.filename,
+        mimeType: mime || 'video/mp4',
+        folder: options.folder || 'indima-spices/videos',
+        resourceType: 'video',
+        cleanupTempFile: true
       });
-      await bucketFile.makePublic().catch(() => {});
-      const publicUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
-
-      // Clean up local temp file
-      if (fs.existsSync(filePath)) {
-        try {
-          fs.unlinkSync(filePath);
-        } catch (_) {}
-      }
-      return publicUrl;
-    } catch (storageErr: any) {
-      db.markStorageUnavailable(storageErr?.message || 'Cloud storage upload unavailable');
-      console.info(`[Media Storage] Cloud storage unavailable (${storageErr?.message || 'Upload failed'}). Stored to local disk: /uploads/${finalFileName}`);
+      return uploadResult;
     }
-  }
 
-  // Write to local disk uploads
-  const targetDiskPath = path.join(UPLOAD_DIR, finalFileName);
-  fs.writeFileSync(targetDiskPath, finalBuffer);
-  if (filePath !== targetDiskPath && fs.existsSync(filePath)) {
-    try {
-      fs.unlinkSync(filePath);
-    } catch (_) {}
+    // Process image: HEIC conversion or Sharp rotation/optimization
+    let processedBuffer: Buffer;
+    let finalFileName = file.filename;
+    let finalContentType = mime || 'image/jpeg';
+
+    if (originalExt === '.heic' || originalExt === '.heif' || mime.includes('heic') || mime.includes('heif')) {
+      try {
+        const inputBuffer = fs.readFileSync(filePath);
+        processedBuffer = (await heicConvert({
+          buffer: inputBuffer,
+          format: 'JPEG',
+          quality: 0.88
+        })) as Buffer;
+        finalFileName = `${baseName}.jpg`;
+        finalContentType = 'image/jpeg';
+      } catch (heicErr: any) {
+        console.info('[HEIC conversion notice]:', heicErr?.message || 'Using original file');
+        processedBuffer = fs.readFileSync(filePath);
+      }
+    } else if (originalExt === '.svg' || mime.includes('svg')) {
+      processedBuffer = fs.readFileSync(filePath);
+      finalContentType = 'image/svg+xml';
+    } else {
+      try {
+        processedBuffer = await sharp(filePath)
+          .rotate()
+          .resize({ width: 2400, height: 2400, fit: 'inside', withoutEnlargement: true })
+          .jpeg({ quality: 88, progressive: true })
+          .toBuffer();
+        finalFileName = `${baseName}.jpg`;
+        finalContentType = 'image/jpeg';
+      } catch (sharpErr: any) {
+        console.info('[Sharp optimization notice]:', sharpErr?.message || 'Using original image buffer');
+        processedBuffer = fs.readFileSync(filePath);
+      }
+    }
+
+    // Upload processed buffer to Cloudinary
+    const uploadResult = await uploadMediaToCloudinary({
+      buffer: processedBuffer,
+      originalName: finalFileName,
+      mimeType: finalContentType,
+      folder: options.folder || 'indima-spices/products',
+      resourceType: 'image',
+      cleanupTempFile: true
+    });
+
+    // Remove temp file created by multer
+    if (fs.existsSync(filePath)) {
+      try {
+        fs.unlinkSync(filePath);
+      } catch (_) {}
+    }
+
+    return uploadResult;
+  } catch (err: any) {
+    if (fs.existsSync(filePath)) {
+      try {
+        fs.unlinkSync(filePath);
+      } catch (_) {}
+    }
+    throw err;
   }
-  return `/uploads/${finalFileName}`;
 }
 
 app.use(
@@ -1501,7 +1523,7 @@ app.get('/api/admin/me', adminAuthMiddleware, (req: Request, res: Response) => {
   });
 });
 
-// Admin Local & Cloud Media Upload
+// Admin Media Upload (Single - Product, Category, Banner, Recipe, Settings)
 app.post('/api/upload', adminAuthMiddleware, (req: Request, res: Response) => {
   upload.single('file')(req, res, async (err: any) => {
     if (err) {
@@ -1511,39 +1533,50 @@ app.post('/api/upload', adminAuthMiddleware, (req: Request, res: Response) => {
 
     try {
       if (req.file) {
-        const publicUrl = await processMediaFile(req.file);
+        const uploadResult = await processMediaFile(req.file, {
+          folder: 'indima-spices/media'
+        });
         return res.json({
           success: true,
-          url: publicUrl,
-          filename: path.basename(publicUrl),
+          url: uploadResult.secure_url,
+          secure_url: uploadResult.secure_url,
+          public_id: uploadResult.public_id,
+          resource_type: uploadResult.resource_type,
+          filename: path.basename(uploadResult.secure_url),
           mimetype: req.file.mimetype,
           size: req.file.size
         });
       }
 
-      // Base64 JSON fallback upload
+      // Base64 JSON fallback upload directly to Cloudinary
       if (req.body && req.body.base64) {
         const base64Data = req.body.base64.replace(/^data:[^;]+;base64,/, '');
         const ext = req.body.ext || '.png';
-        const filename = `upload-${Date.now()}-${Math.round(Math.random() * 1e6)}${ext.startsWith('.') ? ext : '.' + ext}`;
-        const filePath = path.join(UPLOAD_DIR, filename);
-        fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'));
+        const buffer = Buffer.from(base64Data, 'base64');
+        const uploadResult = await uploadMediaToCloudinary({
+          buffer,
+          originalName: `upload-${Date.now()}${ext.startsWith('.') ? ext : '.' + ext}`,
+          folder: 'indima-spices/media'
+        });
         return res.json({
           success: true,
-          url: `/uploads/${filename}`,
-          filename
+          url: uploadResult.secure_url,
+          secure_url: uploadResult.secure_url,
+          public_id: uploadResult.public_id,
+          resource_type: uploadResult.resource_type,
+          filename: path.basename(uploadResult.secure_url)
         });
       }
 
       return res.status(400).json({ success: false, error: 'No file uploaded' });
     } catch (writeErr: any) {
-      console.error('[Upload File Write Error]:', writeErr);
+      console.error('[Upload File Process Error]:', writeErr);
       return res.status(500).json({ success: false, error: writeErr.message || 'Error processing uploaded file' });
     }
   });
 });
 
-// Admin Multiple Media Upload
+// Admin Multiple Media Upload (Batch Product Images)
 app.post('/api/upload-multiple', adminAuthMiddleware, (req: Request, res: Response) => {
   upload.array('files', 20)(req, res, async (err: any) => {
     if (err) {
@@ -1556,18 +1589,168 @@ app.post('/api/upload-multiple', adminAuthMiddleware, (req: Request, res: Respon
       if (!files || files.length === 0) {
         return res.status(400).json({ success: false, error: 'No files uploaded' });
       }
-      const urls: string[] = [];
+      const results: CloudinaryUploadResult[] = [];
       for (const file of files) {
-        const publicUrl = await processMediaFile(file);
-        urls.push(publicUrl);
+        const uploadResult = await processMediaFile(file, { folder: 'indima-spices/products' });
+        results.push(uploadResult);
       }
       return res.json({
         success: true,
-        urls
+        urls: results.map(r => r.secure_url),
+        details: results
       });
     } catch (writeErr: any) {
       console.error('[Multi-Upload Process Error]:', writeErr);
       return res.status(500).json({ success: false, error: writeErr.message });
+    }
+  });
+});
+
+// Admin Hero / Banner Media Upload (Images & Videos)
+app.post('/api/admin/upload-hero-media', adminAuthMiddleware, (req: Request, res: Response) => {
+  upload.single('file')(req, res, async (err: any) => {
+    if (err) {
+      return res.status(400).json({ success: false, error: err.message || 'Hero media upload failed' });
+    }
+    try {
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json({ success: false, error: 'No media file provided for hero banner' });
+      }
+
+      const mime = (file.mimetype || '').toLowerCase();
+      const ext = path.extname(file.originalname).toLowerCase();
+      const isVideo = mime.startsWith('video/') || /^\.(mp4|webm|mov|mkv|avi)$/i.test(ext);
+
+      const uploadResult = await processMediaFile(file, {
+        folder: 'indima-spices/banners',
+        resourceType: isVideo ? 'video' : 'image'
+      });
+
+      const bannerId = req.body.banner_id || req.body.bannerId;
+      let updatedBanner = null;
+
+      if (bannerId) {
+        const banner = db.getBannerById(bannerId);
+        if (banner) {
+          updatedBanner = await db.updateBanner(
+            bannerId,
+            {
+              media_url: uploadResult.secure_url,
+              media_type: isVideo ? 'video' : 'image',
+              ...(isVideo && req.body.fallback_image ? { fallback_image: req.body.fallback_image } : {})
+            },
+            (req as any).adminSession?.username || 'Admin'
+          );
+        }
+      }
+
+      return res.json({
+        success: true,
+        url: uploadResult.secure_url,
+        secure_url: uploadResult.secure_url,
+        public_id: uploadResult.public_id,
+        media_type: isVideo ? 'video' : 'image',
+        banner: updatedBanner
+      });
+    } catch (heroErr: any) {
+      console.error('[Hero Media Upload Error]:', heroErr.message);
+      return res.status(500).json({ success: false, error: heroErr.message });
+    }
+  });
+});
+
+// Review Proof Media Upload (Images & Videos)
+app.post('/api/reviews/upload-proof', (req: Request, res: Response) => {
+  upload.single('file')(req, res, async (err: any) => {
+    if (err) {
+      return res.status(400).json({ success: false, error: err.message || 'Review proof upload failed' });
+    }
+    try {
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json({ success: false, error: 'No proof media file provided' });
+      }
+
+      const mime = (file.mimetype || '').toLowerCase();
+      const ext = path.extname(file.originalname).toLowerCase();
+      const isVideo = mime.startsWith('video/') || /^\.(mp4|webm|mov|mkv|avi)$/i.test(ext);
+
+      const uploadResult = await processMediaFile(file, {
+        folder: 'indima-spices/reviews',
+        resourceType: isVideo ? 'video' : 'image'
+      });
+
+      const reviewId = req.body.review_id || req.body.reviewId;
+      let updatedReview = null;
+
+      if (reviewId) {
+        updatedReview = await db.updateReviewProof(reviewId, {
+          proof_media_url: uploadResult.secure_url,
+          proof_media_type: isVideo ? 'video' : 'image',
+          proof_public_id: uploadResult.public_id
+        });
+      }
+
+      return res.json({
+        success: true,
+        url: uploadResult.secure_url,
+        secure_url: uploadResult.secure_url,
+        public_id: uploadResult.public_id,
+        resource_type: isVideo ? 'video' : 'image',
+        review: updatedReview
+      });
+    } catch (proofErr: any) {
+      console.error('[Review Proof Upload Error]:', proofErr.message);
+      return res.status(500).json({ success: false, error: proofErr.message });
+    }
+  });
+});
+
+// Admin Safe Media Migration: public/uploads/ -> Cloudinary -> Firestore records
+app.post('/api/admin/migrate-media', adminAuthMiddleware, async (req: Request, res: Response) => {
+  try {
+    const fsDb = await db.getFirestoreInstance();
+    const result = await migrateLocalMediaToCloudinary(fsDb);
+    // Reload local state with the newly updated cloud documents
+    await db.reloadFromFirestore();
+    return res.json({
+      success: true,
+      message: `Media migration completed: ${result.uploadedCount} uploaded, ${result.updatedDocsCount} Firestore documents updated.`,
+      ...result
+    });
+  } catch (err: any) {
+    console.error('[Admin Media Migration Error]:', err.message);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Admin Storage Architecture & Diagnostics Endpoint
+app.get('/api/admin/storage-status', adminAuthMiddleware, (req: Request, res: Response) => {
+  const cloudStatus = getCloudinaryStatus();
+  const isFirestore = db.getIsFirestoreReady();
+  const lastFsError = db.getLastFirestoreError();
+  const uploadsPath = path.join(process.cwd(), 'public', 'uploads');
+  const localFileCount = fs.existsSync(uploadsPath)
+    ? fs.readdirSync(uploadsPath).filter(f => !f.startsWith('.')).length
+    : 0;
+
+  res.json({
+    firestore: {
+      connected: isFirestore,
+      lastError: lastFsError
+    },
+    cloudinary: {
+      configured: cloudStatus.configured,
+      cloudName: cloudStatus.cloudName,
+      source: cloudStatus.source,
+      folder: cloudStatus.folder,
+      supportsVideo: cloudStatus.supportsVideo
+    },
+    localUploads: {
+      exists: fs.existsSync(uploadsPath),
+      fileCount: localFileCount,
+      path: 'public/uploads'
     }
   });
 });
@@ -2106,7 +2289,7 @@ function injectDynamicHtmlMeta(html: string, req: Request): string {
 // ----------------------------------------------------
 
 async function startServer() {
-  // Check and run one-time migration if explicitly requested via RUN_FIRESTORE_MIGRATION=true
+  // Check and run one-time database migration if explicitly requested via RUN_FIRESTORE_MIGRATION=true
   if (process.env.RUN_FIRESTORE_MIGRATION === 'true') {
     try {
       console.log('[Server Startup] RUN_FIRESTORE_MIGRATION=true detected. Executing pre-flight one-time migration...');
@@ -2120,6 +2303,28 @@ async function startServer() {
     await db.initFirestore();
   } catch (dbErr: any) {
     console.info('[Firebase Admin Firestore] Pre-flight initialization notice:', dbErr?.message || dbErr);
+  }
+
+  // Cloudinary media service initialization and status audit
+  const cloudStatus = getCloudinaryStatus();
+  if (cloudStatus.configured) {
+    initCloudinary();
+    console.log(`[Cloudinary Media] Connected: Cloud Name "${cloudStatus.cloudName}", Folder "${cloudStatus.folder}", Video Support: Enabled.`);
+  } else {
+    console.warn('[Cloudinary Media] Notice: Cloudinary environment variables (CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET) are not fully defined yet. Uploads will prompt for configuration.');
+  }
+
+  // Check and run media migration if explicitly requested via RUN_MEDIA_MIGRATION=true
+  if (process.env.RUN_MEDIA_MIGRATION === 'true') {
+    try {
+      console.log('[Server Startup] RUN_MEDIA_MIGRATION=true detected. Migrating local public/uploads/ media to Cloudinary...');
+      const fsDb = await db.getFirestoreInstance();
+      const migResult = await migrateLocalMediaToCloudinary(fsDb);
+      console.log(`[Server Startup] Media migration complete: ${migResult.uploadedCount} uploaded, ${migResult.updatedDocsCount} Firestore docs updated.`);
+      await db.reloadFromFirestore();
+    } catch (migErr: any) {
+      console.error('[Server Startup] Media migration encountered error:', migErr.message);
+    }
   }
 
   // Pre-flight check storage availability in background without blocking startup

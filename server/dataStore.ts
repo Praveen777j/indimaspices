@@ -735,36 +735,48 @@ class DataStore {
     }
   }
 
-  private async getFirestoreInstance(): Promise<AdminFirestore | null> {
+  public async getFirestoreInstance(): Promise<AdminFirestore | null> {
     if (this.firestore) return this.firestore;
     await this.initFirestore();
     return this.firestore;
   }
 
   public async setFirestoreDoc(collectionName: string, docId: string, itemData: any): Promise<void> {
-    try {
-      const fsDb = await this.getFirestoreInstance();
-      if (!fsDb) {
-        console.warn(`[Firestore Admin] ⚠️ Notice: Firestore instance unavailable. Skipped cloud sync for ${collectionName}/${docId}`);
-        return;
+    const fsDb = await this.getFirestoreInstance();
+    if (!fsDb) {
+      if (this.isFirestoreReady) {
+        throw new Error(`Firestore is unavailable. Cannot write to ${collectionName}/${docId}`);
       }
+      console.warn(`[Firestore Admin] ⚠️ Notice: Firestore instance unavailable. Skipped cloud sync for ${collectionName}/${docId}`);
+      return;
+    }
+    try {
       const clean = JSON.parse(JSON.stringify(itemData));
       await fsDb.collection(collectionName).doc(String(docId)).set(clean, { merge: true });
     } catch (err: any) {
-      console.warn(`[Firestore Admin] ⚠️ Notice: Cloud sync issue for ${collectionName}/${docId} (${err.message}). Local state remains active.`);
+      console.error(`[Firestore Write Error] Failed write to ${collectionName}/${docId}:`, err?.message || err);
+      if (this.isFirestoreReady) {
+        throw new Error(`Firestore write failed for ${collectionName}/${docId}: ${err?.message || 'Unknown database error'}`);
+      }
     }
   }
 
   public async deleteFirestoreDoc(collectionName: string, docId: string): Promise<void> {
-    try {
-      const fsDb = await this.getFirestoreInstance();
-      if (!fsDb) {
-        console.warn(`[Firestore Admin] ⚠️ Notice: Firestore instance unavailable. Skipped cloud deletion for ${collectionName}/${docId}`);
-        return;
+    const fsDb = await this.getFirestoreInstance();
+    if (!fsDb) {
+      if (this.isFirestoreReady) {
+        throw new Error(`Firestore is unavailable. Cannot delete from ${collectionName}/${docId}`);
       }
+      console.warn(`[Firestore Admin] ⚠️ Notice: Firestore instance unavailable. Skipped cloud deletion for ${collectionName}/${docId}`);
+      return;
+    }
+    try {
       await fsDb.collection(collectionName).doc(String(docId)).delete();
     } catch (err: any) {
-      console.warn(`[Firestore Admin] ⚠️ Notice: Cloud deletion issue for ${collectionName}/${docId} (${err.message}). Local state remains active.`);
+      console.error(`[Firestore Delete Error] Failed deletion for ${collectionName}/${docId}:`, err?.message || err);
+      if (this.isFirestoreReady) {
+        throw new Error(`Firestore delete failed for ${collectionName}/${docId}: ${err?.message || 'Unknown database error'}`);
+      }
     }
   }
 
@@ -908,13 +920,10 @@ class DataStore {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
+    await this.setFirestoreDoc('products', newProduct.id, newProduct);
     this.data.products.unshift(newProduct);
     this.save();
-    
-    Promise.allSettled([
-      this.setFirestoreDoc('products', newProduct.id, newProduct),
-      this.logAudit(adminUser, 'PRODUCT_CREATED', newProduct.id, `Created product ${newProduct.name_en}`)
-    ]).catch(() => {});
+    await this.logAudit(adminUser, 'PRODUCT_CREATED', newProduct.id, `Created product ${newProduct.name_en}`).catch(() => {});
 
     return newProduct;
   }
@@ -922,18 +931,15 @@ class DataStore {
   public async updateProduct(id: string, updates: Partial<Product>, adminUser = 'Admin'): Promise<Product | null> {
     const idx = this.data.products.findIndex(p => p.id === id);
     if (idx === -1) return null;
-    this.data.products[idx] = {
+    const updatedProd: Product = {
       ...this.data.products[idx],
       ...updates,
       updated_at: new Date().toISOString()
     };
-    const updatedProd = this.data.products[idx];
+    await this.setFirestoreDoc('products', id, updatedProd);
+    this.data.products[idx] = updatedProd;
     this.save();
-
-    Promise.allSettled([
-      this.setFirestoreDoc('products', id, updatedProd),
-      this.logAudit(adminUser, 'PRODUCT_UPDATED', id, `Updated product ${updatedProd.name_en}`)
-    ]).catch(() => {});
+    await this.logAudit(adminUser, 'PRODUCT_UPDATED', id, `Updated product ${updatedProd.name_en}`).catch(() => {});
 
     return updatedProd;
   }
@@ -942,13 +948,10 @@ class DataStore {
     const idx = this.data.products.findIndex(p => p.id === id);
     if (idx === -1) return false;
     const name = this.data.products[idx].name_en;
+    await this.deleteFirestoreDoc('products', id);
     this.data.products.splice(idx, 1);
     this.save();
-
-    Promise.allSettled([
-      this.deleteFirestoreDoc('products', id),
-      this.logAudit(adminUser, 'PRODUCT_DELETED', id, `Deleted product ${name}`)
-    ]).catch(() => {});
+    await this.logAudit(adminUser, 'PRODUCT_DELETED', id, `Deleted product ${name}`).catch(() => {});
 
     return true;
   }
@@ -963,13 +966,10 @@ class DataStore {
       ...cat,
       id: 'cat-' + Date.now()
     };
+    await this.setFirestoreDoc('categories', newCat.id, newCat);
     this.data.categories.push(newCat);
     this.save();
-
-    Promise.allSettled([
-      this.setFirestoreDoc('categories', newCat.id, newCat),
-      this.logAudit(adminUser, 'CATEGORY_CREATED', newCat.id, `Created category ${newCat.name_en}`)
-    ]).catch(() => {});
+    await this.logAudit(adminUser, 'CATEGORY_CREATED', newCat.id, `Created category ${newCat.name_en}`).catch(() => {});
 
     return newCat;
   }
@@ -977,14 +977,11 @@ class DataStore {
   public async updateCategory(id: string, updates: Partial<Category>, adminUser = 'Admin'): Promise<Category | null> {
     const idx = this.data.categories.findIndex(c => c.id === id);
     if (idx === -1) return null;
-    this.data.categories[idx] = { ...this.data.categories[idx], ...updates };
-    const updated = this.data.categories[idx];
+    const updated = { ...this.data.categories[idx], ...updates };
+    await this.setFirestoreDoc('categories', id, updated);
+    this.data.categories[idx] = updated;
     this.save();
-
-    Promise.allSettled([
-      this.setFirestoreDoc('categories', id, updated),
-      this.logAudit(adminUser, 'CATEGORY_UPDATED', id, `Updated category ${updated.name_en}`)
-    ]).catch(() => {});
+    await this.logAudit(adminUser, 'CATEGORY_UPDATED', id, `Updated category ${updated.name_en}`).catch(() => {});
 
     return updated;
   }
@@ -993,13 +990,10 @@ class DataStore {
     const idx = this.data.categories.findIndex(c => c.id === id);
     if (idx === -1) return false;
     const name = this.data.categories[idx].name_en;
+    await this.deleteFirestoreDoc('categories', id);
     this.data.categories.splice(idx, 1);
     this.save();
-
-    Promise.allSettled([
-      this.deleteFirestoreDoc('categories', id),
-      this.logAudit(adminUser, 'CATEGORY_DELETED', id, `Deleted category ${name}`)
-    ]).catch(() => {});
+    await this.logAudit(adminUser, 'CATEGORY_DELETED', id, `Deleted category ${name}`).catch(() => {});
 
     return true;
   }
@@ -1544,6 +1538,10 @@ class DataStore {
     return this.data.banners;
   }
 
+  public getBannerById(id: string): Banner | undefined {
+    return this.data.banners.find(b => b.id === id);
+  }
+
   public async updateBanner(id: string, updates: Partial<Banner>, adminUser = 'Admin'): Promise<Banner | null> {
     let idx = this.data.banners.findIndex(b => b.id === id);
     if (idx === -1 && updates.type === 'hero') {
@@ -1701,6 +1699,20 @@ class DataStore {
     await this.deleteFirestoreDoc('reviews', id);
     this.save();
     return true;
+  }
+
+  public async updateReviewProof(
+    reviewId: string,
+    proof: { proof_media_url: string; proof_media_type: 'image' | 'video'; proof_public_id?: string }
+  ): Promise<Review | null> {
+    const rev = this.data.reviews.find(r => r.id === reviewId);
+    if (!rev) return null;
+    (rev as any).proof_media_url = proof.proof_media_url;
+    (rev as any).proof_media_type = proof.proof_media_type;
+    (rev as any).proof_public_id = proof.proof_public_id;
+    await this.setFirestoreDoc('reviews', reviewId, rev);
+    this.save();
+    return rev;
   }
 
   // --- Leads ---
