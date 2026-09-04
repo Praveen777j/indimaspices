@@ -36,19 +36,16 @@ function getLocalFirebaseConfig(): { projectId?: string; storageBucket?: string;
 }
 
 /**
- * Robustly parses FIREBASE_SERVICE_ACCOUNT from environment.
+ * Robustly parses FIREBASE_SERVICE_ACCOUNT or FIREBASE_SERVICE_ACCOUNT_KEY from environment.
  * Supports:
+ * - Priority 1: FIREBASE_SERVICE_ACCOUNT
+ * - Priority 2: FIREBASE_SERVICE_ACCOUNT_KEY (alias)
  * - Direct JSON string
  * - Surrounding quotes (single or double) from Render env input
  * - Base64 encoded JSON
  * - Escaped newlines in private_key (\n vs \\n)
  */
-export function parseServiceAccountCredentials(): { parsed: any; error?: string } {
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
-  if (!raw || !raw.trim()) {
-    return { parsed: null };
-  }
-
+function parseJsonOrBase64String(raw: string): any {
   let str = raw.trim();
 
   // Strip leading/trailing quotes if user pasted with quotes in Render
@@ -56,28 +53,67 @@ export function parseServiceAccountCredentials(): { parsed: any; error?: string 
     str = str.substring(1, str.length - 1).trim();
   }
 
-  try {
-    let json: any;
-    if (str.startsWith('{')) {
-      json = JSON.parse(str);
-    } else {
-      // Try base64 decoding
-      const decoded = Buffer.from(str, 'base64').toString('utf-8');
-      json = JSON.parse(decoded);
-    }
-
-    if (json && typeof json === 'object') {
-      // Ensure private_key has correct literal newlines
-      if (json.private_key && typeof json.private_key === 'string') {
-        json.private_key = json.private_key.replace(/\\n/g, '\n');
-      }
-      return { parsed: json };
-    }
-  } catch (err: any) {
-    return { parsed: null, error: `Failed to parse FIREBASE_SERVICE_ACCOUNT: ${err.message}` };
+  let json: any;
+  if (str.startsWith('{')) {
+    json = JSON.parse(str);
+  } else {
+    // Try base64 decoding
+    const decoded = Buffer.from(str, 'base64').toString('utf-8');
+    json = JSON.parse(decoded);
   }
 
-  return { parsed: null, error: 'FIREBASE_SERVICE_ACCOUNT is not a valid JSON object' };
+  if (json && typeof json === 'object') {
+    // Ensure private_key has correct literal newlines
+    if (json.private_key && typeof json.private_key === 'string') {
+      json.private_key = json.private_key.replace(/\\n/g, '\n');
+    }
+    return json;
+  }
+  return null;
+}
+
+export function parseServiceAccountCredentials(): { parsed: any; error?: string; source?: string } {
+  // Priority 1: FIREBASE_SERVICE_ACCOUNT
+  const raw1 = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (raw1 && raw1.trim()) {
+    try {
+      const parsed = parseJsonOrBase64String(raw1);
+      if (parsed) {
+        return { parsed, source: 'FIREBASE_SERVICE_ACCOUNT' };
+      }
+    } catch (err: any) {
+      const errorMsg = `Failed to parse FIREBASE_SERVICE_ACCOUNT: ${err.message}`;
+      // If FIREBASE_SERVICE_ACCOUNT is malformed, check if FIREBASE_SERVICE_ACCOUNT_KEY has valid credentials
+      const raw2 = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+      if (raw2 && raw2.trim()) {
+        try {
+          const parsed2 = parseJsonOrBase64String(raw2);
+          if (parsed2) {
+            return { parsed: parsed2, source: 'FIREBASE_SERVICE_ACCOUNT_KEY' };
+          }
+        } catch {
+          // ignore fallback error and report original error
+        }
+      }
+      return { parsed: null, error: errorMsg, source: 'FIREBASE_SERVICE_ACCOUNT' };
+    }
+  }
+
+  // Priority 2: FIREBASE_SERVICE_ACCOUNT_KEY (alias)
+  const raw2 = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  if (raw2 && raw2.trim()) {
+    try {
+      const parsed = parseJsonOrBase64String(raw2);
+      if (parsed) {
+        return { parsed, source: 'FIREBASE_SERVICE_ACCOUNT_KEY' };
+      }
+      return { parsed: null, error: 'FIREBASE_SERVICE_ACCOUNT_KEY is not a valid JSON object', source: 'FIREBASE_SERVICE_ACCOUNT_KEY' };
+    } catch (err: any) {
+      return { parsed: null, error: `Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY: ${err.message}`, source: 'FIREBASE_SERVICE_ACCOUNT_KEY' };
+    }
+  }
+
+  return { parsed: null };
 }
 
 /**
@@ -89,7 +125,7 @@ export function getFirebaseAdmin(): FirebaseAdminConfig {
   }
 
   const localConfig = getLocalFirebaseConfig();
-  const { parsed: serviceAccount, error: parseError } = parseServiceAccountCredentials();
+  const { parsed: serviceAccount, error: parseError, source: saSource } = parseServiceAccountCredentials();
   if (parseError) {
     console.warn(`[Firebase Admin] Notice on credentials parsing: ${parseError}`);
   }
@@ -120,17 +156,18 @@ export function getFirebaseAdmin(): FirebaseAdminConfig {
     app = existingApps[0] as AdminApp;
     source = 'existing_instance';
   } else if (serviceAccount && serviceAccount.private_key && serviceAccount.client_email) {
+    const authSource = saSource || 'FIREBASE_SERVICE_ACCOUNT';
     try {
       app = initializeAdminApp({
         credential: cert(serviceAccount),
         projectId: serviceAccount.project_id || projectId,
         storageBucket
       });
-      source = 'FIREBASE_SERVICE_ACCOUNT';
-      console.log(`[Firebase Admin] ✅ Initialized with service account for project: "${projectId}"`);
+      source = authSource;
+      console.log(`[Firebase Admin] ✅ Initialized with service account (${authSource}) for project: "${projectId}"`);
     } catch (e: any) {
-      console.warn(`[Firebase Admin] Notice initializing with FIREBASE_SERVICE_ACCOUNT: ${e.message}`);
-      throw new Error(`Failed to initialize Firebase Admin with service account: ${e.message}`);
+      console.warn(`[Firebase Admin] Notice initializing with ${authSource}: ${e.message}`);
+      throw new Error(`Failed to initialize Firebase Admin with service account (${authSource}): ${e.message}`);
     }
   } else if (process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY) {
     try {
