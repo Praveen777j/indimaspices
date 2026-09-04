@@ -290,6 +290,7 @@ export const api = {
   },
 
   uploadMedia: async (token: string, file: File): Promise<{ success: boolean; url?: string; filename?: string; error?: string }> => {
+    let serverError = '';
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -307,25 +308,40 @@ export const api = {
           return { success: true, url: data.url, filename: data.filename };
         }
         if (data && data.error) {
+          serverError = data.error;
           console.warn('[API Upload Server Notice]:', data.error);
         }
+      } else if (!res.ok) {
+        const text = await res.text();
+        serverError = text || `Upload failed (Status ${res.status})`;
       }
     } catch (networkErr: any) {
-      console.warn('[API Upload Network Exception]:', networkErr?.message || networkErr);
+      serverError = networkErr?.message || 'Network error during upload';
+      console.warn('[API Upload Network Exception]:', serverError);
     }
 
-    // High-reliability Client-side Preview / Base64 Fallback
-    try {
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = (err) => reject(err);
-        reader.readAsDataURL(file);
-      });
-      return { success: true, url: dataUrl, filename: file.name };
-    } catch (fileErr: any) {
-      return { success: false, error: fileErr?.message || 'Failed to process file' };
+    // Do NOT fallback to Base64 for videos as huge payloads break Firestore's 1MB limit and freeze browsers
+    const isVideo = file.type.startsWith('video/') || /\.(mp4|webm|mov|mkv|avi|m4v|3gp|flv)$/i.test(file.name);
+    if (isVideo) {
+      return { success: false, error: serverError || 'Video upload failed. Please verify format and file size.' };
     }
+
+    // Client-side Preview / Base64 Fallback ONLY for small images (< 2MB)
+    if (file.size <= 2 * 1024 * 1024) {
+      try {
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = (err) => reject(err);
+          reader.readAsDataURL(file);
+        });
+        return { success: true, url: dataUrl, filename: file.name };
+      } catch (fileErr: any) {
+        return { success: false, error: fileErr?.message || 'Failed to process file' };
+      }
+    }
+
+    return { success: false, error: serverError || 'Upload failed. File exceeds allowed size.' };
   },
 
   uploadMultipleMedia: async (token: string, files: FileList | File[]): Promise<{ success: boolean; urls: string[]; error?: string }> => {

@@ -732,6 +732,7 @@ class DataStore {
       this.persistNow(this.data);
     } catch (e: any) {
       console.warn('[Firestore Admin] Notice loading collections from Firestore:', e.message);
+      throw e;
     }
   }
 
@@ -742,12 +743,11 @@ class DataStore {
   }
 
   public async setFirestoreDoc(collectionName: string, docId: string, itemData: any): Promise<void> {
+    if (!this.isFirestoreReady) {
+      return;
+    }
     const fsDb = await this.getFirestoreInstance();
-    if (!fsDb) {
-      if (this.isFirestoreReady) {
-        throw new Error(`Firestore is unavailable. Cannot write to ${collectionName}/${docId}`);
-      }
-      console.warn(`[Firestore Admin] ⚠️ Notice: Firestore instance unavailable. Skipped cloud sync for ${collectionName}/${docId}`);
+    if (!fsDb || !this.isFirestoreReady) {
       return;
     }
     try {
@@ -755,6 +755,12 @@ class DataStore {
       await fsDb.collection(collectionName).doc(String(docId)).set(clean, { merge: true });
     } catch (err: any) {
       console.error(`[Firestore Write Error] Failed write to ${collectionName}/${docId}:`, err?.message || err);
+      if (err?.code === 5 || err?.message?.includes('5 NOT_FOUND') || err?.message?.includes('NOT_FOUND') || err?.code === 14) {
+        this.isFirestoreReady = false;
+        this.lastFirestoreError = err?.message || String(err);
+        console.warn(`[Firestore Admin] ⚠️ Firestore database unreachable or not found. Operating with local authoritative store.`);
+        return;
+      }
       if (this.isFirestoreReady) {
         throw new Error(`Firestore write failed for ${collectionName}/${docId}: ${err?.message || 'Unknown database error'}`);
       }
@@ -762,18 +768,23 @@ class DataStore {
   }
 
   public async deleteFirestoreDoc(collectionName: string, docId: string): Promise<void> {
+    if (!this.isFirestoreReady) {
+      return;
+    }
     const fsDb = await this.getFirestoreInstance();
-    if (!fsDb) {
-      if (this.isFirestoreReady) {
-        throw new Error(`Firestore is unavailable. Cannot delete from ${collectionName}/${docId}`);
-      }
-      console.warn(`[Firestore Admin] ⚠️ Notice: Firestore instance unavailable. Skipped cloud deletion for ${collectionName}/${docId}`);
+    if (!fsDb || !this.isFirestoreReady) {
       return;
     }
     try {
       await fsDb.collection(collectionName).doc(String(docId)).delete();
     } catch (err: any) {
       console.error(`[Firestore Delete Error] Failed deletion for ${collectionName}/${docId}:`, err?.message || err);
+      if (err?.code === 5 || err?.message?.includes('5 NOT_FOUND') || err?.message?.includes('NOT_FOUND') || err?.code === 14) {
+        this.isFirestoreReady = false;
+        this.lastFirestoreError = err?.message || String(err);
+        console.warn(`[Firestore Admin] ⚠️ Firestore database unreachable or not found. Operating with local authoritative store.`);
+        return;
+      }
       if (this.isFirestoreReady) {
         throw new Error(`Firestore delete failed for ${collectionName}/${docId}: ${err?.message || 'Unknown database error'}`);
       }
@@ -934,6 +945,7 @@ class DataStore {
     const updatedProd: Product = {
       ...this.data.products[idx],
       ...updates,
+      video: updates.video !== undefined ? (updates.video || '').trim() : (this.data.products[idx].video || ''),
       updated_at: new Date().toISOString()
     };
     await this.setFirestoreDoc('products', id, updatedProd);
@@ -1057,8 +1069,12 @@ class DataStore {
       };
       this.data.customers.push(customer);
     }
-    await this.setFirestoreDoc('customers', customer.id, customer);
     this.save();
+    try {
+      await this.setFirestoreDoc('customers', customer.id, customer);
+    } catch (err: any) {
+      console.warn(`[DataStore] Notice: Cloud sync for customer ${customer.id} failed, saved locally:`, err?.message || err);
+    }
     return customer;
   }
 
@@ -1158,7 +1174,7 @@ class DataStore {
     const fsDb = await this.getFirestoreInstance();
     const nowIso = new Date().toISOString();
 
-    if (fsDb) {
+    if (fsDb && this.isFirestoreReady) {
       try {
         await fsDb.runTransaction(async (transaction) => {
           // --- 1. PHASE 1: ALL READS (Must precede all writes in Firestore) ---
@@ -1305,6 +1321,11 @@ class DataStore {
           msg.includes('is currently inactive')
         ) {
           throw txErr;
+        }
+
+        if (txErr?.code === 5 || msg.includes('5 NOT_FOUND') || msg.includes('NOT_FOUND')) {
+          this.isFirestoreReady = false;
+          this.lastFirestoreError = msg;
         }
 
         console.warn(`[Firestore Admin] ⚠️ Transaction sync notice (${msg}). Executing resilient in-memory atomic reservation.`);

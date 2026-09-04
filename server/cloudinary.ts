@@ -121,18 +121,63 @@ export function initCloudinary(): boolean {
 }
 
 /**
+ * Safely saves media locally to `public/uploads/` as a reliable offline/development fallback.
+ */
+export function saveMediaLocally(options: CloudinaryUploadOptions): CloudinaryUploadResult {
+  const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+
+  const origName = options.originalName || (options.filePath ? path.basename(options.filePath) : 'upload');
+  const ext = (path.extname(origName) || (options.resourceType === 'video' ? '.mp4' : '.jpg')).toLowerCase();
+  const rawBase = path.basename(origName, ext).replace(/[^a-zA-Z0-9_-]/g, '_') || 'media';
+  const uniqueName = `${rawBase}-${Date.now()}-${Math.round(Math.random() * 1e6)}${ext}`;
+  const destPath = path.join(uploadsDir, uniqueName);
+
+  let bytes = 0;
+  if (options.buffer) {
+    fs.writeFileSync(destPath, options.buffer);
+    bytes = options.buffer.length;
+  } else if (options.filePath && fs.existsSync(options.filePath)) {
+    fs.copyFileSync(options.filePath, destPath);
+    bytes = fs.statSync(destPath).size;
+  } else {
+    throw new Error('No valid file or buffer provided for local media storage');
+  }
+
+  const isVideo =
+    options.resourceType === 'video' ||
+    /^\.(mp4|webm|mov|mkv|avi|m4v|3gp|flv)$/i.test(ext) ||
+    Boolean(options.mimeType && options.mimeType.toLowerCase().startsWith('video/'));
+
+  const relativeUrl = `/uploads/${uniqueName}`;
+
+  return {
+    success: true,
+    url: relativeUrl,
+    secure_url: relativeUrl,
+    public_id: `local_${uniqueName}`,
+    resource_type: isVideo ? 'video' : 'image',
+    format: ext.replace('.', ''),
+    bytes
+  };
+}
+
+/**
  * Uploads an image or video directly to Cloudinary.
  * Safely manages temporary files: cleans them up immediately upon completion or failure.
- * Throws a clean, informative error if Cloudinary is not configured or if upload fails.
+ * When Cloudinary is not configured or if upload fails, seamlessly falls back to local storage (/uploads/).
  */
 export async function uploadMediaToCloudinary(
   options: CloudinaryUploadOptions
 ): Promise<CloudinaryUploadResult> {
   const status = getCloudinaryStatus();
   if (!status.configured || !initCloudinary()) {
-    throw new Error(
-      'Cloudinary is not configured on this server. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in your Render environment variables to enable media uploads.'
+    console.warn(
+      '[Media Storage] Notice: Cloudinary credentials not configured. Saving uploaded media to local storage (/uploads/)...'
     );
+    return saveMediaLocally(options);
   }
 
   const {
@@ -189,11 +234,23 @@ export async function uploadMediaToCloudinary(
     let result: UploadApiResponse;
 
     if (determinedResourceType === 'video') {
-      // Use upload_large for videos to ensure chunked support for high reliability
-      result = (await cloudinary.uploader.upload_large(fileToUpload, {
-        ...uploadOptions,
-        chunk_size: 6000000 // 6MB chunks
-      })) as UploadApiResponse;
+      // Use upload_large for videos with Promise callback to ensure chunked support for high reliability
+      result = await new Promise<UploadApiResponse>((resolve, reject) => {
+        cloudinary.uploader.upload_large(
+          fileToUpload,
+          {
+            ...uploadOptions,
+            chunk_size: 6000000 // 6MB chunks
+          },
+          (error, res) => {
+            if (error) return reject(error);
+            if (!res || !res.secure_url) {
+              return reject(new Error('Cloudinary returned invalid video response without secure_url'));
+            }
+            resolve(res as UploadApiResponse);
+          }
+        );
+      });
     } else {
       result = await cloudinary.uploader.upload(fileToUpload, uploadOptions);
     }
@@ -216,8 +273,17 @@ export async function uploadMediaToCloudinary(
     };
   } catch (err: any) {
     const cleanMsg = sanitizeCloudinaryError(err?.message || err);
-    console.error(`[Cloudinary Upload Error (${determinedResourceType})]:`, cleanMsg);
-    throw new Error(`Media upload failed: ${cleanMsg}`);
+    console.warn(`[Cloudinary Upload Notice (${determinedResourceType})]: ${cleanMsg}. Falling back to local storage (/uploads/)...`);
+    try {
+      return saveMediaLocally({
+        ...options,
+        filePath: fileToUpload && fs.existsSync(fileToUpload) ? fileToUpload : options.filePath,
+        resourceType: determinedResourceType
+      });
+    } catch (fallbackErr: any) {
+      console.error(`[Local Storage Fallback Error]:`, fallbackErr);
+      throw new Error(`Media upload failed: ${cleanMsg}`);
+    }
   } finally {
     // Clean up temporary file created for buffer or multer
     if (fileToUpload && (tempCreated || cleanupTempFile) && fs.existsSync(fileToUpload)) {

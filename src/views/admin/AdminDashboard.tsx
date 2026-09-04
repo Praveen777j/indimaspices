@@ -326,17 +326,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
     try {
       const res = await api.uploadMedia(token, file);
       if (res && res.success && res.url) {
-        setEditingProduct({
-          ...editingProduct,
+        setEditingProduct(prev => prev ? {
+          ...prev,
           video: res.url
-        });
+        } : prev);
         showSuccess('Product video uploaded successfully');
       } else {
-        setVideoUploadError('Video upload failed. Please verify format and size.');
+        setVideoUploadError(res?.error || 'Video upload failed. Please verify format and size.');
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('Video upload error', e);
-      setVideoUploadError('Video upload failed. Check connection.');
+      setVideoUploadError('Video upload failed: ' + (e?.message || 'Check connection.'));
     } finally {
       setIsUploadingVideo(false);
     }
@@ -444,6 +444,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
         images: validImages.length > 0 ? validImages : [primaryImage],
         image_url: primaryImage,
         active: editingProduct.active !== false,
+        video: (editingProduct.video || '').trim(),
         updated_at: new Date().toISOString(),
         created_at: editingProduct.created_at || new Date().toISOString()
       };
@@ -1036,6 +1037,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
                       traditional_info_kn: 'ಸಾಂಪ್ರದಾಯಿಕ ಕಲ್ಲಿನ ಬೀಸುವ ವಿಧಾನ',
                       sku: 'IND-SP-' + Math.floor(100 + Math.random() * 900),
                       badges: ['homemade', 'natural'],
+                      video: '',
                       active: true
                     });
                     setIsProductModalOpen(true);
@@ -1083,7 +1085,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
                                 }}
                               />
                               <div>
-                                <p className="font-bold text-neutral-900">{prod.name_en}</p>
+                                <p className="font-bold text-neutral-900 flex items-center gap-1.5">
+                                  <span>{prod.name_en}</span>
+                                  {prod.video && (
+                                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] bg-amber-100 text-amber-900 border border-amber-300 font-semibold" title="Video showcase attached">
+                                      <Video className="w-2.5 h-2.5 text-[#993300]" />
+                                      <span>Video</span>
+                                    </span>
+                                  )}
+                                </p>
                                 <p className="text-neutral-500 font-serif">{prod.name_kn}</p>
                                 <span className="font-mono text-[10px] text-neutral-400">SKU: {prod.sku}</span>
                               </div>
@@ -2159,6 +2169,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
                         if (e.target.files?.[0]) {
                           handleVideoUpload(e.target.files[0]);
                         }
+                        e.target.value = '';
                       }}
                     />
                   </label>
@@ -2190,7 +2201,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
                     {editingProduct.video.includes('youtube.com') || editingProduct.video.includes('youtu.be') ? (
                       <div className="aspect-video w-full rounded-lg overflow-hidden">
                         <iframe
-                          src={editingProduct.video}
+                          src={
+                            editingProduct.video.includes('youtu.be/')
+                              ? `https://www.youtube.com/embed/${editingProduct.video.split('youtu.be/')[1]?.split('?')[0]}`
+                              : editingProduct.video.includes('watch?v=')
+                              ? `https://www.youtube.com/embed/${editingProduct.video.split('watch?v=')[1]?.split('&')[0]}`
+                              : editingProduct.video
+                          }
                           title="Video Preview"
                           className="w-full h-full"
                           allowFullScreen
@@ -2328,11 +2345,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
                   </button>
                   <button
                     type="submit"
-                    disabled={isSavingProduct}
+                    disabled={isSavingProduct || isUploadingVideo}
                     className="px-6 py-2.5 bg-[#993300] hover:bg-[#802B00] disabled:bg-[#993300]/60 text-white font-bold rounded-xl cursor-pointer transition-all shadow-md active:scale-98 text-xs flex items-center space-x-1.5"
                   >
                     <Check className="w-3.5 h-3.5" />
-                    <span>{isSavingProduct ? 'Saving Spice Product...' : 'Save Spice Product'}</span>
+                    <span>{isUploadingVideo ? 'Uploading Video...' : isSavingProduct ? 'Saving Spice Product...' : 'Save Spice Product'}</span>
                   </button>
                 </div>
               </div>

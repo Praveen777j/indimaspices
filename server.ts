@@ -16,6 +16,7 @@ import {
   initCloudinary,
   getCloudinaryStatus,
   uploadMediaToCloudinary,
+  saveMediaLocally,
   migrateLocalMediaToCloudinary,
   CloudinaryUploadResult
 } from './server/cloudinary';
@@ -102,10 +103,10 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   limits: {
-    fileSize: 60 * 1024 * 1024 // 60MB for high-res images/videos
+    fileSize: 120 * 1024 * 1024 // 120MB for high-res images/videos
   },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|webp|svg\+xml|svg|heic|heif|mp4|webm|quicktime|mov|tiff|bmp/;
+    const allowedTypes = /jpeg|jpg|png|webp|svg\+xml|svg|heic|heif|mp4|webm|quicktime|mov|tiff|bmp|mkv|avi|m4v|3gp|flv|wmv|ogv|ts/;
     const ext = path.extname(file.originalname).toLowerCase().replace('.', '');
     const mime = (file.mimetype || '').toLowerCase();
 
@@ -120,7 +121,7 @@ const upload = multer({
     ) {
       cb(null, true);
     } else {
-      cb(new Error('Only images (JPEG, PNG, WebP, HEIC, SVG) and video formats (MP4, WebM) are allowed!'));
+      cb(new Error('Only images (JPEG, PNG, WebP, HEIC, SVG) and video formats (MP4, WebM, MOV, etc.) are allowed!'));
     }
   }
 });
@@ -145,8 +146,9 @@ async function processMediaFile(
 
   const isVideo =
     options.resourceType === 'video' ||
-    /mp4|webm|mov|quicktime/.test(mime) ||
-    /^\.(mp4|webm|mov|mkv|avi)$/i.test(originalExt);
+    mime.startsWith('video/') ||
+    /mp4|webm|mov|quicktime|mkv|avi|m4v|3gp|flv|wmv|ogv|ts/.test(mime) ||
+    /^\.(mp4|webm|mov|mkv|avi|m4v|3gp|flv|wmv|ogv|ts)$/i.test(originalExt);
 
   try {
     if (isVideo) {
@@ -218,6 +220,23 @@ async function processMediaFile(
 
     return uploadResult;
   } catch (err: any) {
+    console.warn('[Process Media Notice]:', err?.message || err, '- saving raw upload as local fallback');
+    try {
+      if (fs.existsSync(filePath)) {
+        const fallbackRes = saveMediaLocally({
+          filePath,
+          originalName: file.originalname || file.filename,
+          mimeType: mime,
+          resourceType: isVideo ? 'video' : 'image'
+        });
+        try {
+          fs.unlinkSync(filePath);
+        } catch (_) {}
+        return fallbackRes;
+      }
+    } catch (saveErr) {
+      console.error('[Fallback Save Error]:', saveErr);
+    }
     if (fs.existsSync(filePath)) {
       try {
         fs.unlinkSync(filePath);
@@ -1862,9 +1881,36 @@ app.post('/api/admin/orders/:id/retry-notification', adminAuthMiddleware, async 
 });
 
 // Admin Products API
+async function normalizeProductVideo(body: any): Promise<void> {
+  if (!body) return;
+  if (typeof body.video === 'string' && body.video.trim().startsWith('data:')) {
+    try {
+      const videoStr = body.video.trim();
+      const matches = videoStr.match(/^data:([^;]+);base64,(.+)$/);
+      if (matches) {
+        const mimeType = matches[1];
+        const base64Data = matches[2];
+        const buffer = Buffer.from(base64Data, 'base64');
+        const ext = mimeType.includes('webm') ? '.webm' : mimeType.includes('quicktime') ? '.mov' : '.mp4';
+        const uploadResult = await uploadMediaToCloudinary({
+          buffer,
+          originalName: `video-${Date.now()}${ext}`,
+          mimeType,
+          resourceType: 'video',
+          folder: 'indima-spices/videos'
+        });
+        body.video = uploadResult.secure_url || uploadResult.url;
+      }
+    } catch (e: any) {
+      console.warn('[Video Normalization Warning]:', e?.message || e);
+    }
+  }
+}
+
 app.post('/api/admin/products', adminAuthMiddleware, async (req: Request, res: Response) => {
   try {
     const session = (req as any).adminSession;
+    await normalizeProductVideo(req.body);
     const product = await db.addProduct(req.body, session?.username || 'Admin');
     res.json({ success: true, product });
   } catch (err: any) {
@@ -1875,6 +1921,7 @@ app.post('/api/admin/products', adminAuthMiddleware, async (req: Request, res: R
 app.put('/api/admin/products/:id', adminAuthMiddleware, async (req: Request, res: Response) => {
   try {
     const session = (req as any).adminSession;
+    await normalizeProductVideo(req.body);
     const updated = await db.updateProduct(req.params.id, req.body, session?.username || 'Admin');
     if (!updated) return res.status(404).json({ error: 'Product not found' });
     res.json({ success: true, product: updated });
