@@ -426,7 +426,13 @@ I am your personal AI Culinary & Spice Companion. Ask me for authentic Karnataka
   };
 
   const formatBoldAndItalics = (text: string) => {
-    return text
+    const escaped = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+    return escaped
       .replace(/\*\*\*(.*?)\*\*\*/g, '<strong class="font-bold text-[#1F1610]"><em class="italic text-[#7A6455]">$1</em></strong>')
       .replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-[#1F1610]">$1</strong>')
       .replace(/\*(.*?)\*/g, '<em class="italic text-[#7A6455]">$1</em>')

@@ -174,6 +174,11 @@ export async function uploadMediaToCloudinary(
 ): Promise<CloudinaryUploadResult> {
   const status = getCloudinaryStatus();
   if (!status.configured || !initCloudinary()) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        'Cloudinary is not configured on this server. Insecure local media storage fallback is strictly disabled in production. Please configure CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in your environment.'
+      );
+    }
     console.warn(
       '[Media Storage] Notice: Cloudinary credentials not configured. Saving uploaded media to local storage (/uploads/)...'
     );

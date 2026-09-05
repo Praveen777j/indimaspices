@@ -130,7 +130,7 @@ export const api = {
     return safeFetchJson<{ success: boolean; key_id: string; is_live: boolean; is_configured?: boolean }>(
       '/api/payments/config',
       undefined,
-      { success: true, key_id: 'rzp_test_51745778844888', is_live: false }
+      { success: false, key_id: '', is_live: false, is_configured: false }
     );
   },
 

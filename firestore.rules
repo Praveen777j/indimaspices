@@ -1,90 +1,81 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
-    }
 
-    function isValidRating(rating) {
-      return rating is number && rating >= 1 && rating <= 5;
-    }
+    // ========================================================================
+    // PUBLIC CATALOG & CONTENT (Read-only for storefront visitors)
+    // All writes are strictly restricted to the server Firebase Admin SDK.
+    // ========================================================================
 
-    // Public catalog & content collections (read allowed for store visitors)
     match /products/{productId} {
       allow read: if true;
-      allow write: if false; // Managed exclusively via server Firebase Admin SDK
+      allow write: if false;
     }
 
     match /categories/{categoryId} {
       allow read: if true;
-      allow write: if false; // Managed exclusively via server Firebase Admin SDK
+      allow write: if false;
     }
 
     match /recipes/{recipeId} {
       allow read: if true;
-      allow write: if false; // Managed exclusively via server Firebase Admin SDK
+      allow write: if false;
     }
 
     match /banners/{bannerId} {
       allow read: if true;
-      allow write: if false; // Managed exclusively via server Firebase Admin SDK
+      allow write: if false;
     }
 
     match /offers/{offerId} {
       allow read: if true;
-      allow write: if false; // Managed exclusively via server Firebase Admin SDK
+      allow write: if false;
     }
 
+    // Reviews: Public visitors can ONLY read approved reviews.
+    // Submission and moderation are routed strictly through server APIs with rate limiting.
     match /reviews/{reviewId} {
-      allow read: if true;
-      allow create: if isValidId(reviewId) && 
-        request.resource.data.rating is number &&
-        isValidRating(request.resource.data.rating) &&
-        request.resource.data.customer_name is string &&
-        request.resource.data.customer_name.size() > 0 &&
-        request.resource.data.customer_name.size() <= 100 &&
-        request.resource.data.comment_en is string &&
-        request.resource.data.comment_en.size() > 0 &&
-        request.resource.data.comment_en.size() <= 1000;
-      allow update, delete: if false; // Moderated via server Admin API
+      allow read: if resource.data.approved == true;
+      allow write: if false;
     }
 
-    match /leads/{leadId} {
-      allow read: if false; // Private lead data protected
-      allow create: if isValidId(leadId) &&
-        request.resource.data.phone is string &&
-        request.resource.data.phone.size() >= 10 &&
-        request.resource.data.phone.size() <= 15;
-      allow update, delete: if false;
-    }
+    // ========================================================================
+    // SENSITIVE & PRIVATE STORE DATA (DENY-ALL CLIENT ACCESS)
+    // Protected against client-side direct access.
+    // Managed exclusively via server Express APIs with authentication & validation.
+    // ========================================================================
 
     match /orders/{orderId} {
-      allow read, write: if false; // Managed exclusively via server APIs to protect PII
+      allow read, write: if false;
     }
 
     match /customers/{customerId} {
-      allow read, write: if false; // Managed exclusively via server APIs to protect PII
+      allow read, write: if false;
     }
 
-    match /processed_webhook_events/{eventId} {
-      allow read, write: if false; // Server internal idempotency tracking
+    match /leads/{leadId} {
+      allow read, write: if false;
     }
 
     match /settings/{settingId} {
-      allow read, write: if false; // Managed & sanitized exclusively via server APIs
+      allow read, write: if false;
+    }
+
+    match /processed_webhook_events/{eventId} {
+      allow read, write: if false;
     }
 
     match /audit_logs/{logId} {
-      allow read, write: if false; // Server internal audit trail
+      allow read, write: if false;
     }
 
     match /system/{docId} {
       allow read, write: if false;
     }
 
+    // Default deny-all fallback for any unlisted collections
     match /{document=**} {
       allow read, write: if false;
     }
   }
 }
-

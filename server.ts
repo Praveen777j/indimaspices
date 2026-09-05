@@ -22,6 +22,22 @@ import {
 } from './server/cloudinary';
 import { lookupPincode } from './src/data/indiaLocations';
 import { Order, Address } from './src/types';
+import {
+  validateSecurityConfiguration,
+  getSessionSecret,
+  signAdminToken,
+  verifyAdminToken,
+  revokeToken,
+  isTokenRevoked,
+  AdminLoginSchema,
+  AdminChangePasswordSchema,
+  SubmitReviewSchema,
+  SubmitLeadSchema,
+  CustomerLookupSchema,
+  TrackOrderSchema,
+  CreateRazorpayOrderSchema,
+  VerifyRazorpayPaymentSchema
+} from './server/security';
 
 const app = express();
 const PORT = 3000;
@@ -184,7 +200,17 @@ async function processMediaFile(
         processedBuffer = fs.readFileSync(filePath);
       }
     } else if (originalExt === '.svg' || mime.includes('svg')) {
-      processedBuffer = fs.readFileSync(filePath);
+      const rawSvg = fs.readFileSync(filePath, 'utf8');
+      // SVG security inspection: block scripts, executable tags, and event handlers
+      if (/<script|onload\s*=|onerror\s*=|onclick\s*=|onmouseover\s*=|javascript:|<foreignObject|<iframe|<embed|<object/i.test(rawSvg)) {
+        if (fs.existsSync(filePath)) {
+          try {
+            fs.unlinkSync(filePath);
+          } catch (_) {}
+        }
+        throw new Error('SVG contains potentially executable or script content and was rejected for security.');
+      }
+      processedBuffer = Buffer.from(rawSvg, 'utf8');
       finalContentType = 'image/svg+xml';
     } else {
       try {
@@ -220,6 +246,14 @@ async function processMediaFile(
 
     return uploadResult;
   } catch (err: any) {
+    if (process.env.NODE_ENV === 'production') {
+      if (fs.existsSync(filePath)) {
+        try {
+          fs.unlinkSync(filePath);
+        } catch (_) {}
+      }
+      throw new Error(`Media processing and Cloudinary storage failed: ${err.message || err}. Local fallback is strictly disabled in production.`);
+    }
     console.warn('[Process Media Notice]:', err?.message || err, '- saving raw upload as local fallback');
     try {
       if (fs.existsSync(filePath)) {
@@ -256,22 +290,58 @@ app.use(
 );
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// CORS & Security Headers Middleware
+app.disable('x-powered-by');
+
+// CORS & Comprehensive Security Headers Middleware
 app.use((req: Request, res: Response, next: NextFunction) => {
   const origin = req.headers.origin;
   const allowedOriginEnv = process.env.ALLOWED_ORIGIN;
 
   if (origin) {
     let isAllowed = false;
-    if (allowedOriginEnv && (origin === allowedOriginEnv || origin.endsWith(allowedOriginEnv))) {
-      isAllowed = true;
-    } else if (
-      origin.startsWith('http://localhost:') ||
-      origin.startsWith('http://127.0.0.1:') ||
-      origin.endsWith('.run.app') ||
-      origin.endsWith('.google.com')
-    ) {
-      isAllowed = true;
+
+    // Parse exact trusted origins from environment (comma-separated list supported)
+    const configuredOrigins = allowedOriginEnv
+      ? allowedOriginEnv.split(',').map(o => o.trim()).filter(Boolean)
+      : [];
+
+    try {
+      const originUrl = new URL(origin);
+      const originHostname = originUrl.hostname.toLowerCase();
+
+      // 1. Check exact configured origins
+      for (const trusted of configuredOrigins) {
+        if (origin.toLowerCase() === trusted.toLowerCase()) {
+          isAllowed = true;
+          break;
+        }
+        try {
+          const trustedUrl = new URL(trusted);
+          if (originHostname === trustedUrl.hostname.toLowerCase()) {
+            isAllowed = true;
+            break;
+          }
+        } catch {
+          // If trusted origin is domain without scheme (e.g. indimaspices.com)
+          const cleanDomain = trusted.toLowerCase().replace(/^\./, '');
+          if (originHostname === cleanDomain || originHostname.endsWith('.' + cleanDomain)) {
+            isAllowed = true;
+            break;
+          }
+        }
+      }
+
+      // 2. Development / sandbox preview origin checking (strictly non-production)
+      if (!isAllowed && process.env.NODE_ENV !== 'production') {
+        const isLocal = originHostname === 'localhost' || originHostname === '127.0.0.1';
+        const isGoogleCloudRun = originHostname.endsWith('.run.app') && originHostname.includes('ais-');
+        const isAiStudio = originHostname.endsWith('.google.com') && originHostname.includes('ai.studio');
+        if (isLocal || isGoogleCloudRun || isAiStudio) {
+          isAllowed = true;
+        }
+      }
+    } catch {
+      isAllowed = false;
     }
 
     if (isAllowed) {
@@ -282,8 +352,31 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     }
   }
 
+  // Standard Security Headers
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+
+  // Content Security Policy (CSP)
+  const cspHeader = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://api.razorpay.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' data: https://fonts.gstatic.com",
+    "img-src 'self' data: blob: https://res.cloudinary.com https://*.cloudinary.com https://*.firebasestorage.app https://images.unsplash.com https://cdn.razorpay.com",
+    "media-src 'self' data: blob: https://res.cloudinary.com https://*.cloudinary.com",
+    "connect-src 'self' https://api.razorpay.com https://lumberjack.razorpay.com https://*.firebaseio.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com",
+    "frame-src 'self' https://api.razorpay.com",
+    "frame-ancestors 'self' https://*.google.com https://*.run.app",
+    "object-src 'none'",
+    "base-uri 'self'"
+  ].join('; ');
+  res.setHeader('Content-Security-Policy', cspHeader);
+
+  if (process.env.NODE_ENV === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
 
   if (req.method === 'OPTIONS') {
     return res.sendStatus(204);
@@ -396,6 +489,20 @@ const paymentVerifyLimiter = createRateLimiter({
   keyPrefix: 'payment_verify'
 });
 
+const reviewSubmitLimiter = createRateLimiter({
+  windowMs: 60 * 1000, // 1 minute
+  max: 15,
+  message: 'Review submission limit reached. Please wait a moment before trying again.',
+  keyPrefix: 'rev_submit'
+});
+
+const reviewUploadLimiter = createRateLimiter({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10,
+  message: 'Media upload rate limit reached. Please wait a moment.',
+  keyPrefix: 'rev_upload'
+});
+
 // Secure Admin Sessions with HMAC Cryptographic Signing
 interface AdminSession {
   token: string;
@@ -406,13 +513,7 @@ interface AdminSession {
 
 const adminSessions = new Map<string, AdminSession>();
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
-const INTERNAL_SECRET = process.env.SESSION_SECRET || process.env.ADMIN_SECRET || 'indima-super-secret-production-auth-salt-2026';
-
-function signAdminToken(username: string, timestamp: number): string {
-  const payload = `${username}:${timestamp}`;
-  const hmac = crypto.createHmac('sha256', INTERNAL_SECRET).update(payload).digest('hex');
-  return `indima_v2_${Buffer.from(payload).toString('base64url')}_${hmac}`;
-}
+const INTERNAL_SECRET = getSessionSecret();
 
 function verifyAdminTokenSignature(token: string): { valid: boolean; username: string; timestamp: number } {
   try {
@@ -443,8 +544,8 @@ function verifyAdminTokenSignature(token: string): { valid: boolean; username: s
 }
 
 function generateSecureSession(username: string): string {
+  const token = signAdminToken(username);
   const now = Date.now();
-  const token = signAdminToken(username, now);
   adminSessions.set(token, {
     token,
     username,
@@ -455,7 +556,7 @@ function generateSecureSession(username: string): string {
 }
 
 function validateAdminToken(token: string): AdminSession | null {
-  if (!token) return null;
+  if (!token || isTokenRevoked(token)) return null;
   const session = adminSessions.get(token);
   if (session) {
     if (Date.now() > session.expiresAt) {
@@ -465,7 +566,20 @@ function validateAdminToken(token: string): AdminSession | null {
     return session;
   }
 
-  // Verify cryptographic signature for seamless container resilience
+  // Verify modern cryptographic signature via security module
+  const verifiedPayload = verifyAdminToken(token);
+  if (verifiedPayload) {
+    const restoredSession: AdminSession = {
+      token,
+      username: verifiedPayload.username,
+      createdAt: verifiedPayload.issuedAt,
+      expiresAt: verifiedPayload.expiresAt
+    };
+    adminSessions.set(token, restoredSession);
+    return restoredSession;
+  }
+
+  // Verify legacy format if token was issued prior to restart
   const verification = verifyAdminTokenSignature(token);
   if (verification.valid) {
     const restoredSession: AdminSession = {
@@ -615,19 +729,30 @@ app.get('/api/reviews', (req: Request, res: Response) => {
   res.json(reviews);
 });
 
-app.post('/api/reviews', async (req: Request, res: Response) => {
+app.post('/api/reviews', reviewSubmitLimiter, async (req: Request, res: Response) => {
   try {
-    const { product_id, customer_name, customer_city, rating, comment_en, comment_kn } = req.body;
-    if (!product_id || !customer_name || !rating || !comment_en) {
-      return res.status(400).json({ error: 'Missing required review fields' });
+    const parseResult = SubmitReviewSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({ error: parseResult.error.issues[0]?.message || 'Invalid review payload' });
     }
+    const { product_id, customer_name, customer_city, rating, comment_en, comment_kn } = parseResult.data;
+
+    // Verify product actually exists
+    const prod = db.getProductById(product_id);
+    if (!prod) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    // Basic HTML escaping against stored XSS
+    const escapeHtml = (str: string) => str.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
     const review = await db.addReview({
       product_id,
-      customer_name,
-      customer_city: customer_city || 'Karnataka',
-      rating: Number(rating) || 5,
-      comment_en,
-      comment_kn: comment_kn || comment_en
+      customer_name: escapeHtml(customer_name),
+      customer_city: customer_city ? escapeHtml(customer_city) : 'Karnataka',
+      rating,
+      comment_en: escapeHtml(comment_en),
+      comment_kn: comment_kn ? escapeHtml(comment_kn) : escapeHtml(comment_en)
     });
     res.json({ success: true, review });
   } catch (err: any) {
@@ -1436,15 +1561,15 @@ app.post('/api/payments/webhook', handleRazorpayWebhook);
 // 14. Lead Capture
 app.post('/api/leads', leadLimiter, async (req: Request, res: Response) => {
   try {
-    const { phone, source } = req.body;
-    if (!phone) {
-      return res.status(400).json({ error: 'Phone number is required' });
+    const parseResult = SubmitLeadSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({ error: parseResult.error.issues[0]?.message || 'Please provide a valid 10-digit phone number' });
     }
-    const clean = String(phone).replace(/\D/g, '').slice(-10);
+    const clean = parseResult.data.phone.replace(/\D/g, '').slice(-10);
     if (clean.length !== 10) {
       return res.status(400).json({ error: 'Please enter a valid 10-digit WhatsApp number' });
     }
-    const lead = await db.addLead(clean, source);
+    const lead = await db.addLead(clean, parseResult.data.source);
     res.json({ success: true, lead, couponCode: 'INDIMA10' });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -1457,9 +1582,13 @@ app.post('/api/leads', leadLimiter, async (req: Request, res: Response) => {
 
 // Admin Login (Protected by rate limiting & timing-safe password check)
 app.post('/api/admin/login', adminLoginLimiter, async (req: Request, res: Response) => {
-  const { username, password } = req.body;
-  const cleanUser = (username || '').toLowerCase().trim();
-  const cleanPass = (password || '').trim();
+  const parseResult = AdminLoginSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    return res.status(400).json({ error: parseResult.error.issues[0]?.message || 'Username and password are required' });
+  }
+
+  const cleanUser = parseResult.data.username.toLowerCase().trim();
+  const cleanPass = parseResult.data.password.trim();
 
   const allowedUsers = [
     'admin',
@@ -1471,12 +1600,12 @@ app.post('/api/admin/login', adminLoginLimiter, async (req: Request, res: Respon
     'owner'
   ];
 
-  const isUserValid = allowedUsers.includes(cleanUser) || cleanUser === '' || cleanUser === 'admin';
-  const isPassValid = db.verifyAdminPassword(cleanPass);
+  const isUserValid = allowedUsers.includes(cleanUser);
+  const isPassValid = await db.verifyAdminPassword(cleanPass);
 
   if (isUserValid && isPassValid) {
-    const token = generateSecureSession(cleanUser || 'admin');
-    await db.logAudit(cleanUser || 'admin', 'ADMIN_LOGIN', 'auth', 'Admin logged in successfully');
+    const token = generateSecureSession(cleanUser);
+    await db.logAudit(cleanUser, 'ADMIN_LOGIN', 'auth', 'Admin logged in successfully');
     
     // Refresh authoritative Firestore cache asynchronously on login
     db.reloadFromFirestore().catch(e => console.warn('[Firestore] Background reload on admin login notice:', e?.message));
@@ -1485,7 +1614,7 @@ app.post('/api/admin/login', adminLoginLimiter, async (req: Request, res: Respon
       success: true,
       token,
       admin: {
-        username: cleanUser || 'admin',
+        username: cleanUser,
         role: 'Super Admin',
         name: 'Indima Store Administrator'
       }
@@ -1499,15 +1628,18 @@ app.post('/api/admin/login', adminLoginLimiter, async (req: Request, res: Respon
 // Admin Password Change
 app.post('/api/admin/change-password', adminAuthMiddleware, async (req: Request, res: Response) => {
   try {
-    const { current_password, new_password } = req.body;
-    if (!current_password || !new_password) {
-      return res.status(400).json({ error: 'Current password and new password are required' });
+    const parseResult = AdminChangePasswordSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({ error: parseResult.error.issues[0]?.message || 'Invalid password payload' });
     }
-    if (!db.verifyAdminPassword(current_password)) {
+    const { current_password, new_password } = parseResult.data;
+
+    const isCurrentValid = await db.verifyAdminPassword(current_password);
+    if (!isCurrentValid) {
       return res.status(400).json({ error: 'Current password does not match' });
     }
-    if (new_password.trim().length < 6) {
-      return res.status(400).json({ error: 'New password must be at least 6 characters long' });
+    if (new_password.trim().length < 8) {
+      return res.status(400).json({ error: 'New password must be at least 8 characters long' });
     }
     const session = (req as any).adminSession;
     const success = await db.setAdminPassword(new_password, session?.username || 'Admin');
@@ -1525,6 +1657,7 @@ app.post('/api/admin/logout', (req: Request, res: Response) => {
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.split(' ')[1];
+    revokeToken(token);
     adminSessions.delete(token);
   }
   res.json({ success: true });
@@ -1679,8 +1812,8 @@ app.post('/api/admin/upload-hero-media', adminAuthMiddleware, (req: Request, res
   });
 });
 
-// Review Proof Media Upload (Images & Videos)
-app.post('/api/reviews/upload-proof', (req: Request, res: Response) => {
+// Review Proof Media Upload (Images & Videos - Rate Limited & MIME Verified)
+app.post('/api/reviews/upload-proof', reviewUploadLimiter, (req: Request, res: Response) => {
   upload.single('file')(req, res, async (err: any) => {
     if (err) {
       return res.status(400).json({ success: false, error: err.message || 'Review proof upload failed' });
@@ -1691,8 +1824,36 @@ app.post('/api/reviews/upload-proof', (req: Request, res: Response) => {
         return res.status(400).json({ success: false, error: 'No proof media file provided' });
       }
 
+      // Enforce 25MB max size on review proof upload
+      const MAX_PROOF_SIZE = 25 * 1024 * 1024;
+      if (file.size > MAX_PROOF_SIZE) {
+        if (fs.existsSync(file.path)) {
+          try { fs.unlinkSync(file.path); } catch (_) {}
+        }
+        return res.status(400).json({ success: false, error: 'Review proof file size exceeds maximum limit of 25MB' });
+      }
+
       const mime = (file.mimetype || '').toLowerCase();
       const ext = path.extname(file.originalname).toLowerCase();
+      const allowedProofMimes = [
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+        'image/heic',
+        'image/heif',
+        'video/mp4',
+        'video/webm',
+        'video/quicktime'
+      ];
+      const allowedProofExts = ['.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif', '.mp4', '.webm', '.mov'];
+
+      if (!allowedProofMimes.includes(mime) && !allowedProofExts.includes(ext)) {
+        if (fs.existsSync(file.path)) {
+          try { fs.unlinkSync(file.path); } catch (_) {}
+        }
+        return res.status(400).json({ success: false, error: 'Invalid file format. Only images (JPG, PNG, WebP) and videos (MP4, WebM) are permitted.' });
+      }
+
       const isVideo = mime.startsWith('video/') || /^\.(mp4|webm|mov|mkv|avi)$/i.test(ext);
 
       const uploadResult = await processMediaFile(file, {
@@ -2344,6 +2505,19 @@ async function startServer() {
     } catch (migErr: any) {
       console.error('[Server Startup] Migration encountered error:', migErr.message);
     }
+  }
+
+  // Production security audit & environment validation
+  const securityReport = validateSecurityConfiguration();
+  if (securityReport.errors.length > 0) {
+    console.error('================================================================');
+    console.error('🚨 [SECURITY CONFIGURATION ALERT] CRITICAL ISSUES DETECTED:');
+    securityReport.errors.forEach(err => console.error(`  - ${err}`));
+    console.error('================================================================');
+  }
+  if (securityReport.warnings.length > 0 && process.env.NODE_ENV === 'production') {
+    console.warn('⚠️ [SECURITY WARNINGS]:');
+    securityReport.warnings.forEach(warn => console.warn(`  - ${warn}`));
   }
 
   try {

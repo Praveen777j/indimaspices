@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { getFirebaseAdmin, getAdminStorageBucketInstance, markStorageUnavailable } from './firebaseAdmin';
+import { verifyPassword, hashPassword } from './security';
 import {
   Product,
   Category,
@@ -853,6 +854,13 @@ class DataStore {
 
   // --- Settings & Security ---
   public getSettings(): BusinessSettings {
+    const raw = this.data.settings;
+    // Omit sensitive credentials from exposed settings object
+    const { admin_password, ...safeSettings } = raw;
+    return safeSettings as BusinessSettings;
+  }
+
+  public getRawSettingsInternal(): BusinessSettings {
     return this.data.settings;
   }
 
@@ -860,19 +868,34 @@ class DataStore {
     return this.data.settings.admin_password || process.env.ADMIN_PASSWORD || 'indima@2026';
   }
 
-  public verifyAdminPassword(password: string): boolean {
+  public async verifyAdminPassword(password: string): Promise<boolean> {
     const current = this.getAdminPassword();
-    return Boolean(password && current && password.trim() === current.trim());
+    if (!password || !current) return false;
+
+    const isValid = await verifyPassword(password, current);
+    if (isValid && !current.startsWith('scrypt$')) {
+      // Opportunistically upgrade legacy plaintext/unhashed password to scrypt hash
+      try {
+        const upgradedHash = await hashPassword(password.trim());
+        this.data.settings.admin_password = upgradedHash;
+        this.save();
+        this.setFirestoreDoc('settings', 'store_settings', this.data.settings).catch(() => {});
+      } catch (upgradeErr) {
+        console.warn('[Security] Password hash upgrade notice:', upgradeErr);
+      }
+    }
+    return isValid;
   }
 
   public async setAdminPassword(newPassword: string, adminUser = 'Admin'): Promise<boolean> {
-    if (!newPassword || newPassword.trim().length < 6) {
+    if (!newPassword || newPassword.trim().length < 8) {
       return false;
     }
-    this.data.settings.admin_password = newPassword.trim();
+    const hashedPassword = await hashPassword(newPassword.trim());
+    this.data.settings.admin_password = hashedPassword;
     this.save();
     Promise.allSettled([
-      this.logAudit(adminUser, 'ADMIN_PASSWORD_CHANGED', 'security', 'Admin master password updated'),
+      this.logAudit(adminUser, 'ADMIN_PASSWORD_CHANGED', 'security', 'Admin master password securely updated and hashed with scrypt'),
       this.setFirestoreDoc('settings', 'store_settings', this.data.settings)
     ]).catch(() => {});
     return true;
