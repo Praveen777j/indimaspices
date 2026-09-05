@@ -92,7 +92,7 @@ Centralized security hub providing:
 - Cleaned hardcoded fallback mock key (`rzp_test_...`) to return unconfigured status cleanly instead of mock values.
 
 ### `.env.example`
-- Removed default password (`indima@2026`).
+- Removed default password.
 - Documented `SESSION_SECRET` (mandatory 32+ character key in production).
 - Clearly listed all required production credentials for Render deployment.
 

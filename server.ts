@@ -98,6 +98,20 @@ function timingSafeEqual(a: string, b: string): boolean {
   return crypto.timingSafeEqual(bufA, bufB);
 }
 
+// Cryptographic Order Access Token Generation & Timing-Safe Verification
+function getOrderAccessToken(order: Order): string {
+  if (order.order_token) return order.order_token;
+  const secret = getSessionSecret() || process.env.SESSION_SECRET || 'indima-order-access-secret-fallback-key-1837482';
+  return crypto.createHmac('sha256', secret).update(`${order.id}:${order.created_at || ''}`).digest('hex');
+}
+
+function verifyOrderAccessToken(order: Order, providedToken?: string): boolean {
+  if (!providedToken || typeof providedToken !== 'string') return false;
+  const cleanProvided = providedToken.trim();
+  const validToken = getOrderAccessToken(order);
+  return timingSafeEqual(cleanProvided, validToken);
+}
+
 // Multer Storage Configuration - Temporary disk storage for processing only
 const TEMP_UPLOAD_DIR = path.join(os.tmpdir(), 'indima-uploads-temp');
 if (!fs.existsSync(TEMP_UPLOAD_DIR)) {
@@ -138,6 +152,37 @@ const upload = multer({
       cb(null, true);
     } else {
       cb(new Error('Only images (JPEG, PNG, WebP, HEIC, SVG) and video formats (MP4, WebM, MOV, etc.) are allowed!'));
+    }
+  }
+});
+
+// Dedicated Multer middleware for review proof uploads: strict 25MB stream limit, no application/octet-stream
+const allowedReviewProofMimes = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+  'video/mp4',
+  'video/webm',
+  'video/quicktime'
+];
+const allowedReviewProofExts = ['.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif', '.mp4', '.webm', '.mov'];
+
+const reviewProofUpload = multer({
+  storage,
+  limits: {
+    fileSize: 25 * 1024 * 1024 // Exactly 25MB stream-level limit
+  },
+  fileFilter: (req, file, cb) => {
+    const mime = (file.mimetype || '').toLowerCase();
+    const ext = path.extname(file.originalname || '').toLowerCase();
+
+    // Reject application/octet-stream and require BOTH allowed MIME and allowed extension
+    if (!allowedReviewProofMimes.includes(mime) || !allowedReviewProofExts.includes(ext)) {
+      cb(new Error('Invalid file format. Only images (JPG, PNG, WebP, HEIC) and videos (MP4, WebM, MOV) are permitted.'));
+    } else {
+      cb(null, true);
     }
   }
 });
@@ -299,53 +344,42 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
   if (origin) {
     let isAllowed = false;
+    let matchedTrustedOrigin: string | null = null;
+    const cleanOrigin = origin.trim();
 
     // Parse exact trusted origins from environment (comma-separated list supported)
     const configuredOrigins = allowedOriginEnv
       ? allowedOriginEnv.split(',').map(o => o.trim()).filter(Boolean)
       : [];
 
-    try {
-      const originUrl = new URL(origin);
-      const originHostname = originUrl.hostname.toLowerCase();
-
-      // 1. Check exact configured origins
-      for (const trusted of configuredOrigins) {
-        if (origin.toLowerCase() === trusted.toLowerCase()) {
-          isAllowed = true;
-          break;
-        }
-        try {
-          const trustedUrl = new URL(trusted);
-          if (originHostname === trustedUrl.hostname.toLowerCase()) {
-            isAllowed = true;
-            break;
-          }
-        } catch {
-          // If trusted origin is domain without scheme (e.g. indimaspices.com)
-          const cleanDomain = trusted.toLowerCase().replace(/^\./, '');
-          if (originHostname === cleanDomain || originHostname.endsWith('.' + cleanDomain)) {
-            isAllowed = true;
-            break;
-          }
-        }
+    // 1. Strict exact origin matching (scheme, hostname, port) for production
+    for (const trusted of configuredOrigins) {
+      if (cleanOrigin.toLowerCase() === trusted.toLowerCase()) {
+        isAllowed = true;
+        matchedTrustedOrigin = trusted;
+        break;
       }
+    }
 
-      // 2. Development / sandbox preview origin checking (strictly non-production)
-      if (!isAllowed && process.env.NODE_ENV !== 'production') {
+    // 2. Development / sandbox preview origin checking (strictly non-production only)
+    if (!isAllowed && process.env.NODE_ENV !== 'production') {
+      try {
+        const originUrl = new URL(cleanOrigin);
+        const originHostname = originUrl.hostname.toLowerCase();
         const isLocal = originHostname === 'localhost' || originHostname === '127.0.0.1';
-        const isGoogleCloudRun = originHostname.endsWith('.run.app') && originHostname.includes('ais-');
+        const isGoogleCloudRun = originHostname.endsWith('.run.app') && originHostname.startsWith('ais-');
         const isAiStudio = originHostname.endsWith('.google.com') && originHostname.includes('ai.studio');
         if (isLocal || isGoogleCloudRun || isAiStudio) {
           isAllowed = true;
+          matchedTrustedOrigin = cleanOrigin;
         }
+      } catch {
+        isAllowed = false;
       }
-    } catch {
-      isAllowed = false;
     }
 
-    if (isAllowed) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
+    if (isAllowed && matchedTrustedOrigin) {
+      res.setHeader('Access-Control-Allow-Origin', matchedTrustedOrigin);
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
       res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
       res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -770,87 +804,97 @@ app.get('/api/pincode/:pincode', (req: Request, res: Response) => {
   res.json(result);
 });
 
-// 9. Customer lookup by 10-digit Indian mobile number (Rate-limited & Sanitized)
-app.post('/api/customer/lookup', customerLookupLimiter, (req: Request, res: Response) => {
-  const { phone } = req.body;
-  if (!phone) {
-    return res.status(400).json({ error: 'Phone number is required' });
-  }
-  const cleanPhone = String(phone).replace(/\D/g, '').slice(-10);
-  if (cleanPhone.length !== 10) {
-    return res.status(400).json({ error: 'Please provide a valid 10-digit Indian phone number' });
-  }
-
-  const customer = db.findCustomerByPhone(cleanPhone);
-  if (!customer) {
-    return res.json({ found: false });
-  }
-  res.json({
-    found: true,
-    customer: {
-      id: customer.id,
-      phone: customer.phone,
-      name: customer.name,
-      email: customer.email,
-      saved_address: customer.saved_address
-    }
-  });
+// 9. Customer lookup endpoint - disabled for unauthenticated callers to prevent PII harvesting / BOLA
+app.post('/api/customer/lookup', customerLookupLimiter, (_req: Request, res: Response) => {
+  // Fails closed: Never returns customer profile or saved address to arbitrary callers.
+  return res.json({ found: false, count: 0 });
 });
 
-// 10. Track Orders by Phone & Optional Order ID (Rate-limited & Sanitized PII)
+// 10. Track Orders by Order ID & Token or Admin Authorization
 app.get('/api/orders/track', orderTrackLimiter, (req: Request, res: Response) => {
   const { phone, order_id } = req.query;
-  if (!phone || typeof phone !== 'string') {
-    return res.status(400).json({ error: 'Please enter a valid 10-digit phone number' });
-  }
-
-  const cleanPhone = phone.replace(/\D/g, '').slice(-10);
-  if (cleanPhone.length !== 10) {
-    return res.status(400).json({ error: 'Please enter a valid 10-digit phone number' });
-  }
-
   const authHeader = req.headers.authorization;
   const hasAdminSession = Boolean(authHeader && authHeader.startsWith('Bearer ') && validateAdminToken(authHeader.split(' ')[1]));
 
-  let rawOrders = db.getOrdersByPhone(cleanPhone);
-  if (order_id && typeof order_id === 'string') {
-    rawOrders = rawOrders.filter(o => o.id.toLowerCase() === order_id.toLowerCase().trim());
+  // 1. Admin Session: Allow tracking / searching by phone or order_id
+  if (hasAdminSession) {
+    let rawOrders = phone && typeof phone === 'string'
+      ? db.getOrdersByPhone(phone.replace(/\D/g, '').slice(-10))
+      : db.getOrders();
+    if (order_id && typeof order_id === 'string') {
+      rawOrders = rawOrders.filter(o => o.id.toLowerCase() === order_id.toLowerCase().trim());
+    }
+    return res.json({
+      phone: phone ? `+91 ${phone}` : undefined,
+      count: rawOrders.length,
+      orders: rawOrders
+    });
   }
 
-  // Return full orders for admin sessions, otherwise sanitize sensitive PII (mask phone/email/street)
-  const sanitizedOrders = rawOrders.map(order => {
-    if (hasAdminSession) return order;
+  // 2. Customer Tracking: Allow tracking a specific order ONLY if provided with valid order access token
+  const searchOrderId = typeof order_id === 'string' ? order_id.trim() : '';
+  const providedToken = (
+    (req.query.token as string) ||
+    (req.headers['x-order-token'] as string) ||
+    (authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : '')
+  )?.trim();
 
-    const maskedPhone = order.customer_phone ? `+91 ******${order.customer_phone.slice(-4)}` : `+91 ******${cleanPhone.slice(-4)}`;
-    const maskedEmail = order.customer_email ? order.customer_email.replace(/^(.)(.*)(@.*)$/, '$1***$3') : undefined;
-    const sanitizedAddress = order.address_snapshot ? {
-      ...order.address_snapshot,
-      phone: maskedPhone,
-      houseFlat: '***',
-      street: '*** Delivery Address on file ***',
-      landmark: undefined
-    } : undefined;
+  if (searchOrderId && providedToken) {
+    const order = db.getOrderById(searchOrderId);
+    if (order && verifyOrderAccessToken(order, providedToken)) {
+      const sanitizedOrder = {
+        id: order.id,
+        internal_order_id: order.internal_order_id,
+        status: order.status,
+        order_status: order.order_status || order.status,
+        payment_status: order.payment_status,
+        payment_method: order.payment_method,
+        items: (order.items || []).map(item => ({
+          product_id: item.product_id,
+          name_en: item.name_en,
+          name_kn: item.name_kn,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          subtotal: item.subtotal,
+          image: item.image
+        })),
+        subtotal: order.subtotal,
+        discount_amount: order.discount_amount,
+        coupon_code: order.coupon_code,
+        shipping_fee: order.shipping_fee,
+        total_amount: order.total_amount,
+        currency: order.currency || 'INR',
+        tracking_number: order.tracking_number,
+        expected_delivery: order.expected_delivery,
+        created_at: order.created_at,
+        order_date: order.order_date,
+        address_snapshot: order.address_snapshot ? {
+          fullName: order.address_snapshot.fullName,
+          city: order.address_snapshot.city,
+          district: order.address_snapshot.district,
+          state: order.address_snapshot.state,
+          pincode: order.address_snapshot.pincode
+        } : undefined
+      };
+      return res.json({
+        count: 1,
+        orders: [sanitizedOrder]
+      });
+    }
+  }
 
-    return {
-      ...order,
-      customer_phone: maskedPhone,
-      customer_email: maskedEmail,
-      address_snapshot: sanitizedAddress
-    };
-  });
-
-  res.json({
-    phone: `+91 ******${cleanPhone.slice(-4)}`,
-    count: sanitizedOrders.length,
-    orders: sanitizedOrders
+  // 3. Fail closed: Unauthenticated caller querying only by phone or without valid order token
+  return res.status(401).json({
+    error: 'Order tracking requires customer authentication or a valid Order ID and Order Token. Please check your order confirmation receipt.',
+    count: 0,
+    orders: []
   });
 });
 
-// 10b. Get Single Order by ID (With PII protection against unauthorized scraping)
+// 10b. Get Single Order by ID (Protected by Admin Auth or Server-Issued Order Access Token)
 app.get('/api/orders/:id', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const phoneParam = typeof req.query.phone === 'string' ? req.query.phone.replace(/\D/g, '').slice(-10) : '';
     const authHeader = req.headers.authorization;
     const hasAdminSession = Boolean(authHeader && authHeader.startsWith('Bearer ') && validateAdminToken(authHeader.split(' ')[1]));
 
@@ -859,31 +903,66 @@ app.get('/api/orders/:id', (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    const isVerifiedCustomer = Boolean(phoneParam && order.customer_phone && order.customer_phone.endsWith(phoneParam));
-
-    // Full order if admin or verified customer
-    if (hasAdminSession || isVerifiedCustomer) {
+    // Admin session: Return full order
+    if (hasAdminSession) {
       return res.json({ success: true, order });
     }
 
-    // Return sanitized order data for generic status tracking without exposing full PII
-    const maskedPhone = order.customer_phone ? `+91 ******${order.customer_phone.slice(-4)}` : undefined;
-    const maskedEmail = order.customer_email ? order.customer_email.replace(/^(.)(.*)(@.*)$/, '$1***$3') : undefined;
-    const sanitizedAddress = order.address_snapshot ? {
-      ...order.address_snapshot,
-      houseFlat: '***',
-      street: '*** Delivery Address on file ***',
-      landmark: undefined
-    } : undefined;
+    // Customer access: Requires valid server-issued order access token
+    const providedToken = (
+      (req.query.token as string) ||
+      (req.headers['x-order-token'] as string) ||
+      (authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : '')
+    )?.trim();
 
-    res.json({
+    const hasValidOrderToken = verifyOrderAccessToken(order, providedToken);
+
+    if (!hasValidOrderToken) {
+      // Fail closed: Anonymous callers or callers with invalid tokens cannot view order details
+      return res.status(401).json({
+        error: 'Access denied. A valid order access token or administrator authorization is required to view order details.'
+      });
+    }
+
+    // Verified customer access: Return explicitly sanitized order data with strict data minimization
+    const sanitizedOrder = {
+      id: order.id,
+      internal_order_id: order.internal_order_id,
+      status: order.status,
+      order_status: order.order_status || order.status,
+      payment_status: order.payment_status,
+      payment_method: order.payment_method,
+      items: (order.items || []).map(item => ({
+        product_id: item.product_id,
+        name_en: item.name_en,
+        name_kn: item.name_kn,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        subtotal: item.subtotal,
+        image: item.image
+      })),
+      subtotal: order.subtotal,
+      discount_amount: order.discount_amount,
+      coupon_code: order.coupon_code,
+      shipping_fee: order.shipping_fee,
+      total_amount: order.total_amount,
+      currency: order.currency || 'INR',
+      tracking_number: order.tracking_number,
+      expected_delivery: order.expected_delivery,
+      created_at: order.created_at,
+      order_date: order.order_date,
+      address_snapshot: order.address_snapshot ? {
+        fullName: order.address_snapshot.fullName,
+        city: order.address_snapshot.city,
+        district: order.address_snapshot.district,
+        state: order.address_snapshot.state,
+        pincode: order.address_snapshot.pincode
+      } : undefined
+    };
+
+    return res.json({
       success: true,
-      order: {
-        ...order,
-        customer_phone: maskedPhone,
-        customer_email: maskedEmail,
-        address_snapshot: sanitizedAddress
-      }
+      order: sanitizedOrder
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -1039,10 +1118,11 @@ async function processOrderCreation(reqBody: any) {
     calculatedSubtotal - discountAmount >= settings.free_delivery_threshold ? 0 : settings.standard_shipping_fee;
   const finalTotal = Math.max(0, calculatedSubtotal - discountAmount + shippingFee);
 
-  // 6. Generate Internal Order ID e.g. IND-2608-XXXX
+  // 6. Generate Internal Order ID with 8-character cryptographically secure random suffix (e.g. IND-2609-A3F8B92C)
   const dateStr = new Date().toISOString().slice(2, 7).replace('-', '');
-  const randSuffix = Math.floor(1000 + Math.random() * 9000);
-  const orderId = `IND-${dateStr}-${randSuffix}`;
+  const cryptoSuffix = crypto.randomBytes(4).toString('hex').toUpperCase();
+  const orderId = `IND-${dateStr}-${cryptoSuffix}`;
+  const orderToken = crypto.randomBytes(32).toString('hex');
 
   // 7. Upsert Customer Profile
   const customer = await db.upsertCustomer({
@@ -1115,6 +1195,7 @@ async function processOrderCreation(reqBody: any) {
   const newOrder: Order = {
     id: orderId,
     internal_order_id: orderId,
+    order_token: orderToken,
     customer_id: customer.id,
     customer_name: customer_name.trim(),
     customer_phone: cleanPhone,
@@ -1144,6 +1225,7 @@ async function processOrderCreation(reqBody: any) {
 
   return {
     order: savedOrder,
+    order_token: orderToken,
     razorpay_order: rzpOrder,
     key_id: isRealOrder ? key_id : '',
     is_live: isRealOrder
@@ -1157,6 +1239,7 @@ app.post('/api/payments/create-order', orderCreateLimiter, async (req: Request, 
     res.json({
       success: true,
       order: result.order,
+      order_token: result.order_token,
       razorpay_order: result.razorpay_order,
       order_id: result.razorpay_order.id,
       amount: result.razorpay_order.amount,
@@ -1177,6 +1260,7 @@ app.post('/api/orders/create', orderCreateLimiter, async (req: Request, res: Res
     res.json({
       success: true,
       order: result.order,
+      order_token: result.order_token,
       razorpay_order: result.razorpay_order,
       order_id: result.razorpay_order.id,
       amount: result.razorpay_order.amount,
@@ -1345,7 +1429,8 @@ async function verifyPaymentInternal(body: any) {
   return {
     success: true,
     message: 'Payment verified successfully',
-    order: updatedOrder
+    order: updatedOrder,
+    order_token: updatedOrder.order_token || getOrderAccessToken(updatedOrder)
   };
 }
 
@@ -1570,7 +1655,7 @@ app.post('/api/leads', leadLimiter, async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Please enter a valid 10-digit WhatsApp number' });
     }
     const lead = await db.addLead(clean, parseResult.data.source);
-    res.json({ success: true, lead, couponCode: 'INDIMA10' });
+    res.json({ success: true, couponCode: 'INDIMA10' });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -1814,9 +1899,12 @@ app.post('/api/admin/upload-hero-media', adminAuthMiddleware, (req: Request, res
 
 // Review Proof Media Upload (Images & Videos - Rate Limited & MIME Verified)
 app.post('/api/reviews/upload-proof', reviewUploadLimiter, (req: Request, res: Response) => {
-  upload.single('file')(req, res, async (err: any) => {
+  reviewProofUpload.single('file')(req, res, async (err: any) => {
     if (err) {
-      return res.status(400).json({ success: false, error: err.message || 'Review proof upload failed' });
+      const errMsg = err.code === 'LIMIT_FILE_SIZE'
+        ? 'Review proof file size exceeds maximum limit of 25MB'
+        : (err.message || 'Review proof upload failed');
+      return res.status(400).json({ success: false, error: errMsg });
     }
     try {
       const file = req.file;
@@ -1824,7 +1912,7 @@ app.post('/api/reviews/upload-proof', reviewUploadLimiter, (req: Request, res: R
         return res.status(400).json({ success: false, error: 'No proof media file provided' });
       }
 
-      // Enforce 25MB max size on review proof upload
+      // Enforce 25MB max size on review proof upload (defense-in-depth)
       const MAX_PROOF_SIZE = 25 * 1024 * 1024;
       if (file.size > MAX_PROOF_SIZE) {
         if (fs.existsSync(file.path)) {
@@ -1847,7 +1935,7 @@ app.post('/api/reviews/upload-proof', reviewUploadLimiter, (req: Request, res: R
       ];
       const allowedProofExts = ['.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif', '.mp4', '.webm', '.mov'];
 
-      if (!allowedProofMimes.includes(mime) && !allowedProofExts.includes(ext)) {
+      if (!allowedProofMimes.includes(mime) || !allowedProofExts.includes(ext)) {
         if (fs.existsSync(file.path)) {
           try { fs.unlinkSync(file.path); } catch (_) {}
         }

@@ -66,8 +66,8 @@ This document represents the formal pre-production security gate review for the 
 - **API secret exists only server-side**: **PASS** (`CLOUDINARY_API_SECRET` is never referenced in client bundles or `.env.example`)
 - **upload endpoint is protected**: **PASS** (All administrative upload endpoints require `adminAuthMiddleware`)
 - **unauthorized users cannot upload**: **PASS** (Public users are restricted to the rate-limited `/api/reviews/upload-proof` endpoint)
-- **unsupported file types are rejected**: **PASS** (Multer file filter validates MIME types and file extensions, unlinking invalid files)
-- **oversized files are rejected**: **PASS** (25MB limit on review proofs; 50MB request limit on Express body)
+- **unsupported file types are rejected**: **PASS** (Multer file filter and route validation enforce BOTH an allowed MIME type and extension; `application/octet-stream` is strictly rejected)
+- **oversized files are rejected**: **PASS** (Dedicated 25MB stream-level Multer limit on `/api/reviews/upload-proof` rejects files before disk write; 50MB request limit on Express body)
 - **SVG cannot introduce executable content**: **PASS** (SVG uploads are inspected; any files containing `<script>`, event handlers (`onload`, `onerror`), `javascript:`, `<foreignObject>`, or executable tags are rejected with an error and unlinked immediately)
 - **production does not silently fall back to insecure local media storage**: **PASS** (`uploadMediaToCloudinary` and `processMediaFile` throw an explicit error in production (`NODE_ENV === 'production'`) when Cloudinary credentials are missing or when uploads fail, preventing ephemeral local disk write)
 
@@ -113,7 +113,7 @@ This document represents the formal pre-production security gate review for the 
 
 ## 11. Production Configuration
 - **no hard-coded secrets**: **PASS** (All secrets loaded via `process.env`)
-- **no default passwords**: **PASS** (Startup validator flags `indima@2026` as invalid for production)
+- **no default passwords**: **PASS** (Zero default passwords exist in codebase; admin authentication fails closed if `ADMIN_PASSWORD` is not configured)
 - **no development authentication fallback**: **PASS** (Missing `SESSION_SECRET` in production generates an ephemeral 256-bit secret rather than a static default)
 - **no mock payment credentials**: **PASS** (Client fallback mock keys removed; live payments require valid server keys)
 - **no sensitive environment variables exposed to frontend**: **PASS** (Only public `VITE_` variables accessible to browser)

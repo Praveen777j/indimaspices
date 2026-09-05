@@ -108,18 +108,23 @@ export const api = {
     return res.json().catch(() => null);
   },
 
-  lookupCustomer: async (phone: string): Promise<any> => {
-    return safeFetchJson<any>('/api/customer/lookup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone })
-    }, { found: false, count: 0 });
+  lookupCustomer: async (_phone: string): Promise<any> => {
+    // Disabled on client & server to prevent unauthenticated PII enumeration
+    return { found: false, count: 0 };
   },
 
-  trackOrders: async (phone: string, orderId?: string): Promise<{ phone: string; count: number; orders: Order[] }> => {
+  trackOrders: async (phone: string, orderId?: string): Promise<{ phone: string; count: number; orders: Order[]; error?: string }> => {
     const query = new URLSearchParams({ phone });
-    if (orderId) query.append('order_id', orderId);
-    return safeFetchJson<{ phone: string; count: number; orders: Order[] }>(
+    if (orderId) {
+      query.append('order_id', orderId);
+      try {
+        const stored = JSON.parse(localStorage.getItem('indima_order_tokens') || '{}');
+        if (stored[orderId]) {
+          query.append('token', stored[orderId]);
+        }
+      } catch (_) {}
+    }
+    return safeFetchJson<{ phone: string; count: number; orders: Order[]; error?: string }>(
       `/api/orders/track?${query.toString()}`,
       undefined,
       { phone, count: 0, orders: [] }
@@ -135,11 +140,22 @@ export const api = {
   },
 
   createRazorpayOrder: async (orderPayload: any): Promise<any> => {
-    return safeFetchJson<any>('/api/payments/create-order', {
+    const res = await safeFetchJson<any>('/api/payments/create-order', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(orderPayload)
     }, { error: 'Failed to initialize payment order' });
+
+    if (res && res.order && (res.order_token || res.order.order_token)) {
+      try {
+        const token = res.order_token || res.order.order_token;
+        const stored = JSON.parse(localStorage.getItem('indima_order_tokens') || '{}');
+        stored[res.order.id] = token;
+        if (res.order.internal_order_id) stored[res.order.internal_order_id] = token;
+        localStorage.setItem('indima_order_tokens', JSON.stringify(stored));
+      } catch (_) {}
+    }
+    return res;
   },
 
   verifyRazorpayPayment: async (verifyPayload: {
@@ -181,15 +197,34 @@ export const api = {
   },
 
   createOrder: async (orderPayload: any): Promise<any> => {
-    return safeFetchJson<any>('/api/orders/create', {
+    const res = await safeFetchJson<any>('/api/orders/create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(orderPayload)
     }, { error: 'Failed to create order' });
+
+    if (res && res.order && (res.order_token || res.order.order_token)) {
+      try {
+        const token = res.order_token || res.order.order_token;
+        const stored = JSON.parse(localStorage.getItem('indima_order_tokens') || '{}');
+        stored[res.order.id] = token;
+        if (res.order.internal_order_id) stored[res.order.internal_order_id] = token;
+        localStorage.setItem('indima_order_tokens', JSON.stringify(stored));
+      } catch (_) {}
+    }
+    return res;
   },
 
   getOrderById: async (orderId: string): Promise<any> => {
-    return safeFetchJson<any>(`/api/orders/${encodeURIComponent(orderId)}`, {
+    let token = '';
+    try {
+      const stored = JSON.parse(localStorage.getItem('indima_order_tokens') || '{}');
+      token = stored[orderId] || '';
+    } catch (_) {}
+    const headers: Record<string, string> = {};
+    if (token) headers['x-order-token'] = token;
+    return safeFetchJson<any>(`/api/orders/${encodeURIComponent(orderId)}${token ? `?token=${encodeURIComponent(token)}` : ''}`, {
+      headers,
       cache: 'no-store'
     }, { error: 'Failed to fetch order' });
   },

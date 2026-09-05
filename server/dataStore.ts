@@ -62,7 +62,7 @@ const INITIAL_SETTINGS: BusinessSettings = {
   default_whatsapp_msg_en: 'Namaskara Indima Spice Co! I would like to inquire about your traditional pure spices.',
   default_whatsapp_msg_kn: 'ನಮಸ್ಕಾರ ಇಂದಿಮಾ ಸ್ಪೈಸ್ ಕಂ! ನಿಮ್ಮ ಸಾಂಪ್ರದಾಯಿಕ ಮಸಾಲೆಗಳ ಬಗ್ಗೆ ವಿಚಾರಿಸಬೇಕಾಗಿದೆ.',
   whatsapp_api_configured: false,
-  admin_password: process.env.ADMIN_PASSWORD || 'indima@2026',
+  admin_password: process.env.ADMIN_PASSWORD || '',
   policy_privacy_en: 'At Indima Spice Co., we prioritize your privacy. We collect minimal customer contact and Pan-India delivery address information purely to process and safely fulfill your spice orders. We do not sell or trade your personal details with third parties.',
   policy_privacy_kn: 'ಇಂದಿಮಾ ಸ್ಪೈಸ್ ಕಂ. ನಲ್ಲಿ ನಿಮ್ಮ ಗೌಪ್ಯತೆಗೆ ನಾವು ಮೊದಲ ಆದ್ಯತೆ ನೀಡುತ್ತೇವೆ. ನಿಮ್ಮ ಆರ್ಡರ್‌ಗಳನ್ನು ತಲುಪಿಸಲು ಮಾತ್ರ ನಾವು ಅಗತ್ಯ ವಿಳಾಸ ಮತ್ತು ಫೋನ್ ವಿವರಗಳನ್ನು ಬಳಸುತ್ತೇವೆ. ನಿಮ್ಮ ವಿವರಗಳನ್ನು ಬೇರೆಯವರಿಗೆ ಮಾರಾಟ ಮಾಡುವುದಿಲ್ಲ.',
   policy_terms_en: 'All Indima Spice Co. products are crafted using 100% natural, farm-sourced whole spices and authentic traditional formulations. Prices are in Indian Rupees (INR) and include applicable taxes.',
@@ -864,8 +864,12 @@ class DataStore {
     return this.data.settings;
   }
 
-  public getAdminPassword(): string {
-    return this.data.settings.admin_password || process.env.ADMIN_PASSWORD || 'indima@2026';
+  public getAdminPassword(): string | null {
+    const pass = this.data.settings.admin_password || process.env.ADMIN_PASSWORD;
+    if (pass && pass.trim().length > 0) {
+      return pass.trim();
+    }
+    return null;
   }
 
   public async verifyAdminPassword(password: string): Promise<boolean> {

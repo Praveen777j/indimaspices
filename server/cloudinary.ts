@@ -278,6 +278,9 @@ export async function uploadMediaToCloudinary(
     };
   } catch (err: any) {
     const cleanMsg = sanitizeCloudinaryError(err?.message || err);
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(`Cloudinary media upload failed: ${cleanMsg}. Local storage fallback is disabled in production.`);
+    }
     console.warn(`[Cloudinary Upload Notice (${determinedResourceType})]: ${cleanMsg}. Falling back to local storage (/uploads/)...`);
     try {
       return saveMediaLocally({

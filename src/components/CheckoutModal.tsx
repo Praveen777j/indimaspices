@@ -85,8 +85,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   // States & Districts helper
   const selectedStateData = INDIA_STATES.find(s => s.state.toLowerCase() === state.toLowerCase()) || INDIA_STATES[0];
 
-  // Lookup & returning customer state
-  const [returningCustomerFound, setReturningCustomerFound] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isInitializingPayment, setIsInitializingPayment] = useState(false);
   const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
@@ -104,32 +102,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       loadRazorpayScript();
     }
   }, [isOpen]);
-
-  // Auto-detect returning customer when 10 digits are entered
-  useEffect(() => {
-    const clean = phone.replace(/\D/g, '').slice(-10);
-    if (clean.length === 10) {
-      api.lookupCustomer(clean).then(res => {
-        if (res.found && res.customer) {
-          setFullName(res.customer.name || fullName);
-          setEmail(res.customer.email || email);
-          if (res.customer.saved_address) {
-            const addr = res.customer.saved_address;
-            setHouseFlat(addr.houseFlat || houseFlat);
-            setStreet(addr.street || street);
-            setArea(addr.area || area);
-            setLandmark(addr.landmark || landmark);
-            setPincode(addr.pincode || pincode);
-            setState(addr.state || state);
-            setDistrict(addr.district || district);
-            setCity(addr.city || city);
-            setDeliveryInstructions(addr.deliveryInstructions || deliveryInstructions);
-          }
-          setReturningCustomerFound(true);
-        }
-      }).catch(console.error);
-    }
-  }, [phone]);
 
   // Auto PIN code lookup
   const handlePincodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -418,15 +390,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           {/* STEP 1: Contact & Pan-India Address Form */}
           {step === 1 && (
             <form onSubmit={handleProceedToReview} className="space-y-4">
-              {returningCustomerFound && (
-                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center space-x-2.5 text-xs text-emerald-800">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>
-                    {t('returningCustomerFound', { name: fullName || 'Valued Customer' })}
-                  </span>
-                </div>
-              )}
-
               {/* Section 1: Contact */}
               <div className="space-y-3">
                 <h3 className="font-serif text-xs font-bold uppercase tracking-wider text-[#993300] flex items-center space-x-1.5">

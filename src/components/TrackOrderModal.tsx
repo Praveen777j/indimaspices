@@ -49,8 +49,10 @@ export const TrackOrderModal: React.FC<TrackOrderModalProps> = ({
   const isKn = language === 'kn';
 
   const handleSearch = async (searchPhone = phone, searchOrderId = orderId) => {
-    const cleanPhone = searchPhone.replace(/\D/g, '').slice(-10);
-    if (!cleanPhone && !searchOrderId) {
+    const cleanOrderId = (searchOrderId || '').trim();
+    const cleanPhone = (searchPhone || '').replace(/\D/g, '').slice(-10);
+
+    if (!cleanOrderId && !cleanPhone) {
       setError(t('trackOrderPrompt'));
       return;
     }
@@ -58,14 +60,14 @@ export const TrackOrderModal: React.FC<TrackOrderModalProps> = ({
     setLoading(true);
     setError('');
     try {
-      const res = await api.trackOrders(cleanPhone || '9999999999', searchOrderId || undefined);
+      const res = await api.trackOrders(cleanPhone || '9999999999', cleanOrderId || undefined);
       if (res.orders && res.orders.length > 0) {
         setOrders(res.orders);
         setSelectedOrder(res.orders[0]);
       } else {
         setOrders([]);
         setSelectedOrder(null);
-        setError(t('noOrdersFound'));
+        setError(res.error || t('noOrdersFound'));
       }
     } catch (e: any) {
       setError(e.message || 'Failed to fetch order details');
@@ -281,21 +283,29 @@ export const TrackOrderModal: React.FC<TrackOrderModalProps> = ({
                 </div>
               </div>
 
-              {/* Immutable Delivery Address */}
-              <div className="p-3.5 bg-[#FAF6EE] rounded-xl border border-[#EADBCA] text-xs text-neutral-800 space-y-1">
-                <h4 className="font-serif text-xs font-bold uppercase tracking-wider text-[#993300] flex items-center space-x-1.5 mb-1">
-                  <MapPin className="w-3.5 h-3.5" />
-                  <span>{t('immutableAddressLabel')}</span>
-                </h4>
-                <p className="font-bold text-neutral-900">{selectedOrder.address_snapshot.fullName}</p>
-                <p>+91 {selectedOrder.address_snapshot.phone}</p>
-                <p>
-                  {selectedOrder.address_snapshot.houseFlat}, {selectedOrder.address_snapshot.street}, {selectedOrder.address_snapshot.area}
-                </p>
-                <p className="font-bold text-[#993300]">
-                  {selectedOrder.address_snapshot.city}, {selectedOrder.address_snapshot.district}, {selectedOrder.address_snapshot.state} - {selectedOrder.address_snapshot.pincode}
-                </p>
-              </div>
+              {/* Delivery Address (Data-Minimized) */}
+              {selectedOrder.address_snapshot && (
+                <div className="p-3.5 bg-[#FAF6EE] rounded-xl border border-[#EADBCA] text-xs text-neutral-800 space-y-1">
+                  <h4 className="font-serif text-xs font-bold uppercase tracking-wider text-[#993300] flex items-center space-x-1.5 mb-1">
+                    <MapPin className="w-3.5 h-3.5" />
+                    <span>{t('immutableAddressLabel')}</span>
+                  </h4>
+                  {selectedOrder.address_snapshot.fullName && (
+                    <p className="font-bold text-neutral-900">{selectedOrder.address_snapshot.fullName}</p>
+                  )}
+                  {selectedOrder.address_snapshot.phone && !selectedOrder.address_snapshot.phone.includes('***') && (
+                    <p>+91 {selectedOrder.address_snapshot.phone}</p>
+                  )}
+                  {selectedOrder.address_snapshot.houseFlat && selectedOrder.address_snapshot.houseFlat !== '***' && (
+                    <p>
+                      {selectedOrder.address_snapshot.houseFlat}, {selectedOrder.address_snapshot.street}
+                    </p>
+                  )}
+                  <p className="font-bold text-[#993300]">
+                    {selectedOrder.address_snapshot.city}{selectedOrder.address_snapshot.district ? `, ${selectedOrder.address_snapshot.district}` : ''}, {selectedOrder.address_snapshot.state} - {selectedOrder.address_snapshot.pincode}
+                  </p>
+                </div>
+              )}
             </div>
           )}
 

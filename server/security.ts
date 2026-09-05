@@ -47,11 +47,11 @@ export function validateSecurityConfiguration(): { valid: boolean; warnings: str
 
   // Check ADMIN_PASSWORD
   const adminPass = process.env.ADMIN_PASSWORD;
-  if (!adminPass || adminPass === 'indima@2026') {
+  if (!adminPass) {
     if (IS_PROD) {
-      errors.push('ADMIN_PASSWORD is missing or set to the insecure default ("indima@2026"). You MUST set a unique ADMIN_PASSWORD in Render environment variables.');
+      errors.push('ADMIN_PASSWORD is not set. You MUST set a unique ADMIN_PASSWORD in Render environment variables. Admin authentication will fail closed until configured.');
     } else {
-      warnings.push('ADMIN_PASSWORD is using default fallback ("indima@2026"). Change this before deploying to production.');
+      warnings.push('ADMIN_PASSWORD is not set. Admin authentication will fail closed until ADMIN_PASSWORD is provided.');
     }
   }
 

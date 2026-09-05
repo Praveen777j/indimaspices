@@ -42,6 +42,14 @@ export const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
 
   useEffect(() => {
     if (order) {
+      if (order.id && order.order_token) {
+        try {
+          const stored = JSON.parse(localStorage.getItem('indima_order_tokens') || '{}');
+          stored[order.id] = order.order_token;
+          if (order.internal_order_id) stored[order.internal_order_id] = order.order_token;
+          localStorage.setItem('indima_order_tokens', JSON.stringify(stored));
+        } catch (_) {}
+      }
       // Trigger festive celebration confetti
       try {
         confetti({

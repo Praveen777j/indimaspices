@@ -125,6 +125,7 @@ export interface OrderItem {
 export interface Order {
   id: string;
   internal_order_id?: string;
+  order_token?: string;
   customer_id: string;
   customer_name: string;
   customer_phone: string;
