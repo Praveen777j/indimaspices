@@ -25,6 +25,17 @@ interface FooterProps {
   onNavigateToSection: (sectionId: string) => void;
 }
 
+export const isSafeExternalUrl = (value?: string): boolean => {
+  if (!value) return false;
+
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === 'https:' || url.protocol === 'http:';
+  } catch {
+    return false;
+  }
+};
+
 export const Footer: React.FC<FooterProps> = ({
   settings,
   onOpenPolicy,
@@ -120,7 +131,7 @@ export const Footer: React.FC<FooterProps> = ({
 
             {/* Social Icons */}
             <div className="flex items-center space-x-2.5 pt-2">
-              {settings.instagram_url && (
+              {isSafeExternalUrl(settings.instagram_url) && (
                 <a
                   href={settings.instagram_url}
                   target="_blank"
@@ -130,7 +141,7 @@ export const Footer: React.FC<FooterProps> = ({
                   <Instagram className="w-4 h-4" />
                 </a>
               )}
-              {settings.facebook_url && (
+              {isSafeExternalUrl(settings.facebook_url) && (
                 <a
                   href={settings.facebook_url}
                   target="_blank"
@@ -140,7 +151,7 @@ export const Footer: React.FC<FooterProps> = ({
                   <Facebook className="w-4 h-4" />
                 </a>
               )}
-              {settings.youtube_url && (
+              {isSafeExternalUrl(settings.youtube_url) && (
                 <a
                   href={settings.youtube_url}
                   target="_blank"
@@ -150,7 +161,7 @@ export const Footer: React.FC<FooterProps> = ({
                   <Youtube className="w-4 h-4" />
                 </a>
               )}
-              {settings.twitter_url && (
+              {isSafeExternalUrl(settings.twitter_url) && (
                 <a
                   href={settings.twitter_url}
                   target="_blank"

@@ -178,12 +178,32 @@ export function getReceiptLogoSvg(): string {
   </svg>`;
 }
 
+export function escapeHtml(val?: string | number | null): string {
+  if (val === null || val === undefined) return '';
+  return String(val)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export function getReceiptLogoHtml(settings: BusinessSettings): string {
   const customUrl = settings.logo_url;
   const svg = getReceiptLogoSvg();
-  if (customUrl && (customUrl.startsWith('http') || customUrl.startsWith('data:'))) {
-    return `<img src="${customUrl}" alt="Logo" class="brand-logo-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+  if (customUrl) {
+    const trimmed = customUrl.trim();
+    let isSafe = false;
+    try {
+      const parsed = new URL(trimmed);
+      isSafe = parsed.protocol === 'https:' || parsed.protocol === 'http:';
+    } catch {
+      isSafe = trimmed.startsWith('data:image/');
+    }
+    if (isSafe) {
+      return `<img src="${escapeHtml(trimmed)}" alt="Logo" class="brand-logo-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
     <div style="display:none; width: 100%; height: 100%;">${svg}</div>`;
+    }
   }
   return svg;
 }
@@ -208,13 +228,13 @@ export function generateInvoiceHtml(order: Order, settings: BusinessSettings): s
       <tr style="border-bottom: 1px solid #e5e7eb;">
         <td style="padding: 12px 14px; text-align: center; color: #6b7280; font-size: 13px;">${idx + 1}</td>
         <td style="padding: 12px 14px; font-weight: 600; color: #1f2937; font-size: 14px;">
-          ${item.name_en}
-          <div style="font-size: 11px; color: #78350f; font-style: italic;">${item.name_kn || ''}</div>
+          ${escapeHtml(item.name_en)}
+          <div style="font-size: 11px; color: #78350f; font-style: italic;">${escapeHtml(item.name_kn || '')}</div>
         </td>
-        <td style="padding: 12px 14px; text-align: center; color: #4b5563; font-size: 13px;">${item.weight || 'Standard'}</td>
-        <td style="padding: 12px 14px; text-align: center; font-weight: 600; color: #1f2937; font-size: 13px;">${item.quantity}</td>
-        <td style="padding: 12px 14px; text-align: right; color: #4b5563; font-size: 13px;">₹${unitP}</td>
-        <td style="padding: 12px 14px; text-align: right; font-weight: 700; color: #111827; font-size: 14px;">₹${itemTot}</td>
+        <td style="padding: 12px 14px; text-align: center; color: #4b5563; font-size: 13px;">${escapeHtml(item.weight || 'Standard')}</td>
+        <td style="padding: 12px 14px; text-align: center; font-weight: 600; color: #1f2937; font-size: 13px;">${escapeHtml(item.quantity)}</td>
+        <td style="padding: 12px 14px; text-align: right; color: #4b5563; font-size: 13px;">₹${Number(unitP) || 0}</td>
+        <td style="padding: 12px 14px; text-align: right; font-weight: 700; color: #111827; font-size: 14px;">₹${Number(itemTot) || 0}</td>
       </tr>
     `;
       }
@@ -225,7 +245,7 @@ export function generateInvoiceHtml(order: Order, settings: BusinessSettings): s
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Indima Spice Co. - Order Receipt ${order.id}</title>
+  <title>Indima Spice Co. - Order Receipt ${escapeHtml(order.id)}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
@@ -282,18 +302,18 @@ export function generateInvoiceHtml(order: Order, settings: BusinessSettings): s
           ${getReceiptLogoHtml(settings)}
         </div>
         <div class="brand-details">
-          <div class="brand-title">${settings.business_name || 'Indima Spice Co.'}</div>
-          <div class="brand-tagline">${settings.tagline_en || "Pure as mother's love • Traditional Karnataka Blends"}</div>
+          <div class="brand-title">${escapeHtml(settings.business_name || 'Indima Spice Co.')}</div>
+          <div class="brand-tagline">${escapeHtml(settings.tagline_en || "Pure as mother's love • Traditional Karnataka Blends")}</div>
           <div class="brand-meta">
-            ${settings.address || '#42, Traditional Kitchen Heritage Lane, Bull Temple Road, Basavanagudi, Bengaluru, Karnataka - 560004'}<br>
-            Phone: ${settings.phone || '+91 9663852435'} | WhatsApp: +${normalizeWhatsAppNumber(settings.whatsapp_number)}
+            ${escapeHtml(settings.address || '#42, Traditional Kitchen Heritage Lane, Bull Temple Road, Basavanagudi, Bengaluru, Karnataka - 560004')}<br>
+            Phone: ${escapeHtml(settings.phone || '+91 9663852435')} | WhatsApp: +${escapeHtml(normalizeWhatsAppNumber(settings.whatsapp_number))}
           </div>
         </div>
       </div>
       <div class="header-right">
         <span class="badge">Official Receipt</span>
-        <div style="font-size: 12px; color: #6b7280; margin-top: 8px;">Date: <strong>${dateFormatted}</strong></div>
-        <div style="font-size: 12px; color: #047857; font-weight: 700; margin-top: 4px;">Payment: ${order.payment_status?.toUpperCase() || 'PAID'}</div>
+        <div style="font-size: 12px; color: #6b7280; margin-top: 8px;">Date: <strong>${escapeHtml(dateFormatted)}</strong></div>
+        <div style="font-size: 12px; color: #047857; font-weight: 700; margin-top: 4px;">Payment: ${escapeHtml(order.payment_status?.toUpperCase() || 'PAID')}</div>
       </div>
     </div>
 
@@ -301,9 +321,9 @@ export function generateInvoiceHtml(order: Order, settings: BusinessSettings): s
     <div class="order-id-card">
       <div>
         <div class="order-id-title">Official Order ID for Tracking</div>
-        <div class="order-id-val">${order.id}</div>
+        <div class="order-id-val">${escapeHtml(order.id)}</div>
         <div style="font-size: 11px; color: #78350f; margin-top: 2px;">
-          Use this Order ID or your Phone (+91 ${order.customer_phone}) to track live progress anytime.
+          Use this Order ID or your Phone (+91 ${escapeHtml(order.customer_phone)}) to track live progress anytime.
         </div>
       </div>
       <div style="text-align: right;">
@@ -317,19 +337,19 @@ export function generateInvoiceHtml(order: Order, settings: BusinessSettings): s
       <div class="info-card">
         <div class="info-title">👤 Customer Information</div>
         <div class="info-body">
-          <strong>${order.customer_name}</strong><br>
-          Phone: +91 ${order.customer_phone}<br>
-          Email: ${order.customer_email || 'N/A'}<br>
-          Payment: ${order.payment_method || 'UPI / Razorpay'}
+          <strong>${escapeHtml(order.customer_name)}</strong><br>
+          Phone: +91 ${escapeHtml(order.customer_phone)}<br>
+          Email: ${escapeHtml(order.customer_email || 'N/A')}<br>
+          Payment: ${escapeHtml(order.payment_method || 'UPI / Razorpay')}
         </div>
       </div>
 
       <div class="info-card">
         <div class="info-title">📍 Delivery Address</div>
         <div class="info-body">
-          ${order.address_snapshot?.houseFlat || ''}, ${order.address_snapshot?.street || ''}<br>
-          ${order.address_snapshot?.area || ''}${order.address_snapshot?.landmark ? ', ' + order.address_snapshot.landmark : ''}<br>
-          <strong>${order.address_snapshot?.city || ''}, ${order.address_snapshot?.state || ''} - ${order.address_snapshot?.pincode || ''}</strong>
+          ${escapeHtml(order.address_snapshot?.houseFlat || '')}, ${escapeHtml(order.address_snapshot?.street || '')}<br>
+          ${escapeHtml(order.address_snapshot?.area || '')}${order.address_snapshot?.landmark ? ', ' + escapeHtml(order.address_snapshot.landmark) : ''}<br>
+          <strong>${escapeHtml(order.address_snapshot?.city || '')}, ${escapeHtml(order.address_snapshot?.state || '')} - ${escapeHtml(order.address_snapshot?.pincode || '')}</strong>
         </div>
       </div>
     </div>
@@ -355,23 +375,23 @@ export function generateInvoiceHtml(order: Order, settings: BusinessSettings): s
       <div class="totals-table">
         <div class="totals-row">
           <span>Items Subtotal:</span>
-          <span>₹${order.subtotal || order.total_amount}</span>
+          <span>₹${Number(order.subtotal || order.total_amount) || 0}</span>
         </div>
         ${
           order.discount_amount
             ? `<div class="totals-row" style="color: #047857;">
-                 <span>Festive Discount (${order.coupon_code || 'Applied'}):</span>
-                 <span>-₹${order.discount_amount}</span>
+                 <span>Festive Discount (${escapeHtml(order.coupon_code || 'Applied')}):</span>
+                 <span>-₹${Number(order.discount_amount) || 0}</span>
                </div>`
             : ''
         }
         <div class="totals-row">
           <span>Delivery Fee:</span>
-          <span>${order.shipping_fee === 0 ? 'FREE' : `₹${order.shipping_fee}`}</span>
+          <span>${order.shipping_fee === 0 ? 'FREE' : `₹${Number(order.shipping_fee) || 0}`}</span>
         </div>
         <div class="totals-row grand">
           <span>Total Paid:</span>
-          <span>₹${order.total_amount}</span>
+          <span>₹${Number(order.total_amount) || 0}</span>
         </div>
       </div>
     </div>
@@ -382,14 +402,14 @@ export function generateInvoiceHtml(order: Order, settings: BusinessSettings): s
       <div class="tracking-desc">
         Track your spice grinding, batch packing, and courier shipment progress anytime.
       </div>
-      <a href="${trackUrl}" target="_blank" class="tracking-link">
-        Click Here to Track Order ${order.id}
+      <a href="${escapeHtml(trackUrl)}" target="_blank" class="tracking-link">
+        Click Here to Track Order ${escapeHtml(order.id)}
       </a>
     </div>
 
     <div class="footer">
       <p>Thank you for supporting pure, authentic Karnataka spices and traditional heritage milling.</p>
-      <p style="margin-top: 4px;">Indima Spice Co. • Support: ${settings.email || 'care@indimaspice.com'} | WhatsApp: +${normalizeWhatsAppNumber(settings.whatsapp_number)}</p>
+      <p style="margin-top: 4px;">Indima Spice Co. • Support: ${escapeHtml(settings.email || 'care@indimaspice.com')} | WhatsApp: +${escapeHtml(normalizeWhatsAppNumber(settings.whatsapp_number))}</p>
     </div>
   </div>
 </body>
