@@ -5,7 +5,7 @@ import { translations } from '../i18n/translations';
 interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
-  t: (key: keyof typeof translations.en, params?: Record<string, string | number>) => string;
+  t: (key: keyof typeof translations.en | string, params?: Record<string, string | number>) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -21,9 +21,9 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     localStorage.setItem('indima_language', lang);
   };
 
-  const t = (key: keyof typeof translations.en, params?: Record<string, string | number>): string => {
+  const t = (key: keyof typeof translations.en | string, params?: Record<string, string | number>): string => {
     const langDict = translations[language] || translations.en;
-    let text = langDict[key] || translations.en[key] || (key as string);
+    let text = (langDict as any)[key] || (translations.en as any)[key] || (key as string);
 
     if (params) {
       Object.entries(params).forEach(([paramKey, val]) => {

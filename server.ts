@@ -20,6 +20,7 @@ import {
   migrateLocalMediaToCloudinary,
   CloudinaryUploadResult
 } from './server/cloudinary';
+import { validateMediaContent } from './server/mediaValidator';
 import { lookupPincode } from './src/data/indiaLocations';
 import { Order, Address } from './src/types';
 import {
@@ -41,6 +42,28 @@ import {
 
 const app = express();
 const PORT = 3000;
+
+// Configure trusted reverse-proxy hops for IP resolution and rate limiting
+// - In production (Render, Cloud Run, etc.) behind a single reverse proxy, default to 1 hop.
+// - Can be configured explicitly via TRUST_PROXY_HOPS or TRUST_PROXY environment variables.
+// - In local development / direct connections, defaults to false so untrusted clients cannot spoof X-Forwarded-For.
+const envTrustProxy = process.env.TRUST_PROXY_HOPS || process.env.TRUST_PROXY;
+if (envTrustProxy !== undefined) {
+  const hops = Number(envTrustProxy);
+  if (!isNaN(hops) && hops >= 0) {
+    app.set('trust proxy', hops);
+  } else if (envTrustProxy === 'true') {
+    app.set('trust proxy', 1);
+  } else if (envTrustProxy === 'false') {
+    app.set('trust proxy', false);
+  } else {
+    app.set('trust proxy', envTrustProxy);
+  }
+} else if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+} else {
+  app.set('trust proxy', false);
+}
 
 // Setup upload directory for local storage / fallback
 const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');
@@ -130,29 +153,56 @@ const storage = multer.diskStorage({
   }
 });
 
+const allowedAdminMimes = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+  'image/svg+xml',
+  'image/tiff',
+  'image/bmp',
+  'video/mp4',
+  'video/webm',
+  'video/quicktime',
+  'video/x-matroska'
+];
+const allowedAdminExts = [
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.webp',
+  '.heic',
+  '.heif',
+  '.svg',
+  '.tif',
+  '.tiff',
+  '.bmp',
+  '.mp4',
+  '.m4v',
+  '.webm',
+  '.mov',
+  '.mkv'
+];
+
 const upload = multer({
   storage,
   limits: {
     fileSize: 120 * 1024 * 1024 // 120MB for high-res images/videos
   },
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|webp|svg\+xml|svg|heic|heif|mp4|webm|quicktime|mov|tiff|bmp|mkv|avi|m4v|3gp|flv|wmv|ogv|ts/;
-    const ext = path.extname(file.originalname).toLowerCase().replace('.', '');
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname || '').toLowerCase();
     const mime = (file.mimetype || '').toLowerCase();
 
-    if (
-      allowedTypes.test(ext) ||
-      allowedTypes.test(mime) ||
-      mime.startsWith('image/') ||
-      mime.startsWith('video/') ||
-      ext === 'heic' ||
-      ext === 'heif' ||
-      mime === 'application/octet-stream'
-    ) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only images (JPEG, PNG, WebP, HEIC, SVG) and video formats (MP4, WebM, MOV, etc.) are allowed!'));
+    if (mime === 'application/octet-stream') {
+      return cb(new Error('Generic application/octet-stream upload is rejected. Please provide a valid media file.'));
     }
+
+    if (!allowedAdminMimes.includes(mime) || !allowedAdminExts.includes(ext)) {
+      return cb(new Error('Invalid file format. Only permitted image and video formats are allowed.'));
+    }
+
+    cb(null, true);
   }
 });
 
@@ -189,27 +239,39 @@ const reviewProofUpload = multer({
 
 /**
  * Normalizes uploaded media files:
+ * - Validates binary magic-bytes and container signature
  * - Direct video stream to Cloudinary using video resource type
  * - Converts HEIC/HEIF to JPEG
  * - Auto-rotates EXIF orientation from mobile phone cameras
- * - Optimizes image sizes with sharp
+ * - Optimizes and verifies image structures with sharp (rejects corrupt/spoofed files)
  * - Directly uploads to Cloudinary
  * - Cleans up temporary files immediately after upload
  */
 async function processMediaFile(
   file: Express.Multer.File,
-  options: { folder?: string; resourceType?: 'auto' | 'image' | 'video' } = {}
+  options: { folder?: string; resourceType?: 'auto' | 'image' | 'video'; allowSvg?: boolean } = {}
 ): Promise<CloudinaryUploadResult> {
   const filePath = file.path;
   const originalExt = path.extname(file.originalname || file.filename).toLowerCase();
   const baseName = path.basename(file.filename, path.extname(file.filename));
   const mime = (file.mimetype || '').toLowerCase();
 
-  const isVideo =
-    options.resourceType === 'video' ||
-    mime.startsWith('video/') ||
-    /mp4|webm|mov|quicktime|mkv|avi|m4v|3gp|flv|wmv|ogv|ts/.test(mime) ||
-    /^\.(mp4|webm|mov|mkv|avi|m4v|3gp|flv|wmv|ogv|ts)$/i.test(originalExt);
+  // 1. Mandatory Magic-Byte & Container Structure Validation before processing or storing
+  const validation = validateMediaContent(filePath, mime, file.originalname || file.filename, {
+    allowSvg: options.allowSvg ?? true,
+    allowedCategories: ['image', 'video']
+  });
+
+  if (!validation.valid) {
+    if (fs.existsSync(filePath)) {
+      try {
+        fs.unlinkSync(filePath);
+      } catch (_) {}
+    }
+    throw new Error(validation.error || 'Uploaded file content failed media signature validation.');
+  }
+
+  const isVideo = validation.detected.category === 'video';
 
   try {
     if (isVideo) {
@@ -217,7 +279,7 @@ async function processMediaFile(
       const uploadResult = await uploadMediaToCloudinary({
         filePath,
         originalName: file.originalname || file.filename,
-        mimeType: mime || 'video/mp4',
+        mimeType: mime || validation.detected.mime || 'video/mp4',
         folder: options.folder || 'indima-spices/videos',
         resourceType: 'video',
         cleanupTempFile: true
@@ -225,7 +287,7 @@ async function processMediaFile(
       return uploadResult;
     }
 
-    // Process image: HEIC conversion or Sharp rotation/optimization
+    // Process image: HEIC conversion, SVG sanitization, or Sharp decoding & re-encoding
     let processedBuffer: Buffer;
     let finalFileName = file.filename;
     let finalContentType = mime || 'image/jpeg';
@@ -241,8 +303,12 @@ async function processMediaFile(
         finalFileName = `${baseName}.jpg`;
         finalContentType = 'image/jpeg';
       } catch (heicErr: any) {
-        console.info('[HEIC conversion notice]:', heicErr?.message || 'Using original file');
-        processedBuffer = fs.readFileSync(filePath);
+        if (fs.existsSync(filePath)) {
+          try {
+            fs.unlinkSync(filePath);
+          } catch (_) {}
+        }
+        throw new Error(`HEIC conversion failed: ${heicErr?.message || 'Corrupt or invalid HEIC image'}`);
       }
     } else if (originalExt === '.svg' || mime.includes('svg')) {
       const rawSvg = fs.readFileSync(filePath, 'utf8');
@@ -259,6 +325,7 @@ async function processMediaFile(
       finalContentType = 'image/svg+xml';
     } else {
       try {
+        // Decode and re-encode through Sharp. This strips malicious metadata and guarantees valid image pixels.
         processedBuffer = await sharp(filePath)
           .rotate()
           .resize({ width: 2400, height: 2400, fit: 'inside', withoutEnlargement: true })
@@ -267,8 +334,12 @@ async function processMediaFile(
         finalFileName = `${baseName}.jpg`;
         finalContentType = 'image/jpeg';
       } catch (sharpErr: any) {
-        console.info('[Sharp optimization notice]:', sharpErr?.message || 'Using original image buffer');
-        processedBuffer = fs.readFileSync(filePath);
+        if (fs.existsSync(filePath)) {
+          try {
+            fs.unlinkSync(filePath);
+          } catch (_) {}
+        }
+        throw new Error(`Image decoding failed: ${sharpErr?.message || 'File is corrupt or contains invalid image data'}`);
       }
     }
 
@@ -327,13 +398,13 @@ async function processMediaFile(
 
 app.use(
   express.json({
-    limit: '50mb',
+    limit: '1mb',
     verify: (req: any, _res: Response, buf: Buffer) => {
       req.rawBody = buf;
     }
   })
 );
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 app.disable('x-powered-by');
 
@@ -393,7 +464,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 
   // Content Security Policy (CSP)
-  const cspHeader = [
+  const cspDirectives = [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://api.razorpay.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
@@ -404,12 +475,18 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     "frame-src 'self' https://api.razorpay.com",
     "frame-ancestors 'self' https://*.google.com https://*.run.app",
     "object-src 'none'",
-    "base-uri 'self'"
-  ].join('; ');
-  res.setHeader('Content-Security-Policy', cspHeader);
+    "base-uri 'self'",
+    "form-action 'self'"
+  ];
 
   if (process.env.NODE_ENV === 'production') {
-    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    cspDirectives.push("upgrade-insecure-requests");
+  }
+
+  res.setHeader('Content-Security-Policy', cspDirectives.join('; '));
+
+  if (process.env.NODE_ENV === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
   }
 
   if (req.method === 'OPTIONS') {
@@ -418,8 +495,32 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-// Serve static uploads and public assets directly
-app.use('/uploads', express.static(UPLOAD_DIR));
+// Anti-Caching Middleware for all API routes (prevents caching of PII, orders, tokens, admin data)
+app.use('/api', (_req: Request, res: Response, next: NextFunction) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
+// Serve static uploads with strict security headers (nosniff, sandboxing, attachment disposition for SVGs)
+app.use(
+  '/uploads',
+  (_req: Request, res: Response, next: NextFunction) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
+    next();
+  },
+  express.static(UPLOAD_DIR, {
+    setHeaders: (res, filePath) => {
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      const ext = path.extname(filePath).toLowerCase();
+      if (ext === '.svg' || !['.jpg', '.jpeg', '.png', '.webp', '.mp4', '.webm', '.mov'].includes(ext)) {
+        res.setHeader('Content-Disposition', 'attachment');
+      }
+    }
+  })
+);
 app.use(express.static(path.join(process.cwd(), 'public')));
 
 // ----------------------------------------------------
@@ -447,8 +548,9 @@ function createRateLimiter(options: { windowMs: number; max: number; message: st
   }, 120000).unref();
 
   return (req: Request, res: Response, next: NextFunction) => {
-    const rawIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip || '127.0.0.1';
-    const clientIp = String(rawIp).split(',')[0].trim();
+    // Derive client IP reliably from Express-managed req.ip (honors trust proxy configuration)
+    const rawIp = req.ip || req.socket.remoteAddress || '127.0.0.1';
+    const clientIp = typeof rawIp === 'string' && rawIp.startsWith('::ffff:') ? rawIp.substring(7) : String(rawIp);
     const now = Date.now();
 
     let bucket = bucketMap.get(clientIp);
@@ -892,7 +994,7 @@ app.get('/api/orders/track', orderTrackLimiter, (req: Request, res: Response) =>
 });
 
 // 10b. Get Single Order by ID (Protected by Admin Auth or Server-Issued Order Access Token)
-app.get('/api/orders/:id', (req: Request, res: Response) => {
+app.get('/api/orders/:id', orderTrackLimiter, (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const authHeader = req.headers.authorization;
@@ -1788,12 +1890,30 @@ app.post('/api/upload', adminAuthMiddleware, (req: Request, res: Response) => {
       // Base64 JSON fallback upload directly to Cloudinary
       if (req.body && req.body.base64) {
         const base64Data = req.body.base64.replace(/^data:[^;]+;base64,/, '');
-        const ext = req.body.ext || '.png';
+        const ext = (req.body.ext || '.png').toLowerCase();
         const buffer = Buffer.from(base64Data, 'base64');
+        const validation = validateMediaContent(buffer, `image/${ext.replace('.', '')}`, `upload${ext}`, {
+          allowSvg: false,
+          allowedCategories: ['image']
+        });
+        if (!validation.valid) {
+          return res.status(400).json({ success: false, error: validation.error });
+        }
+        let safeBuffer: Buffer;
+        try {
+          safeBuffer = await sharp(buffer)
+            .rotate()
+            .resize({ width: 2400, height: 2400, fit: 'inside', withoutEnlargement: true })
+            .jpeg({ quality: 88, progressive: true })
+            .toBuffer();
+        } catch (sharpErr: any) {
+          return res.status(400).json({ success: false, error: `Invalid image content: ${sharpErr?.message || 'cannot decode'}` });
+        }
         const uploadResult = await uploadMediaToCloudinary({
-          buffer,
-          originalName: `upload-${Date.now()}${ext.startsWith('.') ? ext : '.' + ext}`,
-          folder: 'indima-spices/media'
+          buffer: safeBuffer,
+          originalName: `upload-${Date.now()}.jpg`,
+          folder: 'indima-spices/media',
+          resourceType: 'image'
         });
         return res.json({
           success: true,
@@ -1808,7 +1928,7 @@ app.post('/api/upload', adminAuthMiddleware, (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'No file uploaded' });
     } catch (writeErr: any) {
       console.error('[Upload File Process Error]:', writeErr);
-      return res.status(500).json({ success: false, error: writeErr.message || 'Error processing uploaded file' });
+      return res.status(400).json({ success: false, error: writeErr.message || 'Error processing uploaded file' });
     }
   });
 });
@@ -1838,7 +1958,7 @@ app.post('/api/upload-multiple', adminAuthMiddleware, (req: Request, res: Respon
       });
     } catch (writeErr: any) {
       console.error('[Multi-Upload Process Error]:', writeErr);
-      return res.status(500).json({ success: false, error: writeErr.message });
+      return res.status(400).json({ success: false, error: writeErr.message });
     }
   });
 });
@@ -1892,12 +2012,12 @@ app.post('/api/admin/upload-hero-media', adminAuthMiddleware, (req: Request, res
       });
     } catch (heroErr: any) {
       console.error('[Hero Media Upload Error]:', heroErr.message);
-      return res.status(500).json({ success: false, error: heroErr.message });
+      return res.status(400).json({ success: false, error: heroErr.message });
     }
   });
 });
 
-// Review Proof Media Upload (Images & Videos - Rate Limited & MIME Verified)
+// Review Proof Media Upload (Images & Videos - Rate Limited & MIME Verified & Magic-Byte Inspected)
 app.post('/api/reviews/upload-proof', reviewUploadLimiter, (req: Request, res: Response) => {
   reviewProofUpload.single('file')(req, res, async (err: any) => {
     if (err) {
@@ -1942,11 +2062,26 @@ app.post('/api/reviews/upload-proof', reviewUploadLimiter, (req: Request, res: R
         return res.status(400).json({ success: false, error: 'Invalid file format. Only images (JPG, PNG, WebP) and videos (MP4, WebM) are permitted.' });
       }
 
-      const isVideo = mime.startsWith('video/') || /^\.(mp4|webm|mov|mkv|avi)$/i.test(ext);
+      // Magic byte & container verification for review uploads (SVG disallowed for reviews)
+      const validation = validateMediaContent(file.path, mime, file.originalname, {
+        allowSvg: false,
+        allowedCategories: ['image', 'video'],
+        allowedFormats: ['jpeg', 'png', 'webp', 'heic', 'mp4', 'webm', 'mov']
+      });
+
+      if (!validation.valid) {
+        if (fs.existsSync(file.path)) {
+          try { fs.unlinkSync(file.path); } catch (_) {}
+        }
+        return res.status(400).json({ success: false, error: validation.error });
+      }
+
+      const isVideo = validation.detected.category === 'video';
 
       const uploadResult = await processMediaFile(file, {
         folder: 'indima-spices/reviews',
-        resourceType: isVideo ? 'video' : 'image'
+        resourceType: isVideo ? 'video' : 'image',
+        allowSvg: false
       });
 
       const reviewId = req.body.review_id || req.body.reviewId;
@@ -1970,7 +2105,7 @@ app.post('/api/reviews/upload-proof', reviewUploadLimiter, (req: Request, res: R
       });
     } catch (proofErr: any) {
       console.error('[Review Proof Upload Error]:', proofErr.message);
-      return res.status(500).json({ success: false, error: proofErr.message });
+      return res.status(400).json({ success: false, error: proofErr.message });
     }
   });
 });
@@ -2460,6 +2595,9 @@ app.all('/api/*', (req: Request, res: Response) => {
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   if (req.path.startsWith('/api')) {
     console.error('[API Handler Error]:', err);
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     return res.status(err.status || 500).json({
       success: false,
       error: err.message || 'Internal API error'

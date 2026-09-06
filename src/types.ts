@@ -28,6 +28,7 @@ export interface Product {
   stock: number;
   low_stock_threshold: number;
   images: string[];
+  image_url?: string;
   video?: string;
   badges: ('bestseller' | 'new' | 'homemade' | 'natural' | 'festival_special' | 'limited_stock' | 'featured')[];
   active: boolean;
@@ -99,6 +100,7 @@ export type PaymentStatus =
   | 'Processing'
   | 'Successful'
   | 'PAID'
+  | 'PENDING'
   | 'Failed'
   | 'FAILED'
   | 'CANCELLED'
@@ -216,10 +218,12 @@ export interface Recipe {
   description_kn: string;
   image: string;
   video?: string;
+  video_url?: string;
   prep_time: string;
   cook_time: string;
   servings: string;
   featured_spice_ids: string[];
+  related_product_ids?: string[];
   ingredients_en: string[];
   ingredients_kn: string[];
   instructions_en: string[];
@@ -329,7 +333,9 @@ export interface AdminAuditLog {
   timestamp: string;
   admin_username: string;
   action_type: string;
+  action?: string;
   target_id: string;
+  reason?: string;
   details: string;
 }
 

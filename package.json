@@ -40,12 +40,16 @@
     "@types/multer": "^2.2.0",
     "@types/node": "^22.14.0",
     "@types/qrcode": "^1.5.6",
-    "@types/sharp": "^0.32.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
     "autoprefixer": "^10.4.21",
     "esbuild": "^0.25.0",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.3"
+    "typescript": "~5.8.2"
+  },
+  "overrides": {
+    "qs": "^6.16.0",
+    "uuid": "^11.1.1"
   }
 }

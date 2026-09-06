@@ -4,5 +4,26 @@ dist/
 coverage/
 .DS_Store
 *.log
-.env*
+
+# Environment variables & secrets
+.env
+.env.*
+.env*.local
 !.env.example
+
+# Service account credentials, tokens & private keys
+*service-account*.json
+*serviceAccount*.json
+*credentials*.json
+*firebase-adminsdk*.json
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Local sensitive credential stores & sqlite databases
+data/secrets*.json
+data/*credentials*.json
+*.sqlite
+*.db
+

@@ -2,6 +2,7 @@ import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import { validateMediaContent } from './mediaValidator';
 
 export interface CloudinaryStatus {
   configured: boolean;
@@ -135,6 +136,25 @@ export function saveMediaLocally(options: CloudinaryUploadOptions): CloudinaryUp
   const uniqueName = `${rawBase}-${Date.now()}-${Math.round(Math.random() * 1e6)}${ext}`;
   const destPath = path.join(uploadsDir, uniqueName);
 
+  if (!options.buffer && (!options.filePath || !fs.existsSync(options.filePath))) {
+    throw new Error('No valid file or buffer provided for local media storage');
+  }
+
+  // Validate magic bytes and media format before saving to local storage
+  const sourceForValidation = options.buffer || options.filePath!;
+  const validation = validateMediaContent(
+    sourceForValidation,
+    options.mimeType || '',
+    origName,
+    {
+      allowedCategories: ['image', 'video'],
+      allowSvg: true
+    }
+  );
+  if (!validation.valid) {
+    throw new Error(`Local media storage rejected: ${validation.error}`);
+  }
+
   let bytes = 0;
   if (options.buffer) {
     fs.writeFileSync(destPath, options.buffer);
@@ -142,14 +162,9 @@ export function saveMediaLocally(options: CloudinaryUploadOptions): CloudinaryUp
   } else if (options.filePath && fs.existsSync(options.filePath)) {
     fs.copyFileSync(options.filePath, destPath);
     bytes = fs.statSync(destPath).size;
-  } else {
-    throw new Error('No valid file or buffer provided for local media storage');
   }
 
-  const isVideo =
-    options.resourceType === 'video' ||
-    /^\.(mp4|webm|mov|mkv|avi|m4v|3gp|flv)$/i.test(ext) ||
-    Boolean(options.mimeType && options.mimeType.toLowerCase().startsWith('video/'));
+  const isVideo = validation.detected.category === 'video';
 
   const relativeUrl = `/uploads/${uniqueName}`;
 
@@ -206,11 +221,8 @@ export async function uploadMediaToCloudinary(
     mimeLower.startsWith('video/') ||
     /^\.(mp4|webm|mov|mkv|avi|m4v|3gp|flv)$/i.test(originalExt);
 
-  const determinedResourceType: 'image' | 'video' | 'raw' = isVideo
-    ? 'video'
-    : resourceType === 'raw'
-    ? 'raw'
-    : 'image';
+  // Strictly enforce image or video resource types; never allow raw upload
+  const determinedResourceType: 'image' | 'video' = isVideo ? 'video' : 'image';
 
   try {
     // If a Buffer was passed instead of a file path, write temporarily to os.tmpdir()
@@ -228,9 +240,26 @@ export async function uploadMediaToCloudinary(
       throw new Error('No valid file or buffer provided for Cloudinary upload');
     }
 
+    // Strict format validation before uploading to Cloudinary
+    const validation = validateMediaContent(
+      fileToUpload,
+      mimeType,
+      originalName || path.basename(fileToUpload),
+      {
+        allowedCategories: ['image', 'video'],
+        allowSvg: true
+      }
+    );
+    if (!validation.valid) {
+      throw new Error(`Cloudinary upload rejected: ${validation.error}`);
+    }
+
     const uploadOptions: Record<string, any> = {
       folder,
       resource_type: determinedResourceType,
+      allowed_formats: determinedResourceType === 'video'
+        ? ['mp4', 'webm', 'mov']
+        : ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif', 'svg'],
       use_filename: false,
       unique_filename: true,
       overwrite: true
