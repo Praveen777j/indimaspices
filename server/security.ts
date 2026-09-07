@@ -350,3 +350,137 @@ export const VerifyRazorpayPaymentSchema = z.object({
   razorpay_payment_id: z.string().trim().min(1, 'razorpay_payment_id is required'),
   razorpay_signature: z.string().trim().min(1, 'razorpay_signature is required')
 });
+
+// ============================================================================
+// URL SECURITY & HOST VALIDATION UTILITIES (SSRF & Open Redirect Defenses)
+// ============================================================================
+
+/**
+ * Validates whether a Host header represents an authentic, expected hostname
+ * for Indima Spices. Protects against Host Header Injection, cache poisoning,
+ * and spoofed CORS same-origin assertions.
+ */
+export function isTrustedHost(hostHeader?: string): boolean {
+  if (!hostHeader || typeof hostHeader !== 'string') return false;
+  const cleanHost = hostHeader.split(':')[0].toLowerCase().trim();
+  if (!cleanHost || !/^[a-z0-9.-]+$/.test(cleanHost)) return false;
+
+  // 1. Production primary domains
+  if (cleanHost === 'indimaspice.com' || cleanHost === 'www.indimaspice.com') {
+    return true;
+  }
+
+  // 2. Explicitly configured allowed origins (extract hostname)
+  const allowedOriginEnv = process.env.ALLOWED_ORIGIN;
+  if (allowedOriginEnv) {
+    const origins = allowedOriginEnv.split(',').map(o => o.trim()).filter(Boolean);
+    for (const o of origins) {
+      try {
+        const u = new URL(o);
+        if (u.hostname.toLowerCase() === cleanHost) return true;
+      } catch {
+        if (o.toLowerCase() === cleanHost) return true;
+      }
+    }
+  }
+
+  // 3. Known cloud hosting domains (Render, Cloud Run)
+  if (cleanHost.endsWith('.run.app') || cleanHost.endsWith('.onrender.com')) {
+    return true;
+  }
+
+  // 4. Local development hostnames
+  if (process.env.NODE_ENV !== 'production') {
+    if (
+      cleanHost === 'localhost' ||
+      cleanHost === '127.0.0.1' ||
+      cleanHost === '::1' ||
+      cleanHost.endsWith('.google.com') ||
+      cleanHost.includes('ai.studio')
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Validates a URL against dangerous protocols and unallowed schemes.
+ * Rejects javascript:, vbscript:, file:, data:text/html, and embedded credentials.
+ */
+export function isSafeUrl(
+  urlStr?: string,
+  options: { allowRelative?: boolean; allowDataImage?: boolean } = { allowRelative: true, allowDataImage: true }
+): boolean {
+  if (!urlStr || typeof urlStr !== 'string') return false;
+  const trimmed = urlStr.trim();
+  if (!trimmed) return false;
+
+  const lower = trimmed.toLowerCase();
+
+  // Strict check for dangerous pseudo-protocols
+  if (
+    lower.startsWith('javascript:') ||
+    lower.startsWith('vbscript:') ||
+    lower.startsWith('file:') ||
+    lower.startsWith('data:text/html') ||
+    lower.startsWith('data:application') ||
+    lower.startsWith('blob:http')
+  ) {
+    return false;
+  }
+
+  // Handle relative URLs
+  if (options.allowRelative && (trimmed.startsWith('/') || trimmed.startsWith('./') || trimmed.startsWith('#'))) {
+    // Prevent protocol confusion like "//evil.com"
+    if (trimmed.startsWith('//')) {
+      return false;
+    }
+    return true;
+  }
+
+  // Handle data: URIs for media (images and videos only)
+  if (options.allowDataImage && (lower.startsWith('data:image/') || lower.startsWith('data:video/'))) {
+    return true;
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+
+    // Only allow http and https
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return false;
+    }
+
+    // Reject userinfo/credentials in URLs (e.g. https://user:pass@evil.com)
+    if (parsed.username || parsed.password) {
+      return false;
+    }
+
+    // Reject unusual or non-standard hostname structures
+    if (!parsed.hostname || parsed.hostname.includes(' ') || parsed.hostname.includes('\\')) {
+      return false;
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Sanitizes a URL, returning either the safe URL string or an empty string / fallback.
+ */
+export function sanitizeUrl(
+  urlStr?: string,
+  fallback: string = '',
+  options: { allowRelative?: boolean; allowDataImage?: boolean } = { allowRelative: true, allowDataImage: true }
+): string {
+  if (!urlStr || typeof urlStr !== 'string') return fallback;
+  const trimmed = urlStr.trim();
+  if (isSafeUrl(trimmed, options)) {
+    return trimmed;
+  }
+  return fallback;
+}

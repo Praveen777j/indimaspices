@@ -37,7 +37,10 @@ import {
   CustomerLookupSchema,
   TrackOrderSchema,
   CreateRazorpayOrderSchema,
-  VerifyRazorpayPaymentSchema
+  VerifyRazorpayPaymentSchema,
+  isTrustedHost,
+  isSafeUrl,
+  sanitizeUrl
 } from './server/security';
 
 const app = express();
@@ -408,49 +411,70 @@ app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 app.disable('x-powered-by');
 
+// ----------------------------------------------------
+// CORS, SECURITY HEADERS & CSRF / REQUEST-FORGERY PROTECTION
+// ----------------------------------------------------
+
+// Helper to determine if an Origin is trusted for Indima Spices
+function isTrustedOrigin(origin: string, req: Request): boolean {
+  if (!origin || typeof origin !== 'string') return false;
+  const cleanOrigin = origin.trim();
+  if (!cleanOrigin || cleanOrigin === 'null') return false;
+
+  // 1. Same-Origin Check against verified Host header
+  try {
+    const originUrl = new URL(cleanOrigin);
+    const hostHeader = req.get('host');
+    if (hostHeader && isTrustedHost(hostHeader)) {
+      const cleanHost = hostHeader.split(':')[0].toLowerCase();
+      if (originUrl.hostname.toLowerCase() === cleanHost) {
+        return true;
+      }
+    }
+  } catch {
+    return false;
+  }
+
+  // 2. Strict exact origin matching from ALLOWED_ORIGIN env var
+  const allowedOriginEnv = process.env.ALLOWED_ORIGIN;
+  const configuredOrigins = allowedOriginEnv
+    ? allowedOriginEnv.split(',').map(o => o.trim()).filter(Boolean)
+    : [];
+  for (const trusted of configuredOrigins) {
+    if (cleanOrigin.toLowerCase() === trusted.toLowerCase()) {
+      return true;
+    }
+  }
+
+  // 3. Development / preview environments (strictly non-production only)
+  if (process.env.NODE_ENV !== 'production') {
+    try {
+      const originUrl = new URL(cleanOrigin);
+      const originHostname = originUrl.hostname.toLowerCase();
+      const isLocal = originHostname === 'localhost' || originHostname === '127.0.0.1';
+      const isGoogleCloudRun = originHostname.endsWith('.run.app') && originHostname.startsWith('ais-');
+      const isAiStudio = originHostname.endsWith('.google.com') && originHostname.includes('ai.studio');
+      if (isLocal || isGoogleCloudRun || isAiStudio) {
+        return true;
+      }
+    } catch {
+      return false;
+    }
+  }
+
+  return false;
+}
+
 // CORS & Comprehensive Security Headers Middleware
 app.use((req: Request, res: Response, next: NextFunction) => {
   const origin = req.headers.origin;
-  const allowedOriginEnv = process.env.ALLOWED_ORIGIN;
 
   if (origin) {
-    let isAllowed = false;
-    let matchedTrustedOrigin: string | null = null;
     const cleanOrigin = origin.trim();
+    const isAllowed = isTrustedOrigin(cleanOrigin, req);
 
-    // Parse exact trusted origins from environment (comma-separated list supported)
-    const configuredOrigins = allowedOriginEnv
-      ? allowedOriginEnv.split(',').map(o => o.trim()).filter(Boolean)
-      : [];
-
-    // 1. Strict exact origin matching (scheme, hostname, port) for production
-    for (const trusted of configuredOrigins) {
-      if (cleanOrigin.toLowerCase() === trusted.toLowerCase()) {
-        isAllowed = true;
-        matchedTrustedOrigin = trusted;
-        break;
-      }
-    }
-
-    // 2. Development / sandbox preview origin checking (strictly non-production only)
-    if (!isAllowed && process.env.NODE_ENV !== 'production') {
-      try {
-        const originUrl = new URL(cleanOrigin);
-        const originHostname = originUrl.hostname.toLowerCase();
-        const isLocal = originHostname === 'localhost' || originHostname === '127.0.0.1';
-        const isGoogleCloudRun = originHostname.endsWith('.run.app') && originHostname.startsWith('ais-');
-        const isAiStudio = originHostname.endsWith('.google.com') && originHostname.includes('ai.studio');
-        if (isLocal || isGoogleCloudRun || isAiStudio) {
-          isAllowed = true;
-          matchedTrustedOrigin = cleanOrigin;
-        }
-      } catch {
-        isAllowed = false;
-      }
-    }
-
-    if (isAllowed && matchedTrustedOrigin) {
-      res.setHeader('Access-Control-Allow-Origin', matchedTrustedOrigin);
+    if (isAllowed) {
+      res.setHeader('Access-Control-Allow-Origin', cleanOrigin);
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
       res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
       res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -489,9 +513,70 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
   }
 
+  // Preflight handling: reject untrusted preflight origins; allow trusted
   if (req.method === 'OPTIONS') {
+    if (origin && !isTrustedOrigin(origin, req)) {
+      return res.status(403).json({ error: 'Forbidden: Untrusted cross-origin preflight' });
+    }
     return res.sendStatus(204);
   }
+  next();
+});
+
+// CSRF & Cross-Origin State-Changing Request Protection Middleware
+// Prevents cross-site request forgery and unauthorized cross-origin mutations
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const method = req.method.toUpperCase();
+  const isStateChanging = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
+
+  // Read-only HTTP methods do not change state
+  if (!isStateChanging) {
+    return next();
+  }
+
+  // Machine-to-machine webhooks (Razorpay) bypass browser CSRF checks;
+  // they are cryptographically authenticated via x-razorpay-signature and raw HMAC-SHA256
+  if (req.path === '/api/razorpay-webhook' || req.path === '/api/payments/webhook') {
+    return next();
+  }
+
+  const origin = req.headers.origin;
+  const referer = req.headers.referer;
+  const secFetchSite = req.headers['sec-fetch-site'];
+
+  // 1. Explicit Origin Header Verification
+  // Modern browsers unconditionally send Origin on cross-origin requests and state-changing mutations
+  if (origin) {
+    if (!isTrustedOrigin(origin, req)) {
+      return res.status(403).json({
+        error: 'Forbidden: Cross-origin state-changing request blocked'
+      });
+    }
+  }
+
+  // 2. Fetch Metadata Sec-Fetch-Site Check (defense-in-depth)
+  if (secFetchSite === 'cross-site' && (!origin || !isTrustedOrigin(origin, req))) {
+    return res.status(403).json({
+      error: 'Forbidden: Cross-site state-changing request blocked'
+    });
+  }
+
+  // 3. Fallback Referer Header Verification if Origin is absent
+  if (!origin && referer) {
+    try {
+      const refererUrl = new URL(referer);
+      if (!isTrustedOrigin(refererUrl.origin, req)) {
+        return res.status(403).json({
+          error: 'Forbidden: Cross-origin referer blocked'
+        });
+      }
+    } catch {
+      return res.status(403).json({
+        error: 'Forbidden: Malformed referer header'
+      });
+    }
+  }
+
   next();
 });
 
@@ -913,7 +998,7 @@ app.post('/api/customer/lookup', customerLookupLimiter, (_req: Request, res: Res
 });
 
 // 10. Track Orders by Order ID & Token or Admin Authorization
-app.get('/api/orders/track', orderTrackLimiter, (req: Request, res: Response) => {
+app.get('/api/orders/track', orderTrackLimiter, async (req: Request, res: Response) => {
   const { phone, order_id } = req.query;
   const authHeader = req.headers.authorization;
   const hasAdminSession = Boolean(authHeader && authHeader.startsWith('Bearer ') && validateAdminToken(authHeader.split(' ')[1]));
@@ -937,12 +1022,16 @@ app.get('/api/orders/track', orderTrackLimiter, (req: Request, res: Response) =>
   const searchOrderId = typeof order_id === 'string' ? order_id.trim() : '';
   const providedToken = (
     (req.query.token as string) ||
+    (req.query.order_token as string) ||
     (req.headers['x-order-token'] as string) ||
     (authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : '')
   )?.trim();
 
   if (searchOrderId && providedToken) {
-    const order = db.getOrderById(searchOrderId);
+    let order = db.getOrderById(searchOrderId);
+    if (!order) {
+      order = await db.findOrFetchOrder(searchOrderId);
+    }
     if (order && verifyOrderAccessToken(order, providedToken)) {
       const sanitizedOrder = {
         id: order.id,
@@ -1377,7 +1466,7 @@ app.post('/api/orders/create', orderCreateLimiter, async (req: Request, res: Res
 });
 
 // Helper for Razorpay Signature Verification & Order Finalization
-async function verifyPaymentInternal(body: any) {
+async function verifyPaymentInternal(body: any, req?: Request) {
   const internal_order_id = body.internal_order_id || body.internalOrderId || '';
   const order_id = body.order_id || body.orderId || body.id || body.receipt || '';
   const razorpay_order_id = body.razorpay_order_id || body.razorpayOrderId || '';
@@ -1431,6 +1520,20 @@ async function verifyPaymentInternal(body: any) {
 
   // Case A: Manual UTR / Bank Reference or Offline Payment Proof submission (Queued for Admin Verification)
   if (utr_reference && !razorpay_signature) {
+    const authHeader = req?.headers?.authorization;
+    const providedToken = (
+      body.order_token ||
+      body.token ||
+      (req?.headers?.['x-order-token'] as string) ||
+      (authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : '')
+    )?.trim();
+    const hasAdminSession = Boolean(providedToken && validateAdminToken(providedToken));
+    const hasValidToken = verifyOrderAccessToken(order, providedToken);
+
+    if (!hasAdminSession && !hasValidToken) {
+      throw new Error('Access denied: A valid order access token or administrator authorization is required to submit payment references.');
+    }
+
     const nowIso = new Date().toISOString();
     order.payment_status = 'Pending Verification';
     order.order_status = 'Payment Verification Pending';
@@ -1539,7 +1642,7 @@ async function verifyPaymentInternal(body: any) {
 // 12. Server-Side Payment Verification: POST /api/payments/verify
 app.post('/api/payments/verify', paymentVerifyLimiter, async (req: Request, res: Response) => {
   try {
-    const result = await verifyPaymentInternal(req.body);
+    const result = await verifyPaymentInternal(req.body, req);
     res.json(result);
   } catch (err: any) {
     console.error('Payment Verification Exception:', err);
@@ -1550,7 +1653,7 @@ app.post('/api/payments/verify', paymentVerifyLimiter, async (req: Request, res:
 // Alias: POST /api/orders/verify-payment
 app.post('/api/orders/verify-payment', paymentVerifyLimiter, async (req: Request, res: Response) => {
   try {
-    const result = await verifyPaymentInternal(req.body);
+    const result = await verifyPaymentInternal(req.body, req);
     res.json(result);
   } catch (err: any) {
     console.error('Payment Verification Exception:', err);
@@ -1561,7 +1664,7 @@ app.post('/api/orders/verify-payment', paymentVerifyLimiter, async (req: Request
 // Alias: POST /api/orders/submit-payment-proof
 app.post('/api/orders/submit-payment-proof', paymentVerifyLimiter, async (req: Request, res: Response) => {
   try {
-    const result = await verifyPaymentInternal(req.body);
+    const result = await verifyPaymentInternal(req.body, req);
     res.json(result);
   } catch (err: any) {
     console.error('Submit Payment Proof Exception:', err);
@@ -2088,6 +2191,14 @@ app.post('/api/reviews/upload-proof', reviewUploadLimiter, (req: Request, res: R
       let updatedReview = null;
 
       if (reviewId) {
+        const authHeader = req.headers.authorization;
+        const hasAdminSession = Boolean(authHeader && authHeader.startsWith('Bearer ') && validateAdminToken(authHeader.split(' ')[1]));
+        if (!hasAdminSession) {
+          if (fs.existsSync(file.path)) {
+            try { fs.unlinkSync(file.path); } catch (_) {}
+          }
+          return res.status(403).json({ success: false, error: 'Forbidden: Administrator authorization required to modify existing reviews.' });
+        }
         updatedReview = await db.updateReviewProof(reviewId, {
           proof_media_url: uploadResult.secure_url,
           proof_media_type: isVideo ? 'video' : 'image',
@@ -2265,6 +2376,70 @@ app.post('/api/admin/orders/:id/retry-notification', adminAuthMiddleware, async 
 });
 
 // Admin Products API
+function sanitizeProductPayload(body: any): void {
+  if (!body || typeof body !== 'object') return;
+  if (Array.isArray(body.images)) {
+    body.images = body.images
+      .filter((img: any) => typeof img === 'string')
+      .map((img: string) => sanitizeUrl(img, '', { allowRelative: true, allowDataImage: true }))
+      .filter(Boolean);
+  }
+  if (typeof body.image_url === 'string') {
+    body.image_url = sanitizeUrl(body.image_url, '', { allowRelative: true, allowDataImage: true });
+  }
+  if (typeof body.video === 'string') {
+    body.video = sanitizeUrl(body.video, '', { allowRelative: true, allowDataImage: true });
+  }
+}
+
+function sanitizeBannerPayload(body: any): void {
+  if (!body || typeof body !== 'object') return;
+  if (typeof body.media_url === 'string') {
+    body.media_url = sanitizeUrl(body.media_url, '', { allowRelative: true, allowDataImage: true });
+  }
+  if (typeof body.fallback_image === 'string') {
+    body.fallback_image = sanitizeUrl(body.fallback_image, '', { allowRelative: true, allowDataImage: true });
+  }
+  if (typeof body.link_url === 'string') {
+    body.link_url = sanitizeUrl(body.link_url, '', { allowRelative: true, allowDataImage: false });
+  }
+}
+
+function sanitizeRecipePayload(body: any): void {
+  if (!body || typeof body !== 'object') return;
+  if (typeof body.image_url === 'string') {
+    body.image_url = sanitizeUrl(body.image_url, '', { allowRelative: true, allowDataImage: true });
+  }
+  if (typeof body.video_url === 'string') {
+    body.video_url = sanitizeUrl(body.video_url, '', { allowRelative: true, allowDataImage: true });
+  }
+  if (typeof body.video === 'string') {
+    body.video = sanitizeUrl(body.video, '', { allowRelative: true, allowDataImage: true });
+  }
+}
+
+function sanitizeSettingsPayload(body: any): void {
+  if (!body || typeof body !== 'object') return;
+  if (typeof body.instagram_url === 'string') {
+    body.instagram_url = sanitizeUrl(body.instagram_url, '', { allowRelative: false, allowDataImage: false });
+  }
+  if (typeof body.facebook_url === 'string') {
+    body.facebook_url = sanitizeUrl(body.facebook_url, '', { allowRelative: false, allowDataImage: false });
+  }
+  if (typeof body.youtube_url === 'string') {
+    body.youtube_url = sanitizeUrl(body.youtube_url, '', { allowRelative: false, allowDataImage: false });
+  }
+  if (typeof body.twitter_url === 'string') {
+    body.twitter_url = sanitizeUrl(body.twitter_url, '', { allowRelative: false, allowDataImage: false });
+  }
+  if (typeof body.upi_qr_code_url === 'string') {
+    body.upi_qr_code_url = sanitizeUrl(body.upi_qr_code_url, '', { allowRelative: true, allowDataImage: true });
+  }
+  if (typeof body.logo_url === 'string') {
+    body.logo_url = sanitizeUrl(body.logo_url, '', { allowRelative: true, allowDataImage: true });
+  }
+}
+
 async function normalizeProductVideo(body: any): Promise<void> {
   if (!body) return;
   if (typeof body.video === 'string' && body.video.trim().startsWith('data:')) {
@@ -2295,6 +2470,7 @@ app.post('/api/admin/products', adminAuthMiddleware, async (req: Request, res: R
   try {
     const session = (req as any).adminSession;
     await normalizeProductVideo(req.body);
+    sanitizeProductPayload(req.body);
     const product = await db.addProduct(req.body, session?.username || 'Admin');
     res.json({ success: true, product });
   } catch (err: any) {
@@ -2306,6 +2482,7 @@ app.put('/api/admin/products/:id', adminAuthMiddleware, async (req: Request, res
   try {
     const session = (req as any).adminSession;
     await normalizeProductVideo(req.body);
+    sanitizeProductPayload(req.body);
     const updated = await db.updateProduct(req.params.id, req.body, session?.username || 'Admin');
     if (!updated) return res.status(404).json({ error: 'Product not found' });
     res.json({ success: true, product: updated });
@@ -2397,6 +2574,7 @@ app.delete('/api/admin/customers/:id', adminAuthMiddleware, async (req: Request,
 app.post('/api/admin/banners', adminAuthMiddleware, async (req: Request, res: Response) => {
   try {
     const session = (req as any).adminSession;
+    sanitizeBannerPayload(req.body);
     const banner = await db.addBanner(req.body, session?.username || 'Admin');
     res.json({ success: true, banner });
   } catch (err: any) {
@@ -2407,6 +2585,7 @@ app.post('/api/admin/banners', adminAuthMiddleware, async (req: Request, res: Re
 app.put('/api/admin/banners/:id', adminAuthMiddleware, async (req: Request, res: Response) => {
   try {
     const session = (req as any).adminSession;
+    sanitizeBannerPayload(req.body);
     const updated = await db.updateBanner(req.params.id, req.body, session?.username || 'Admin');
     if (!updated) return res.status(404).json({ error: 'Banner not found' });
     res.json({ success: true, banner: updated });
@@ -2430,6 +2609,7 @@ app.delete('/api/admin/banners/:id', adminAuthMiddleware, async (req: Request, r
 app.post('/api/admin/recipes', adminAuthMiddleware, async (req: Request, res: Response) => {
   try {
     const session = (req as any).adminSession;
+    sanitizeRecipePayload(req.body);
     const recipe = await db.addRecipe(req.body, session?.username || 'Admin');
     res.json({ success: true, recipe });
   } catch (err: any) {
@@ -2440,6 +2620,7 @@ app.post('/api/admin/recipes', adminAuthMiddleware, async (req: Request, res: Re
 app.put('/api/admin/recipes/:id', adminAuthMiddleware, async (req: Request, res: Response) => {
   try {
     const session = (req as any).adminSession;
+    sanitizeRecipePayload(req.body);
     const updated = await db.updateRecipe(req.params.id, req.body, session?.username || 'Admin');
     if (!updated) return res.status(404).json({ error: 'Recipe not found' });
     res.json({ success: true, recipe: updated });
@@ -2463,6 +2644,9 @@ app.delete('/api/admin/recipes/:id', adminAuthMiddleware, async (req: Request, r
 app.post('/api/admin/offers', adminAuthMiddleware, async (req: Request, res: Response) => {
   try {
     const session = (req as any).adminSession;
+    if (req.body && typeof req.body.image_url === 'string') {
+      req.body.image_url = sanitizeUrl(req.body.image_url, '', { allowRelative: true, allowDataImage: true });
+    }
     const offer = await db.addOffer(req.body, session?.username || 'Admin');
     res.json({ success: true, offer });
   } catch (err: any) {
@@ -2473,6 +2657,9 @@ app.post('/api/admin/offers', adminAuthMiddleware, async (req: Request, res: Res
 app.put('/api/admin/offers/:id', adminAuthMiddleware, async (req: Request, res: Response) => {
   try {
     const session = (req as any).adminSession;
+    if (req.body && typeof req.body.image_url === 'string') {
+      req.body.image_url = sanitizeUrl(req.body.image_url, '', { allowRelative: true, allowDataImage: true });
+    }
     const updated = await db.updateOffer(req.params.id, req.body, session?.username || 'Admin');
     if (!updated) return res.status(404).json({ error: 'Offer not found' });
     res.json({ success: true, offer: updated });
@@ -2505,6 +2692,7 @@ app.get('/api/admin/settings', adminAuthMiddleware, (req: Request, res: Response
 app.put('/api/admin/settings', adminAuthMiddleware, async (req: Request, res: Response) => {
   try {
     const session = (req as any).adminSession;
+    sanitizeSettingsPayload(req.body);
     const updated = await db.updateSettings(req.body, session?.username || 'Admin');
     res.json({ success: true, settings: updated });
   } catch (err: any) {
@@ -2542,7 +2730,8 @@ app.get('/api/backup/download', adminAuthMiddleware, (req: Request, res: Respons
 
 app.get('/sitemap.xml', (req: Request, res: Response) => {
   try {
-    const host = req.get('host') || 'indimaspice.com';
+    const rawHost = req.get('host');
+    const host = rawHost && isTrustedHost(rawHost) ? rawHost : 'indimaspice.com';
     const protocol = req.protocol === 'https' || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
     const baseUrl = `${protocol}://${host}`;
 
@@ -2612,7 +2801,8 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 
 function injectDynamicHtmlMeta(html: string, req: Request): string {
   try {
-    const host = req.get('host') || 'indimaspice.com';
+    const rawHost = req.get('host');
+    const host = rawHost && isTrustedHost(rawHost) ? rawHost : 'indimaspice.com';
     const protocol = req.protocol === 'https' || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
     const baseUrl = `${protocol}://${host}`;
 

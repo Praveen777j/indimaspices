@@ -30,12 +30,12 @@ export interface Product {
   images: string[];
   image_url?: string;
   video?: string;
-  badges: ('bestseller' | 'new' | 'homemade' | 'natural' | 'festival_special' | 'limited_stock' | 'featured')[];
+  badges: ('bestseller' | 'new' | 'homemade' | 'natural' | 'festival_special' | 'limited_stock' | 'featured' | 'single_origin' | string)[];
   active: boolean;
   rating: number;
   review_count: number;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Category {
@@ -220,16 +220,16 @@ export interface Recipe {
   video?: string;
   video_url?: string;
   prep_time: string;
-  cook_time: string;
-  servings: string;
-  featured_spice_ids: string[];
+  cook_time?: string;
+  servings?: string;
+  featured_spice_ids?: string[];
   related_product_ids?: string[];
   ingredients_en: string[];
   ingredients_kn: string[];
   instructions_en: string[];
   instructions_kn: string[];
-  active: boolean;
-  created_at: string;
+  active?: boolean;
+  created_at?: string;
 }
 
 export interface Banner {
@@ -286,6 +286,7 @@ export interface Review {
   comment_kn?: string;
   date: string;
   approved: boolean;
+  verified_purchase?: boolean;
 }
 
 export interface BusinessSettings {
@@ -297,25 +298,26 @@ export interface BusinessSettings {
   phone: string;
   whatsapp_number: string;
   email: string;
-  address_line1: string;
-  address_line2: string;
-  city: string;
-  state: string;
-  pincode: string;
+  address_line1?: string;
+  address_line2?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
   upi_id: string;
   upi_merchant_name: string;
   upi_qr_code_url?: string;
-  instagram_url: string;
-  facebook_url: string;
-  youtube_url: string;
+  instagram_url?: string;
+  facebook_url?: string;
+  youtube_url?: string;
   twitter_url?: string;
   address?: string;
-  free_delivery_threshold: number;
-  standard_shipping_fee: number;
-  floating_whatsapp_enabled: boolean;
-  default_whatsapp_msg_en: string;
-  default_whatsapp_msg_kn: string;
-  whatsapp_api_configured: boolean;
+  free_delivery_threshold?: number;
+  free_shipping_threshold?: number;
+  standard_shipping_fee?: number;
+  floating_whatsapp_enabled?: boolean;
+  default_whatsapp_msg_en?: string;
+  default_whatsapp_msg_kn?: string;
+  whatsapp_api_configured?: boolean;
   whatsapp_api_token?: string;
   admin_password?: string;
   policy_privacy_en: string;
@@ -336,7 +338,7 @@ export interface AdminAuditLog {
   action?: string;
   target_id: string;
   reason?: string;
-  details: string;
+  details: any;
 }
 
 export interface Lead {

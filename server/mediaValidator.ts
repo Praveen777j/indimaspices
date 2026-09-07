@@ -191,7 +191,7 @@ export function validateMediaContent(
 
   // Check allowed categories (image, video)
   const allowedCategories = options.allowedCategories || ['image', 'video'];
-  if (!allowedCategories.includes(detected.category)) {
+  if (detected.category === 'unknown' || !allowedCategories.includes(detected.category)) {
     return {
       valid: false,
       detected,

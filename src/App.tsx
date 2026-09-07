@@ -180,7 +180,7 @@ const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToA
   };
 
   const handleApplyOfferCoupon = (offer: Offer) => {
-    applyCoupon(offer.code, offers);
+    applyCoupon(offer);
     setIsCartOpen(true);
   };
 

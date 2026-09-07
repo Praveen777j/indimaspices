@@ -972,6 +972,8 @@ class DataStore {
     const updatedProd: Product = {
       ...this.data.products[idx],
       ...updates,
+      id, // Preserve immutable ID
+      created_at: this.data.products[idx].created_at, // Preserve created_at
       video: updates.video !== undefined ? (updates.video || '').trim() : (this.data.products[idx].video || ''),
       updated_at: new Date().toISOString()
     };
@@ -1016,7 +1018,11 @@ class DataStore {
   public async updateCategory(id: string, updates: Partial<Category>, adminUser = 'Admin'): Promise<Category | null> {
     const idx = this.data.categories.findIndex(c => c.id === id);
     if (idx === -1) return null;
-    const updated = { ...this.data.categories[idx], ...updates };
+    const updated = {
+      ...this.data.categories[idx],
+      ...updates,
+      id // Preserve immutable ID
+    };
     await this.setFirestoreDoc('categories', id, updated);
     this.data.categories[idx] = updated;
     this.save();
@@ -1604,7 +1610,11 @@ class DataStore {
       normalizedUpdates.enabled = normalizedUpdates.active;
     }
 
-    this.data.banners[idx] = { ...this.data.banners[idx], ...normalizedUpdates };
+    this.data.banners[idx] = {
+      ...this.data.banners[idx],
+      ...normalizedUpdates,
+      id // Preserve immutable ID
+    };
     const updated = this.data.banners[idx];
     await this.logAudit(adminUser, 'BANNER_UPDATED', updated.id, `Updated banner ${updated.title_en}`);
     await this.setFirestoreDoc('banners', updated.id, updated);
@@ -1658,7 +1668,12 @@ class DataStore {
   public async updateRecipe(id: string, updates: Partial<Recipe>, adminUser = 'Admin'): Promise<Recipe | null> {
     const idx = this.data.recipes.findIndex(r => r.id === id);
     if (idx === -1) return null;
-    this.data.recipes[idx] = { ...this.data.recipes[idx], ...updates };
+    this.data.recipes[idx] = {
+      ...this.data.recipes[idx],
+      ...updates,
+      id, // Preserve immutable ID
+      created_at: this.data.recipes[idx].created_at // Preserve created_at
+    };
     const updated = this.data.recipes[idx];
     await this.logAudit(adminUser, 'RECIPE_UPDATED', id, `Updated recipe ${updated.title_en}`);
     await this.setFirestoreDoc('recipes', id, updated);
@@ -1693,7 +1708,11 @@ class DataStore {
   public async updateOffer(id: string, updates: Partial<Offer>, adminUser = 'Admin'): Promise<Offer | null> {
     const idx = this.data.offers.findIndex(o => o.id === id);
     if (idx === -1) return null;
-    this.data.offers[idx] = { ...this.data.offers[idx], ...updates };
+    this.data.offers[idx] = {
+      ...this.data.offers[idx],
+      ...updates,
+      id // Preserve immutable ID
+    };
     const updated = this.data.offers[idx];
     await this.logAudit(adminUser, 'OFFER_UPDATED', id, `Updated offer ${updated.code}`);
     await this.setFirestoreDoc('offers', id, updated);
