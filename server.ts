@@ -453,8 +453,8 @@ function isTrustedOrigin(origin: string, req: Request): boolean {
       const originUrl = new URL(cleanOrigin);
       const originHostname = originUrl.hostname.toLowerCase();
       const isLocal = originHostname === 'localhost' || originHostname === '127.0.0.1';
-      const isGoogleCloudRun = originHostname.endsWith('.run.app') && originHostname.startsWith('ais-');
-      const isAiStudio = originHostname.endsWith('.google.com') && originHostname.includes('ai.studio');
+      const isGoogleCloudRun = originHostname.endsWith('.run.app');
+      const isAiStudio = originHostname.endsWith('ai.studio') || originHostname.includes('ai.studio') || originHostname.endsWith('.google.com');
       if (isLocal || isGoogleCloudRun || isAiStudio) {
         return true;
       }
@@ -485,10 +485,9 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   // Standard Security Headers
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 
-  // Content Security Policy (CSP)
+  // Content Security Policy (CSP) with frame-ancestors allowing AI Studio preview & Cloud Run
   const cspDirectives = [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://api.razorpay.com",
@@ -498,7 +497,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     "media-src 'self' data: blob: https://res.cloudinary.com https://*.cloudinary.com",
     "connect-src 'self' https://api.razorpay.com https://lumberjack.razorpay.com https://*.firebaseio.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com",
     "frame-src 'self' https://api.razorpay.com",
-    "frame-ancestors 'self' https://*.google.com https://*.run.app",
+    "frame-ancestors 'self' https://ai.studio https://*.ai.studio https://*.google.com https://*.run.app https://*.onrender.com",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'"
