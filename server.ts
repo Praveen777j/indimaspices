@@ -138,6 +138,14 @@ function verifyOrderAccessToken(order: Order, providedToken?: string): boolean {
   return timingSafeEqual(cleanProvided, validToken);
 }
 
+// Sanitized internal server error responder (prevents internal stack/path leaks in production)
+function safeInternalError(res: Response, err: any, clientFallback = 'An unexpected internal error occurred'): Response {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(500).json({ success: false, error: clientFallback });
+  }
+  return res.status(500).json({ success: false, error: err?.message || clientFallback });
+}
+
 // Multer Storage Configuration - Temporary disk storage for processing only
 const TEMP_UPLOAD_DIR = path.join(os.tmpdir(), 'indima-uploads-temp');
 if (!fs.existsSync(TEMP_UPLOAD_DIR)) {
@@ -869,7 +877,7 @@ app.get('/api/settings', (req: Request, res: Response) => {
     const { admin_password, ...publicSettings } = rawSettings as any;
     res.json(publicSettings);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return safeInternalError(res, err, 'Failed to load store settings');
   }
 });
 
@@ -904,7 +912,7 @@ app.get('/api/products', (req: Request, res: Response) => {
 
     res.json(filtered);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return safeInternalError(res, err, 'Failed to load products');
   }
 });
 
@@ -977,7 +985,7 @@ app.post('/api/reviews', reviewSubmitLimiter, async (req: Request, res: Response
     });
     res.json({ success: true, review });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return safeInternalError(res, err, 'Failed to submit review');
   }
 });
 
@@ -1156,7 +1164,7 @@ app.get('/api/orders/:id', orderTrackLimiter, (req: Request, res: Response) => {
       order: sanitizedOrder
     });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return safeInternalError(res, err, 'Failed to retrieve order');
   }
 });
 
@@ -1862,7 +1870,7 @@ app.post('/api/leads', leadLimiter, async (req: Request, res: Response) => {
     const lead = await db.addLead(clean, parseResult.data.source);
     res.json({ success: true, couponCode: 'INDIMA10' });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return safeInternalError(res, err, 'Failed to record inquiry');
   }
 });
 
@@ -1938,7 +1946,7 @@ app.post('/api/admin/change-password', adminAuthMiddleware, async (req: Request,
     }
     res.json({ success: true, message: 'Admin password successfully updated' });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return safeInternalError(res, err, 'Failed to update admin password');
   }
 });
 
@@ -2783,13 +2791,17 @@ app.all('/api/*', (req: Request, res: Response) => {
 // API Error handler middleware
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   if (req.path.startsWith('/api')) {
-    console.error('[API Handler Error]:', err);
+    console.error('[API Handler Error]:', err?.message || err);
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
-    return res.status(err.status || 500).json({
+    const statusCode = typeof err.status === 'number' && err.status >= 400 && err.status <= 599 ? err.status : 500;
+    const safeMessage = statusCode < 500
+      ? (err.message || 'Invalid request')
+      : (process.env.NODE_ENV === 'production' ? 'An unexpected internal error occurred' : (err.message || 'Internal API error'));
+    return res.status(statusCode).json({
       success: false,
-      error: err.message || 'Internal API error'
+      error: safeMessage
     });
   }
   next(err);
@@ -2966,6 +2978,61 @@ async function startServer() {
 
   // Pre-flight check storage availability in background without blocking startup
   isCloudStorageAvailable().catch(() => {});
+
+  // ----------------------------------------------------
+  // STATIC FILE & SENSITIVE PATH SECURITY GUARD
+  // ----------------------------------------------------
+  // Prevents unauthorized enumeration and exposure of dotfiles, secrets, manifests,
+  // database backups, source maps, server source code, and internal configs.
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const rawPath = (req.path || '').toLowerCase();
+
+    // 1. Block dotfiles and hidden paths (e.g. /.env, /.git, /.github, etc.)
+    if (rawPath.startsWith('/.') || rawPath.includes('/.')) {
+      return res.status(404).send('Not found');
+    }
+
+    // 2. Block direct access to manifests, configurations, and cloud rules
+    const blockedExact = [
+      '/package.json',
+      '/package-lock.json',
+      '/tsconfig.json',
+      '/tsconfig.node.json',
+      '/vite.config.ts',
+      '/vite.config.js',
+      '/metadata.json',
+      '/firestore.rules',
+      '/firebase-applet-config.json',
+      '/firebase-blueprint.json',
+      '/service-account.json',
+      '/firebase-service-account.json',
+      '/server.ts',
+      '/server.cjs'
+    ];
+
+    if (blockedExact.includes(rawPath)) {
+      return res.status(404).send('Not found');
+    }
+
+    // 3. Block sensitive extensions and internal server directories
+    const blockedPatterns = [
+      /\.(env|map|bak|backup|sql|sqlite|db|log|cert|key|pem|crt|conf|config|yml|yaml|sh)$/i,
+      /^\/(server|scripts)(\/|$)/i,
+      /\/(\.git|\.env|node_modules|server)(\/|$)/i
+    ];
+
+    // In production, block direct access to /src/ and raw TS/TSX source files
+    if (process.env.NODE_ENV === 'production') {
+      blockedPatterns.push(/^\/src(\/|$)/i);
+      blockedPatterns.push(/\.(ts|tsx)$/i);
+    }
+
+    if (blockedPatterns.some(pattern => pattern.test(rawPath))) {
+      return res.status(404).send('Not found');
+    }
+
+    next();
+  });
 
   // Explicitly serve public files (e.g. google verification files, sitemap, robots.txt)
   app.use(express.static(path.join(process.cwd(), 'public')));
