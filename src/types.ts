@@ -124,6 +124,19 @@ export interface OrderItem {
   total_price?: number;
 }
 
+export interface OrderTrackingInfo {
+  carrier?: string;
+  tracking_number?: string;
+  status?: string;
+  expected_delivery?: string;
+  latitude?: number;
+  longitude?: number;
+  location_name?: string;
+  location_updated_at?: string;
+  location_updated_by?: string;
+  live_tracking_available?: boolean;
+}
+
 export interface Order {
   id: string;
   internal_order_id?: string;
@@ -163,7 +176,9 @@ export interface Order {
     submitted_at?: string;
   };
   tracking_number?: string;
+  carrier?: string;
   expected_delivery?: string;
+  tracking?: OrderTrackingInfo;
   whatsapp_notification_status?: 'Sent' | 'Pending' | 'Failed' | 'sent' | 'pending' | 'failed';
   whatsapp_notification_error?: string;
   stock_restored?: boolean;

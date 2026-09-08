@@ -113,21 +113,65 @@ export const api = {
     return { found: false, count: 0 };
   },
 
-  trackOrders: async (phone: string, orderId?: string): Promise<{ phone: string; count: number; orders: Order[]; error?: string }> => {
-    const query = new URLSearchParams({ phone });
-    if (orderId) {
-      query.append('order_id', orderId);
+  trackOrders: async (
+    phone?: string,
+    orderId?: string,
+    manualToken?: string
+  ): Promise<{ phone?: string; count: number; orders: Order[]; error?: string }> => {
+    const query = new URLSearchParams();
+    if (phone) query.append('phone', phone);
+    if (orderId) query.append('order_id', orderId.trim());
+
+    // Check for token from parameter or localStorage
+    let token = manualToken?.trim();
+    if (!token && orderId) {
       try {
+        const cleanId = orderId.trim();
         const stored = JSON.parse(localStorage.getItem('indima_order_tokens') || '{}');
-        if (stored[orderId]) {
-          query.append('token', stored[orderId]);
+        if (stored[cleanId]) {
+          token = stored[cleanId];
         }
       } catch (_) {}
     }
-    return safeFetchJson<{ phone: string; count: number; orders: Order[]; error?: string }>(
+    if (token) {
+      query.append('token', token);
+    }
+
+    return safeFetchJson<{ phone?: string; count: number; orders: Order[]; error?: string }>(
       `/api/orders/track?${query.toString()}`,
       undefined,
       { phone, count: 0, orders: [] }
+    );
+  },
+
+  trackSingleOrder: async (
+    orderId: string,
+    manualToken?: string
+  ): Promise<{ success: boolean; order?: Order; error?: string }> => {
+    const cleanId = orderId.trim();
+    let token = manualToken?.trim();
+    if (!token) {
+      try {
+        const stored = JSON.parse(localStorage.getItem('indima_order_tokens') || '{}');
+        if (stored[cleanId]) {
+          token = stored[cleanId];
+        }
+      } catch (_) {}
+    }
+
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['X-Order-Token'] = token;
+    }
+
+    const url = token
+      ? `/api/orders/${encodeURIComponent(cleanId)}?token=${encodeURIComponent(token)}`
+      : `/api/orders/${encodeURIComponent(cleanId)}`;
+
+    return safeFetchJson<{ success: boolean; order?: Order; error?: string }>(
+      url,
+      { headers },
+      { success: false, error: 'Order could not be retrieved' }
     );
   },
 
@@ -284,7 +328,17 @@ export const api = {
   updateOrderStatus: async (
     token: string,
     orderId: string,
-    payload: { status?: string; payment_status?: string; tracking_number?: string; expected_delivery?: string }
+    payload: {
+      status?: string;
+      payment_status?: string;
+      tracking_number?: string;
+      carrier?: string;
+      expected_delivery?: string;
+      latitude?: number;
+      longitude?: number;
+      location_name?: string;
+      live_tracking_available?: boolean;
+    }
   ): Promise<any> => {
     return safeFetchJson<any>(`/api/admin/orders/${orderId}/status`, {
       method: 'PUT',
@@ -294,6 +348,26 @@ export const api = {
       },
       body: JSON.stringify(payload)
     }, { error: 'Failed to update order status' });
+  },
+
+  updateOrderLocation: async (
+    token: string,
+    orderId: string,
+    payload: {
+      latitude: number;
+      longitude: number;
+      location_name?: string;
+      live_tracking_available?: boolean;
+    }
+  ): Promise<any> => {
+    return safeFetchJson<any>(`/api/admin/orders/${orderId}/location`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    }, { error: 'Failed to update order delivery location' });
   },
 
   updateOrderAddress: async (

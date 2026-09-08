@@ -703,6 +703,13 @@ const orderTrackLimiter = createRateLimiter({
   keyPrefix: 'order_track'
 });
 
+const deliveryLocationLimiter = createRateLimiter({
+  windowMs: 60 * 1000, // 1 minute
+  max: 60,
+  message: 'Delivery location update rate limit reached. Please wait a moment.',
+  keyPrefix: 'delivery_loc'
+});
+
 const paymentVerifyLimiter = createRateLimiter({
   windowMs: 60 * 1000, // 1 minute
   max: 20,
@@ -1056,7 +1063,24 @@ app.get('/api/orders/track', orderTrackLimiter, async (req: Request, res: Respon
         total_amount: order.total_amount,
         currency: order.currency || 'INR',
         tracking_number: order.tracking_number,
+        carrier: order.carrier || order.tracking?.carrier,
         expected_delivery: order.expected_delivery,
+        tracking: order.tracking ? {
+          carrier: order.tracking.carrier || order.carrier,
+          tracking_number: order.tracking.tracking_number || order.tracking_number,
+          status: order.tracking.status || order.order_status || order.status,
+          expected_delivery: order.tracking.expected_delivery || order.expected_delivery,
+          latitude: order.tracking.latitude,
+          longitude: order.tracking.longitude,
+          location_name: order.tracking.location_name,
+          location_updated_at: order.tracking.location_updated_at,
+          live_tracking_available: order.tracking.live_tracking_available
+        } : (order.tracking_number || order.carrier || order.expected_delivery ? {
+          carrier: order.carrier,
+          tracking_number: order.tracking_number,
+          expected_delivery: order.expected_delivery,
+          status: order.order_status || order.status
+        } : undefined),
         created_at: order.created_at,
         order_date: order.order_date,
         address_snapshot: order.address_snapshot ? {
@@ -1139,7 +1163,24 @@ app.get('/api/orders/:id', orderTrackLimiter, (req: Request, res: Response) => {
       total_amount: order.total_amount,
       currency: order.currency || 'INR',
       tracking_number: order.tracking_number,
+      carrier: order.carrier || order.tracking?.carrier,
       expected_delivery: order.expected_delivery,
+      tracking: order.tracking ? {
+        carrier: order.tracking.carrier || order.carrier,
+        tracking_number: order.tracking.tracking_number || order.tracking_number,
+        status: order.tracking.status || order.order_status || order.status,
+        expected_delivery: order.tracking.expected_delivery || order.expected_delivery,
+        latitude: order.tracking.latitude,
+        longitude: order.tracking.longitude,
+        location_name: order.tracking.location_name,
+        location_updated_at: order.tracking.location_updated_at,
+        live_tracking_available: order.tracking.live_tracking_available
+      } : (order.tracking_number || order.carrier || order.expected_delivery ? {
+        carrier: order.carrier,
+        tracking_number: order.tracking_number,
+        expected_delivery: order.expected_delivery,
+        status: order.order_status || order.status
+      } : undefined),
       created_at: order.created_at,
       order_date: order.order_date,
       address_snapshot: order.address_snapshot ? {
@@ -2324,20 +2365,194 @@ app.delete('/api/admin/orders/:id', adminAuthMiddleware, async (req: Request, re
 app.put('/api/admin/orders/:id/status', adminAuthMiddleware, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { status, tracking_number, expected_delivery, payment_status } = req.body;
+    const {
+      status,
+      tracking_number,
+      carrier,
+      expected_delivery,
+      payment_status,
+      latitude,
+      longitude,
+      location_name,
+      live_tracking_available
+    } = req.body;
+
+    // 1. Validate status format if provided
+    if (status !== undefined && status !== null) {
+      if (typeof status !== 'string' || status.trim().length > 50) {
+        return res.status(400).json({ error: 'Invalid order status format' });
+      }
+    }
+
+    // 2. Validate tracking number format if provided
+    if (tracking_number !== undefined && tracking_number !== null) {
+      if (typeof tracking_number !== 'string' || tracking_number.length > 60) {
+        return res.status(400).json({ error: 'Invalid tracking number format' });
+      }
+    }
+
+    // 3. Validate carrier format if provided
+    if (carrier !== undefined && carrier !== null) {
+      if (typeof carrier !== 'string' || carrier.length > 60) {
+        return res.status(400).json({ error: 'Invalid carrier format' });
+      }
+    }
+
+    // 4. Validate coordinates if provided
+    let validLat: number | undefined = undefined;
+    let validLng: number | undefined = undefined;
+
+    if (latitude !== undefined && latitude !== null && latitude !== '') {
+      const numLat = Number(latitude);
+      if (isNaN(numLat) || !isFinite(numLat)) {
+        return res.status(400).json({ error: 'Latitude must be a valid number' });
+      }
+      if (numLat < -90 || numLat > 90) {
+        return res.status(400).json({ error: 'Latitude must be between -90 and 90 degrees' });
+      }
+      validLat = numLat;
+    }
+
+    if (longitude !== undefined && longitude !== null && longitude !== '') {
+      const numLng = Number(longitude);
+      if (isNaN(numLng) || !isFinite(numLng)) {
+        return res.status(400).json({ error: 'Longitude must be a valid number' });
+      }
+      if (numLng < -180 || numLng > 180) {
+        return res.status(400).json({ error: 'Longitude must be between -180 and 180 degrees' });
+      }
+      validLng = numLng;
+    }
+
+    if ((validLat !== undefined && validLng === undefined) || (validLat === undefined && validLng !== undefined)) {
+      return res.status(400).json({ error: 'Both latitude and longitude must be provided together' });
+    }
+
     const session = (req as any).adminSession;
     const updated = await db.updateOrderStatus(
       id,
-      status,
-      tracking_number,
-      expected_delivery,
-      payment_status,
-      session?.username || 'Admin'
+      status ? status.trim() : undefined,
+      tracking_number !== undefined ? tracking_number.trim() : undefined,
+      expected_delivery !== undefined ? expected_delivery.trim() : undefined,
+      payment_status ? payment_status.trim() : undefined,
+      session?.username || 'Admin',
+      {
+        carrier: carrier !== undefined ? carrier.trim() : undefined,
+        latitude: validLat,
+        longitude: validLng,
+        location_name: typeof location_name === 'string' ? location_name.trim().slice(0, 100) : undefined,
+        live_tracking_available: typeof live_tracking_available === 'boolean' ? live_tracking_available : false
+      }
     );
+
     if (!updated) {
       return res.status(404).json({ error: 'Order not found' });
     }
     res.json({ success: true, order: updated });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Admin Dedicated Location Update
+app.put('/api/admin/orders/:id/location', adminAuthMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { latitude, longitude, location_name, live_tracking_available } = req.body;
+
+    if (latitude === undefined || longitude === undefined || latitude === null || longitude === null) {
+      return res.status(400).json({ error: 'Latitude and longitude are required' });
+    }
+
+    const numLat = Number(latitude);
+    const numLng = Number(longitude);
+    if (isNaN(numLat) || !isFinite(numLat) || numLat < -90 || numLat > 90) {
+      return res.status(400).json({ error: 'Latitude must be between -90 and 90 degrees' });
+    }
+    if (isNaN(numLng) || !isFinite(numLng) || numLng < -180 || numLng > 180) {
+      return res.status(400).json({ error: 'Longitude must be between -180 and 180 degrees' });
+    }
+
+    const session = (req as any).adminSession;
+    const updated = await db.updateOrderLocation(
+      id,
+      numLat,
+      numLng,
+      typeof location_name === 'string' ? location_name.trim().slice(0, 100) : undefined,
+      session?.username || 'Admin',
+      Boolean(live_tracking_available)
+    );
+
+    if (!updated) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    res.json({ success: true, order: updated });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Phase 2-Ready Delivery Partner GPS Location Endpoint
+app.put('/api/delivery/orders/:id/location', deliveryLocationLimiter, async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Authorization header with Bearer token required for delivery updates' });
+    }
+    const token = authHeader.split(' ')[1].trim();
+
+    let actor = 'Delivery Partner';
+    const isValidAdmin = validateAdminToken(token);
+    const deliverySecret = process.env.DELIVERY_AGENT_SECRET || process.env.DELIVERY_SECRET;
+    const isValidDriver = deliverySecret && token === deliverySecret;
+
+    if (!isValidAdmin && !isValidDriver) {
+      return res.status(403).json({ error: 'Invalid or unauthorized delivery partner credentials' });
+    }
+    if (isValidAdmin) {
+      actor = 'Admin';
+    }
+
+    const { id } = req.params;
+    const { latitude, longitude, location_name } = req.body;
+
+    if (latitude === undefined || longitude === undefined || latitude === null || longitude === null) {
+      return res.status(400).json({ error: 'Latitude and longitude are required for GPS tracking update' });
+    }
+
+    const numLat = Number(latitude);
+    const numLng = Number(longitude);
+    if (isNaN(numLat) || !isFinite(numLat) || numLat < -90 || numLat > 90) {
+      return res.status(400).json({ error: 'Latitude must be between -90 and 90 degrees' });
+    }
+    if (isNaN(numLng) || !isFinite(numLng) || numLng < -180 || numLng > 180) {
+      return res.status(400).json({ error: 'Longitude must be between -180 and 180 degrees' });
+    }
+
+    const updated = await db.updateOrderLocation(
+      id,
+      numLat,
+      numLng,
+      typeof location_name === 'string' ? location_name.trim().slice(0, 100) : 'GPS Live Transit Point',
+      actor,
+      true // live GPS source
+    );
+
+    if (!updated) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Delivery location updated successfully',
+      tracking: {
+        latitude: updated.tracking?.latitude,
+        longitude: updated.tracking?.longitude,
+        location_name: updated.tracking?.location_name,
+        location_updated_at: updated.tracking?.location_updated_at,
+        live_tracking_available: true
+      }
+    });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

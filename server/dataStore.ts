@@ -7,6 +7,8 @@ import {
   Product,
   Category,
   Order,
+  OrderStatus,
+  OrderTrackingInfo,
   PaymentStatus,
   Customer,
   Recipe,
@@ -1477,7 +1479,8 @@ class DataStore {
     trackingNumber?: string,
     expectedDelivery?: string,
     paymentStatus?: PaymentStatus,
-    adminUser = 'Admin'
+    adminUser = 'Admin',
+    trackingDetails?: Partial<OrderTrackingInfo>
   ): Promise<Order | null> {
     const order = this.getOrderById(orderId);
     if (!order) return null;
@@ -1507,6 +1510,36 @@ class DataStore {
     }
     if (trackingNumber !== undefined) order.tracking_number = trackingNumber;
     if (expectedDelivery !== undefined) order.expected_delivery = expectedDelivery;
+
+    // Initialize or update tracking structure
+    if (!order.tracking) {
+      order.tracking = {};
+    }
+    if (orderStatus) order.tracking.status = orderStatus;
+    if (trackingNumber !== undefined) order.tracking.tracking_number = trackingNumber;
+    if (expectedDelivery !== undefined) order.tracking.expected_delivery = expectedDelivery;
+
+    if (trackingDetails) {
+      if (trackingDetails.carrier !== undefined) {
+        order.carrier = trackingDetails.carrier;
+        order.tracking.carrier = trackingDetails.carrier;
+      }
+      if (typeof trackingDetails.latitude === 'number' && typeof trackingDetails.longitude === 'number') {
+        order.tracking.latitude = trackingDetails.latitude;
+        order.tracking.longitude = trackingDetails.longitude;
+        order.tracking.location_updated_at = new Date().toISOString();
+        order.tracking.location_updated_by = adminUser;
+      }
+      if (trackingDetails.location_name !== undefined) {
+        order.tracking.location_name = trackingDetails.location_name;
+      }
+      if (trackingDetails.live_tracking_available !== undefined) {
+        order.tracking.live_tracking_available = trackingDetails.live_tracking_available;
+      }
+    } else if (order.carrier) {
+      order.tracking.carrier = order.carrier;
+    }
+
     order.updated_at = new Date().toISOString();
 
     await this.logAudit(
@@ -1514,6 +1547,42 @@ class DataStore {
       'ORDER_STATUS_CHANGED',
       orderId,
       `Status updated: ${orderStatus || ''} ${paymentStatus ? `Payment: ${paymentStatus}` : ''}`
+    );
+    await this.setFirestoreDoc('orders', orderId, order);
+    this.save();
+    return order;
+  }
+
+  public async updateOrderLocation(
+    orderId: string,
+    latitude: number,
+    longitude: number,
+    locationName?: string,
+    updatedBy = 'Admin',
+    isLiveGps = false
+  ): Promise<Order | null> {
+    const order = this.getOrderById(orderId);
+    if (!order) return null;
+
+    if (!order.tracking) {
+      order.tracking = {};
+    }
+
+    order.tracking.latitude = latitude;
+    order.tracking.longitude = longitude;
+    if (locationName !== undefined) {
+      order.tracking.location_name = locationName;
+    }
+    order.tracking.location_updated_at = new Date().toISOString();
+    order.tracking.location_updated_by = updatedBy;
+    order.tracking.live_tracking_available = isLiveGps;
+    order.updated_at = new Date().toISOString();
+
+    await this.logAudit(
+      updatedBy,
+      'ORDER_LOCATION_UPDATED',
+      orderId,
+      `Location updated to [${latitude}, ${longitude}] ${locationName ? `(${locationName})` : ''} by ${updatedBy}`
     );
     await this.setFirestoreDoc('orders', orderId, order);
     this.save();

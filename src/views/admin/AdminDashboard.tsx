@@ -40,7 +40,9 @@ import {
   ArrowLeft,
   ArrowRight,
   Download,
-  Printer
+  Printer,
+  Navigation,
+  MapPin
 } from 'lucide-react';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 import { api } from '../../services/api';
@@ -48,6 +50,8 @@ import { HeroBannerManager } from './components/HeroBannerManager';
 import { AdminSecuritySettings } from './components/AdminSecuritySettings';
 import { AdminPaymentsTab } from './components/AdminPaymentsTab';
 import { AdminReportsTab } from './components/AdminReportsTab';
+import { DeliveryMap } from '../../components/DeliveryMap';
+import { SUPPORTED_CARRIERS, getCarrierDisplayName, getVerifiedTrackingUrl } from '../../utils/carrierTracking';
 import {
   downloadReceiptFile,
   printReceiptDirectly,
@@ -132,10 +136,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
   const [addressEditReason, setAddressEditReason] = useState('');
   const [modifiedAddress, setModifiedAddress] = useState<any>(null);
 
-  // Status update state
+  // Status & Tracking update state
   const [newOrderStatus, setNewOrderStatus] = useState<OrderStatus>('placed');
   const [newTrackingNumber, setNewTrackingNumber] = useState('');
+  const [newCarrier, setNewCarrier] = useState('Delhivery');
   const [newExpectedDelivery, setNewExpectedDelivery] = useState('');
+  const [newLatitude, setNewLatitude] = useState<number | undefined>(undefined);
+  const [newLongitude, setNewLongitude] = useState<number | undefined>(undefined);
+  const [newLocationName, setNewLocationName] = useState('');
+  const [newLiveTrackingAvailable, setNewLiveTrackingAvailable] = useState(false);
+  const [isUpdatingTracking, setIsUpdatingTracking] = useState(false);
 
   // Uploading status
   const [isUploading, setIsUploading] = useState(false);
@@ -274,6 +284,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
     setTimeout(() => setActionSuccess(''), 3000);
   };
 
+  const showError = (msg: string) => {
+    setActionSuccess(`⚠️ ${msg}`);
+    setTimeout(() => setActionSuccess(''), 5000);
+  };
+
   // Handle Single Media Upload
   const handleFileUpload = async (file: File): Promise<string | null> => {
     if (!token) return null;
@@ -342,37 +357,65 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
     }
   };
 
-  // Order Status Update (Optimistic)
-  const handleUpdateOrderStatus = async (orderId: string) => {
+  // Order Status & Delivery Tracking Update (Optimistic)
+  const handleUpdateOrderStatus = async (orderId: string, overrideStatus?: OrderStatus) => {
     if (!token) return;
+    const targetStatus = overrideStatus || newOrderStatus;
     const order = orders.find(o => o.id === orderId);
-    const isConfirming = newOrderStatus === 'confirmed' || newOrderStatus === 'processing' || newOrderStatus === 'packed' || newOrderStatus === 'shipped';
+    const isConfirming = targetStatus === 'confirmed' || targetStatus === 'processing' || targetStatus === 'packed' || targetStatus === 'shipped';
     const paymentStatus = isConfirming && order?.payment_status !== 'Successful' ? 'Successful' : undefined;
+
+    const updatedTracking = {
+      carrier: newCarrier || order?.carrier || order?.tracking?.carrier,
+      tracking_number: newTrackingNumber || order?.tracking_number || order?.tracking?.tracking_number,
+      status: targetStatus,
+      expected_delivery: newExpectedDelivery || order?.expected_delivery || order?.tracking?.expected_delivery,
+      latitude: newLatitude,
+      longitude: newLongitude,
+      location_name: newLocationName || order?.tracking?.location_name,
+      location_updated_at: newLatitude !== undefined ? new Date().toISOString() : order?.tracking?.location_updated_at,
+      location_updated_by: newLatitude !== undefined ? 'Admin' : order?.tracking?.location_updated_by,
+      live_tracking_available: newLiveTrackingAvailable
+    };
 
     // Optimistically update order in state immediately
     setOrders(prev => prev.map(o => o.id === orderId ? {
       ...o,
-      status: newOrderStatus.toLowerCase().includes('deliv') ? 'delivered' : newOrderStatus.toLowerCase().includes('ship') ? 'shipped' : newOrderStatus.toLowerCase().includes('pack') ? 'packed' : newOrderStatus.toLowerCase().includes('process') ? 'confirmed' : o.status,
-      order_status: newOrderStatus,
+      status: targetStatus.toLowerCase().includes('deliv') ? 'delivered' : targetStatus.toLowerCase().includes('ship') ? 'shipped' : targetStatus.toLowerCase().includes('pack') ? 'packed' : targetStatus.toLowerCase().includes('process') ? 'confirmed' : o.status,
+      order_status: targetStatus,
       tracking_number: newTrackingNumber || o.tracking_number,
+      carrier: newCarrier || o.carrier,
       expected_delivery: newExpectedDelivery || o.expected_delivery,
       payment_status: paymentStatus || o.payment_status,
+      tracking: updatedTracking,
       updated_at: new Date().toISOString()
     } : o));
 
     setIsOrderModalOpen(false);
-    showSuccess('Order status updated');
+    showSuccess(`Order status updated to ${targetStatus}`);
 
     try {
       await api.updateOrderStatus(token, orderId, {
-        status: newOrderStatus,
+        status: targetStatus,
         tracking_number: newTrackingNumber || undefined,
+        carrier: newCarrier || undefined,
         expected_delivery: newExpectedDelivery || undefined,
-        payment_status: paymentStatus
+        payment_status: paymentStatus,
+        latitude: newLatitude,
+        longitude: newLongitude,
+        location_name: newLocationName || undefined,
+        live_tracking_available: newLiveTrackingAvailable
       });
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      showError(e.message || 'Failed to update order status');
     }
+  };
+
+  // Quick Mark as Delivered
+  const handleQuickMarkDelivered = async (orderId: string) => {
+    setNewOrderStatus('delivered');
+    await handleUpdateOrderStatus(orderId, 'delivered');
   };
 
   // Order Address Emergency Modification (Optimistic)
@@ -1354,21 +1397,54 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
                             </td>
                             <td className="p-3">
                               <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-sm bg-[#993300] text-white">
-                                {ord.status}
+                                {ord.order_status || ord.status}
                               </span>
-                              {ord.tracking_number && (
-                                <p className="font-mono text-[10px] text-neutral-600 mt-1">
-                                  AWB: {ord.tracking_number}
-                                </p>
+                              {(ord.tracking_number || ord.tracking?.tracking_number) && (
+                                <div className="mt-1 flex items-center space-x-1">
+                                  <span className="font-mono text-[10px] text-neutral-600">
+                                    {ord.carrier || ord.tracking?.carrier ? `${getCarrierDisplayName(ord.carrier || ord.tracking?.carrier)}: ` : 'AWB: '}
+                                    {ord.tracking_number || ord.tracking?.tracking_number}
+                                  </span>
+                                  {getVerifiedTrackingUrl(ord.carrier || ord.tracking?.carrier, ord.tracking_number || ord.tracking?.tracking_number) && (
+                                    <a
+                                      href={getVerifiedTrackingUrl(ord.carrier || ord.tracking?.carrier, ord.tracking_number || ord.tracking?.tracking_number)!}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-[#993300] hover:underline inline-flex items-center"
+                                      title="Open courier tracking portal"
+                                    >
+                                      <ExternalLink className="w-2.5 h-2.5" />
+                                    </a>
+                                  )}
+                                </div>
+                              )}
+                              {(ord.tracking?.latitude != null && ord.tracking?.longitude != null) && (
+                                <div className="mt-0.5 flex flex-wrap gap-1 items-center">
+                                  <span className="inline-flex items-center space-x-1 text-[9px] text-[#993300] bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                                    <MapPin className="w-2.5 h-2.5" />
+                                    <span>{ord.tracking.location_name || 'Location Pinned'}</span>
+                                  </span>
+                                  {ord.tracking.live_tracking_available && (
+                                    <span className="inline-flex items-center space-x-1 text-[9px] text-emerald-800 bg-emerald-50 border border-emerald-300 px-1.5 py-0.5 rounded font-bold">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                                      <span>Live</span>
+                                    </span>
+                                  )}
+                                </div>
                               )}
                             </td>
                             <td className="p-3 text-right space-x-1">
                               <button
                                 onClick={() => {
                                   setEditingOrder(ord);
-                                  setNewOrderStatus(ord.status);
-                                  setNewTrackingNumber(ord.tracking_number || '');
-                                  setNewExpectedDelivery(ord.expected_delivery || '');
+                                  setNewOrderStatus(ord.order_status || ord.status);
+                                  setNewTrackingNumber(ord.tracking_number || ord.tracking?.tracking_number || '');
+                                  setNewCarrier(ord.carrier || ord.tracking?.carrier || 'Delhivery');
+                                  setNewExpectedDelivery(ord.expected_delivery || ord.tracking?.expected_delivery || '');
+                                  setNewLatitude(ord.tracking?.latitude ?? undefined);
+                                  setNewLongitude(ord.tracking?.longitude ?? undefined);
+                                  setNewLocationName(ord.tracking?.location_name || '');
+                                  setNewLiveTrackingAvailable(ord.tracking?.live_tracking_available || false);
                                   setModifiedAddress({ ...ord.address_snapshot });
                                   setIsOrderModalOpen(true);
                                 }}
@@ -2407,49 +2483,241 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
               </div>
             </div>
 
-            {/* Status Transition Control */}
-            <div className="bg-[#FAF6EE] p-4 rounded-xl border border-[#DFC7A2] space-y-3">
-              <h4 className="font-bold text-neutral-900 uppercase">Update Shipment Status</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Status & Delivery Tracking Management */}
+            <div className="bg-[#FAF6EE] p-4 rounded-xl border border-[#DFC7A2] space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#EADBCA] pb-3">
                 <div>
-                  <label className="block font-bold text-neutral-900 mb-1">Status</label>
+                  <h4 className="font-bold text-neutral-900 uppercase text-sm">Shipment Status & Delivery Tracking</h4>
+                  <p className="text-xs text-neutral-600">
+                    Manage carrier assignment, tracking numbers, and verified delivery checkpoints.
+                  </p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => handleQuickMarkDelivered(editingOrder.id)}
+                    className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-lg text-xs flex items-center space-x-1.5 cursor-pointer shadow-xs transition-colors"
+                    title="Instantly mark this order as Delivered"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Quick Mark Delivered</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Status, Carrier, AWB, Expected Date */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div>
+                  <label className="block font-bold text-neutral-900 text-xs mb-1">Order Status</label>
                   <select
                     value={newOrderStatus}
                     onChange={e => setNewOrderStatus(e.target.value as OrderStatus)}
-                    className="w-full px-3 py-2 bg-white border border-[#D9C4A2] rounded-lg text-neutral-900 font-medium"
+                    className="w-full px-3 py-2 bg-white border border-[#D9C4A2] rounded-lg text-neutral-900 font-medium text-xs"
                   >
                     <option value="placed">Order Placed</option>
                     <option value="confirmed">Payment Confirmed</option>
                     <option value="processing">In Preparation</option>
                     <option value="packed">Packed</option>
-                    <option value="shipped">Shipped</option>
+                    <option value="shipped">Dispatched / In Transit</option>
                     <option value="out_for_delivery">Out for Delivery</option>
                     <option value="delivered">Delivered</option>
                     <option value="cancelled">Cancelled</option>
                   </select>
                 </div>
+
                 <div>
-                  <label className="block font-bold text-neutral-900 mb-1">AWB Courier ID</label>
+                  <label className="block font-bold text-neutral-900 text-xs mb-1">Logistics Carrier</label>
+                  <select
+                    value={newCarrier}
+                    onChange={e => setNewCarrier(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-[#D9C4A2] rounded-lg text-neutral-900 font-medium text-xs"
+                  >
+                    {SUPPORTED_CARRIERS.map(c => (
+                      <option key={c.id} value={c.name}>
+                        {c.name} {c.notes ? `(${c.notes})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-neutral-900 text-xs mb-1">AWB / Tracking Number</label>
                   <input
                     type="text"
                     value={newTrackingNumber}
                     onChange={e => setNewTrackingNumber(e.target.value)}
-                    placeholder="e.g. DTDC-984521"
-                    className="w-full px-3 py-2 bg-white border border-[#D9C4A2] rounded-lg font-mono text-neutral-900"
+                    placeholder="e.g. DEL-84920412"
+                    className="w-full px-3 py-2 bg-white border border-[#D9C4A2] rounded-lg font-mono text-neutral-900 text-xs"
                   />
                 </div>
+
                 <div>
-                  <label className="block font-bold text-neutral-900 mb-1">Expected Delivery Date</label>
+                  <label className="block font-bold text-neutral-900 text-xs mb-1">Expected Delivery</label>
                   <input
                     type="text"
                     value={newExpectedDelivery}
                     onChange={e => setNewExpectedDelivery(e.target.value)}
                     placeholder="e.g. 24 Oct 2025"
-                    className="w-full px-3 py-2 bg-white border border-[#D9C4A2] rounded-lg text-neutral-900"
+                    className="w-full px-3 py-2 bg-white border border-[#D9C4A2] rounded-lg text-neutral-900 text-xs"
                   />
                 </div>
               </div>
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+
+              {/* Carrier Portal Link if available */}
+              {newTrackingNumber && (
+                <div className="flex items-center justify-between text-xs bg-white/70 p-2.5 rounded-lg border border-[#EADBCA]">
+                  <div className="flex items-center space-x-1.5 text-neutral-700">
+                    <Truck className="w-3.5 h-3.5 text-[#993300]" />
+                    <span>Courier: <strong className="text-neutral-900">{getCarrierDisplayName(newCarrier)}</strong></span>
+                    <span className="text-neutral-400">•</span>
+                    <span>AWB: <strong className="font-mono text-neutral-900">{newTrackingNumber}</strong></span>
+                  </div>
+                  {getVerifiedTrackingUrl(newCarrier, newTrackingNumber) ? (
+                    <a
+                      href={getVerifiedTrackingUrl(newCarrier, newTrackingNumber)!}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[#993300] hover:underline font-bold inline-flex items-center space-x-1"
+                    >
+                      <span>Open Official Tracking Portal</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  ) : (
+                    <span className="text-neutral-400 text-[11px] italic">Direct portal link not available</span>
+                  )}
+                </div>
+              )}
+
+              {/* Delivery Geolocation & Live Map Tracking Section */}
+              <div className="bg-white p-3.5 rounded-xl border border-[#DFC7A2] space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center space-x-2 text-[#993300]">
+                    <MapPin className="w-4 h-4" />
+                    <span className="font-bold text-xs uppercase tracking-wide">
+                      Delivery Location & Live Tracking Checkpoint
+                    </span>
+                  </div>
+
+                  {/* Last updated badge */}
+                  {editingOrder.tracking?.location_updated_at && (
+                    <span className="text-[11px] text-neutral-500 bg-neutral-50 px-2 py-0.5 rounded border border-neutral-200 flex items-center space-x-1">
+                      <Clock className="w-3 h-3 text-neutral-400" />
+                      <span>
+                        Last updated: {new Date(editingOrder.tracking.location_updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {editingOrder.tracking.location_updated_by ? ` by ${editingOrder.tracking.location_updated_by}` : ''}
+                      </span>
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <div className="sm:col-span-1">
+                    <label className="block text-[11px] font-bold text-neutral-700 mb-1">
+                      Checkpoint Name / Hub
+                    </label>
+                    <input
+                      type="text"
+                      value={newLocationName}
+                      onChange={e => setNewLocationName(e.target.value)}
+                      placeholder="e.g. Nelamangala Sorting Center"
+                      className="w-full px-2.5 py-1.5 bg-[#FAF6EE] border border-[#D9C4A2] rounded text-xs text-neutral-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-neutral-700 mb-1">
+                      Latitude
+                    </label>
+                    <input
+                      type="number"
+                      step="0.0001"
+                      value={newLatitude !== undefined ? newLatitude : ''}
+                      onChange={e => {
+                        const val = e.target.value.trim();
+                        setNewLatitude(val === '' ? undefined : parseFloat(val));
+                      }}
+                      placeholder="e.g. 13.0995"
+                      className="w-full px-2.5 py-1.5 bg-[#FAF6EE] border border-[#D9C4A2] rounded font-mono text-xs text-neutral-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-neutral-700 mb-1">
+                      Longitude
+                    </label>
+                    <input
+                      type="number"
+                      step="0.0001"
+                      value={newLongitude !== undefined ? newLongitude : ''}
+                      onChange={e => {
+                        const val = e.target.value.trim();
+                        setNewLongitude(val === '' ? undefined : parseFloat(val));
+                      }}
+                      placeholder="e.g. 77.3917"
+                      className="w-full px-2.5 py-1.5 bg-[#FAF6EE] border border-[#D9C4A2] rounded font-mono text-xs text-neutral-900"
+                    />
+                  </div>
+                </div>
+
+                {/* Live tracking availability checkbox */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-neutral-100">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={newLiveTrackingAvailable}
+                      onChange={e => setNewLiveTrackingAvailable(e.target.checked)}
+                      className="rounded border-[#D9C4A2] text-[#993300] focus:ring-[#993300] w-4 h-4 cursor-pointer"
+                    />
+                    <span className="text-xs font-semibold text-neutral-800">
+                      Live GPS Tracking Broadcast Active
+                    </span>
+                  </label>
+
+                  {(newLatitude !== undefined || newLongitude !== undefined) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewLatitude(undefined);
+                        setNewLongitude(undefined);
+                        setNewLocationName('');
+                        setNewLiveTrackingAvailable(false);
+                      }}
+                      className="text-[11px] text-red-600 hover:text-red-800 hover:underline cursor-pointer font-medium"
+                    >
+                      Clear Pin Location
+                    </button>
+                  )}
+                </div>
+
+                <p className="text-[10px] text-neutral-500 italic">
+                  Note: Do not mark live tracking active unless there is an actual GPS broadcasting feed or delivery driver update stream. Customers will see exact coordinates and verified timestamps.
+                </p>
+
+                {/* Interactive Map Picker */}
+                <div className="mt-2">
+                  <DeliveryMap
+                    latitude={newLatitude}
+                    longitude={newLongitude}
+                    locationName={newLocationName}
+                    lastUpdated={editingOrder.tracking?.location_updated_at}
+                    statusText={newOrderStatus}
+                    isLiveTracking={newLiveTrackingAvailable}
+                    destinationCity={editingOrder.address_snapshot?.city}
+                    destinationState={editingOrder.address_snapshot?.state}
+                    isAdminPicker={true}
+                    onLocationSelect={(coords) => {
+                      setNewLatitude(coords.latitude);
+                      setNewLongitude(coords.longitude);
+                      if (coords.locationName) {
+                        setNewLocationName(coords.locationName);
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#DFC7A2]">
                 <div className="flex items-center space-x-2">
                   <button
                     type="button"
@@ -2462,7 +2730,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
 
                   <a
                     href={`https://wa.me/91${editingOrder.customer_phone.replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(
-                      `Namaskara ${editingOrder.customer_name}! 🙏\nUpdate on your Indima Spice Co. Order ${editingOrder.id}:\nStatus: ${newOrderStatus.toUpperCase()}\n${newTrackingNumber ? `Courier AWB: ${newTrackingNumber}\n` : ''}${newExpectedDelivery ? `Expected Delivery: ${newExpectedDelivery}\n` : ''}Track live: ${window.location.origin}/#track\n\nThank you for choosing pure Karnataka spices! 🌿`
+                      `Namaskara ${editingOrder.customer_name}! 🙏\nUpdate on your Indima Spice Co. Order ${editingOrder.id}:\nStatus: ${newOrderStatus.toUpperCase()}\n${newTrackingNumber ? `Courier (${newCarrier}): ${newTrackingNumber}\n` : ''}${newExpectedDelivery ? `Expected Delivery: ${newExpectedDelivery}\n` : ''}${newLocationName ? `Current Checkpoint: ${newLocationName}\n` : ''}Track live: ${window.location.origin}/#track\n\nThank you for choosing pure Karnataka spices! 🌿`
                     )}`}
                     target="_blank"
                     rel="noreferrer"
@@ -2476,9 +2744,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
                 <button
                   type="button"
                   onClick={() => handleUpdateOrderStatus(editingOrder.id)}
-                  className="px-4 py-1.5 bg-[#993300] hover:bg-[#802B00] text-white font-bold rounded-lg cursor-pointer shadow-xs"
+                  className="px-5 py-2 bg-[#993300] hover:bg-[#802B00] text-white font-bold rounded-lg cursor-pointer shadow-xs text-xs flex items-center space-x-1.5"
                 >
-                  Save Status
+                  <Check className="w-4 h-4" />
+                  <span>Save Status & Tracking</span>
                 </button>
               </div>
             </div>
