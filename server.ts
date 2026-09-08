@@ -74,16 +74,9 @@ if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 }
 
-// Razorpay SDK Client Helper
-let hasLiveAuthFailed = false;
-
 function getRazorpayInstance() {
   const key_id = (process.env.RAZORPAY_KEY_ID || '').trim();
   const key_secret = (process.env.RAZORPAY_KEY_SECRET || '').trim();
-
-  if (hasLiveAuthFailed) {
-    return { instance: null, key_id: '', key_secret: '', isConfigured: false };
-  }
 
   // Real Razorpay keys start with rzp_test_ or rzp_live_ and are not placeholder strings
   const isConfigured = Boolean(
@@ -1353,8 +1346,8 @@ async function processOrderCreation(reqBody: any) {
         }
       });
       isRealOrder = true;
-    } catch (_err) {
-      hasLiveAuthFailed = true;
+    } catch (_err: any) {
+      console.error('[Razorpay Order Creation Failed]:', _err?.message || _err);
       rzpOrder = {
         id: `order_${Date.now().toString(36)}${Math.random().toString(36).substring(2, 8)}`,
         entity: 'order',
@@ -1585,7 +1578,7 @@ async function verifyPaymentInternal(body: any, req?: Request) {
   } else {
     // In production, reject unconfigured / simulated payment signatures
     if (process.env.NODE_ENV === 'production') {
-      throw new Error('Payment gateway configuration is missing or inactive for live verification.');
+      throw new Error('Payment gateway configuration is missing or inactive for live verification. Please configure RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in your server environment variables.');
     }
     // Development / Test mode validation
     const isTestSignature =
