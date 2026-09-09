@@ -135,12 +135,14 @@ export interface OrderTrackingInfo {
   location_updated_at?: string;
   location_updated_by?: string;
   live_tracking_available?: boolean;
+  delivery_dispatch_token?: string;
 }
 
 export interface Order {
   id: string;
   internal_order_id?: string;
   order_token?: string;
+  delivery_dispatch_token?: string;
   customer_id: string;
   customer_name: string;
   customer_phone: string;

@@ -13,10 +13,9 @@ import {
   Copy,
   Check,
   AlertTriangle,
-  ShieldCheck,
-  Navigation,
   Calendar,
-  CreditCard
+  CreditCard,
+  ArrowRight
 } from 'lucide-react';
 import { Order, OrderStatus } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -37,13 +36,15 @@ export const TrackOrderModal: React.FC<TrackOrderModalProps> = ({
   initialOrderId,
   initialPhone
 }) => {
-  const { language, t } = useLanguage();
+  const { language } = useLanguage();
   const isKn = language === 'kn';
 
   const [phone, setPhone] = useState(initialPhone || '');
   const [orderId, setOrderId] = useState(initialOrderId || '');
   const [manualToken, setManualToken] = useState('');
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
   const [error, setError] = useState('');
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -54,7 +55,7 @@ export const TrackOrderModal: React.FC<TrackOrderModalProps> = ({
     if (initialPhone) setPhone(initialPhone);
     if (initialOrderId) {
       setOrderId(initialOrderId);
-      // Auto look for saved token
+      // Look for saved token in localStorage
       try {
         const stored = JSON.parse(localStorage.getItem('indima_order_tokens') || '{}');
         if (stored[initialOrderId]) {
@@ -112,26 +113,28 @@ export const TrackOrderModal: React.FC<TrackOrderModalProps> = ({
     setError('');
 
     try {
-      // 1. First attempt: Dedicated single order fetch if Order ID is present
+      // 1. Dedicated single order fetch if Order ID is present
       if (cleanOrderId) {
         const singleRes = await api.trackSingleOrder(cleanOrderId, tokenOverride || undefined);
         if (singleRes.success && singleRes.order) {
           setOrders([singleRes.order]);
           setSelectedOrder(singleRes.order);
+          setLastRefreshedAt(new Date());
           setLoading(false);
           return;
         }
       }
 
-      // 2. Second attempt: Track orders API
+      // 2. Track orders API
       const res = await api.trackOrders(cleanPhone || undefined, cleanOrderId || undefined, tokenOverride || undefined);
       if (res.orders && res.orders.length > 0) {
         setOrders(res.orders);
         setSelectedOrder(res.orders[0]);
+        setLastRefreshedAt(new Date());
       } else {
         setOrders([]);
         setSelectedOrder(null);
-        setError(res.error || (isKn ? 'ಯಾವುದೇ ಸಕ್ರಿಯ ಆರ್ಡರ್ಗಳು ಕಂಡುಬಂದಿಲ್ಲ' : 'No active orders found. Please verify your Order ID.'));
+        setError(res.error || (isKn ? 'ಯಾವುದೇ ಸಕ್ರಿಯ ಆರ್ಡರ್ಗಳು ಕಂಡುಬಂದಿಲ್ಲ' : 'No active orders found. Please verify your Order ID and Order Token.'));
       }
     } catch (e: any) {
       setError(e.message || 'Failed to fetch order details');
@@ -140,79 +143,133 @@ export const TrackOrderModal: React.FC<TrackOrderModalProps> = ({
     }
   };
 
-  // Timeline step definitions
-  const timelineSteps: { key: OrderStatus; label_en: string; label_kn: string; desc_en: string }[] = [
+  // Safe customer refresh mechanism to fetch the latest location saved by admin
+  const handleRefreshTracking = async () => {
+    if (!selectedOrder) return;
+    setRefreshing(true);
+    try {
+      let token = manualToken;
+      if (!token) {
+        try {
+          const stored = JSON.parse(localStorage.getItem('indima_order_tokens') || '{}');
+          token = stored[selectedOrder.id] || stored[(selectedOrder as any).internal_order_id] || '';
+        } catch (_) {}
+      }
+
+      const res = await api.trackSingleOrder(selectedOrder.id, token || undefined);
+      if (res.success && res.order) {
+        setSelectedOrder(res.order);
+        setOrders(prev => prev.map(o => o.id === res.order!.id ? res.order! : o));
+        setLastRefreshedAt(new Date());
+      } else {
+        const trackRes = await api.trackOrders(undefined, selectedOrder.id, token || undefined);
+        if (trackRes.orders && trackRes.orders.length > 0) {
+          setSelectedOrder(trackRes.orders[0]);
+          setOrders(trackRes.orders);
+          setLastRefreshedAt(new Date());
+        }
+      }
+    } catch (err: any) {
+      console.error('Failed to refresh tracking:', err);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // Customer-Facing 7 Delivery Status Timeline Steps
+  const timelineSteps: { key: string; label_en: string; label_kn: string; desc_en: string; desc_kn: string }[] = [
     {
       key: 'placed',
       label_en: 'Order Placed',
       label_kn: 'ಆರ್ಡರ್ ಸ್ವೀಕರಿಸಲಾಗಿದೆ',
-      desc_en: 'Order recorded in our estate system'
+      desc_en: 'Order received and recorded in estate system',
+      desc_kn: 'ಆರ್ಡರ್ ದಾಖಲಿಸಲಾಗಿದೆ'
     },
     {
       key: 'confirmed',
       label_en: 'Payment Confirmed',
       label_kn: 'ಪಾವತಿ ದೃಢೀಕರಿಸಲಾಗಿದೆ',
-      desc_en: 'Payment verified securely'
+      desc_en: 'Payment verified securely',
+      desc_kn: 'ಪಾವತಿ ಪರಿಶೀಲಿಸಲಾಗಿದೆ'
     },
     {
       key: 'processing',
-      label_en: 'In Preparation',
-      label_kn: 'ಮಸಾಲೆ ತಯಾರಿಕೆ ಹಂತ',
-      desc_en: 'Fresh batch grinding & aroma preservation'
-    },
-    {
-      key: 'packed',
-      label_en: 'Packed Fresh',
-      label_kn: 'ಪ್ಯಾಕಿಂಗ್ ಪೂರ್ಣಗೊಂಡಿದೆ',
-      desc_en: 'Sealed in moisture-barrier pouches'
+      label_en: 'Processing',
+      label_kn: 'ಸಂಸ್ಕರಣೆ ಹಂತ',
+      desc_en: 'Fresh batch grinding & aroma-sealed packaging',
+      desc_kn: 'ಮಸಾಲೆ ತಯಾರಿಕೆ ಮತ್ತು ಪ್ಯಾಕಿಂಗ್'
     },
     {
       key: 'shipped',
-      label_en: 'Dispatched & In Transit',
+      label_en: 'Shipped',
       label_kn: 'ರವಾನಿಸಲಾಗಿದೆ',
-      desc_en: 'Handed over to verified logistics courier'
+      desc_en: 'Handed over to verified logistics courier',
+      desc_kn: 'ಕೊರಿಯರ್ ಸಂಸ್ಥೆಗೆ ಹಸ್ತಾಂತರಿಸಲಾಗಿದೆ'
+    },
+    {
+      key: 'in_transit',
+      label_en: 'In Transit',
+      label_kn: 'ಸಾಗಣೆಯಲ್ಲಿದೆ',
+      desc_en: 'Moving through regional logistics hubs',
+      desc_kn: 'ವಿತರಣಾ ಕೇಂದ್ರಗಳ ಮೂಲಕ ಸಾಗುತ್ತಿದೆ'
     },
     {
       key: 'out_for_delivery',
       label_en: 'Out for Delivery',
       label_kn: 'ವಿತರಣೆಗೆ ಹೊರಟಿದೆ',
-      desc_en: 'Arriving at your doorstep today'
+      desc_en: 'Consignment out for doorstep delivery',
+      desc_kn: 'ನಿಮ್ಮ ಮನೆಬಾಗಿಲಿಗೆ ತಲುಪಿಸಲು ಹೊರಟಿದೆ'
     },
     {
       key: 'delivered',
       label_en: 'Delivered',
       label_kn: 'ತಲುಪಿಸಲಾಗಿದೆ',
-      desc_en: 'Safely delivered to customer'
+      desc_en: 'Safely delivered to customer',
+      desc_kn: 'ಯಶಸ್ವಿಯಾಗಿ ತಲುಪಿಸಲಾಗಿದೆ'
     }
   ];
 
-  const getStepIndex = (rawStatus?: string) => {
+  const getStepIndex = (rawStatus?: string, paymentStatus?: string) => {
     if (!rawStatus) return 0;
     const s = String(rawStatus).toLowerCase().replace(/[\s_-]+/g, '_');
     if (s.includes('cancel')) return -1;
-    if (s.includes('place')) return 0;
-    if (s.includes('confirm')) return 1;
-    if (s.includes('process') || s.includes('prep')) return 2;
-    if (s.includes('pack')) return 3;
-    if (s.includes('ship')) return 4;
-    if (s.includes('out') || s.includes('delivery')) return 5;
-    if (s.includes('delivered')) return 6;
+    if (s.includes('deliver') && !s.includes('out')) return 6; // Delivered
+    if (s.includes('out') || s.includes('doorstep')) return 5; // Out for Delivery
+    if (s.includes('transit')) return 4; // In Transit
+    if (s.includes('ship') || s.includes('dispatch')) return 3; // Shipped
+    if (s.includes('process') || s.includes('prep') || s.includes('pack')) return 2; // Processing
+    if (s.includes('confirm') || (paymentStatus && (String(paymentStatus).toLowerCase() === 'paid' || String(paymentStatus).toLowerCase().includes('success')))) return 1; // Payment Confirmed
+    if (s.includes('place')) return 0; // Order Placed
     return 0;
   };
 
   const currentStatusRaw = selectedOrder
-    ? (selectedOrder.tracking?.status || selectedOrder.order_status || selectedOrder.status || '')
+    ? (selectedOrder.tracking?.status || selectedOrder.order_status || selectedOrder.status || 'placed')
     : '';
 
-  const currentStepIdx = getStepIndex(currentStatusRaw);
+  const currentStepIdx = getStepIndex(currentStatusRaw, selectedOrder?.payment_status);
   const isCancelled = currentStatusRaw.toLowerCase().includes('cancel');
-  const isPaymentFailed = selectedOrder?.payment_status?.toLowerCase().includes('fail');
+  const isPaymentFailed = String(selectedOrder?.payment_status || '').toLowerCase().includes('fail');
 
-  // Resolved carrier and tracking
+  // Resolved carrier and tracking information
   const carrier = selectedOrder?.tracking?.carrier || selectedOrder?.carrier;
   const trackingNumber = selectedOrder?.tracking?.tracking_number || selectedOrder?.tracking_number;
   const expectedDelivery = selectedOrder?.tracking?.expected_delivery || selectedOrder?.expected_delivery;
   const courierExternalUrl = carrier && trackingNumber ? getVerifiedTrackingUrl(carrier, trackingNumber) : null;
+  const checkpointName = selectedOrder?.tracking?.location_name || '';
+  const locationUpdatedAt = selectedOrder?.tracking?.location_updated_at || '';
+
+  // Formatted last update time
+  const formattedUpdateTime = (() => {
+    if (!locationUpdatedAt) return null;
+    try {
+      const d = new Date(locationUpdatedAt);
+      if (isNaN(d.getTime())) return locationUpdatedAt;
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ', ' + d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+    } catch {
+      return locationUpdatedAt;
+    }
+  })();
 
   return (
     <div
@@ -227,15 +284,15 @@ export const TrackOrderModal: React.FC<TrackOrderModalProps> = ({
         {/* Modal Header */}
         <div className="p-4 sm:p-5 border-b border-[#F0E6D2] bg-[#FAF6EE] flex items-center justify-between shrink-0">
           <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#993300]/10 flex items-center justify-center text-[#993300]">
-              <Truck className="w-4 h-4" />
+            <div className="w-9 h-9 rounded-lg bg-[#993300]/10 flex items-center justify-center text-[#993300]">
+              <Truck className="w-5 h-5" />
             </div>
             <div>
               <h2 className="font-serif text-lg font-bold text-neutral-900 leading-tight">
-                {isKn ? 'ಆರ್ಡರ್ ವಿತರಣೆ ಟ್ರ್ಯಾಕಿಂಗ್' : 'Order Delivery Tracking'}
+                {isKn ? 'ನಿಮ್ಮ ಆರ್ಡರ್ ಅನ್ನು ಟ್ರ್ಯಾಕ್ ಮಾಡಿ' : 'Track Your Order'}
               </h2>
               <p className="text-[11px] text-neutral-500 font-medium">
-                {isKn ? 'ಲೈವ್ ಸ್ಥಿತಿ ಮತ್ತು ಪರಿಶೀಲಿಸಿದ ಕೊರಿಯರ್ ಮಾಹಿತಿ' : 'Verified courier transit & delivery location'}
+                {isKn ? 'ಲೈವ್ ವಿತರಣಾ ಸ್ಥಿತಿ ಮತ್ತು ಪರಿಶೀಲಿಸಿದ ಶಿಪ್‌ಮೆಂಟ್ ಮಾಹಿತಿ' : 'Verified courier shipment status & delivery checkpoint'}
               </p>
             </div>
           </div>
@@ -332,48 +389,53 @@ export const TrackOrderModal: React.FC<TrackOrderModalProps> = ({
             </div>
           )}
 
-          {/* Active Order Details */}
+          {/* Active Customer Order Details */}
           {selectedOrder && (
             <div className="space-y-6">
-              {/* Order Key Overview Card */}
+              {/* 1. ORDER OVERVIEW & QUICK ACTIONS BAR */}
               <div className="bg-[#FAF6EE] p-4 rounded-xl border border-[#EADBCA] space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-xs text-neutral-500 font-semibold">{isKn ? 'ಆರ್ಡರ್ ಐಡಿ:' : 'Order ID:'}</span>
-                    <span className="font-mono text-xs sm:text-sm font-bold text-neutral-900 bg-white px-2 py-0.5 rounded-md border border-[#DFC7A2]">
-                      {selectedOrder.id}
+                <div className="flex flex-wrap items-center justify-between gap-2.5">
+                  <div>
+                    <span className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider block">
+                      TRACK YOUR ORDER
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => copyToClipboard(selectedOrder.id, 'order_id')}
-                      className="p-1 hover:bg-neutral-200/60 rounded text-neutral-500 hover:text-neutral-800 transition-colors cursor-pointer"
-                      title="Copy Order ID"
-                    >
-                      {copiedField === 'order_id' ? (
-                        <Check className="w-3.5 h-3.5 text-emerald-600" />
-                      ) : (
-                        <Copy className="w-3.5 h-3.5" />
-                      )}
-                    </button>
+                    <div className="flex items-center space-x-2 mt-0.5">
+                      <span className="text-xs text-neutral-600 font-semibold">{isKn ? 'ಆರ್ಡರ್ ಐಡಿ:' : 'Order ID:'}</span>
+                      <span className="font-mono text-xs sm:text-sm font-bold text-neutral-900 bg-white px-2 py-0.5 rounded-md border border-[#DFC7A2]">
+                        {selectedOrder.id}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(selectedOrder.id, 'order_id')}
+                        className="p-1 hover:bg-neutral-200/60 rounded text-neutral-500 hover:text-neutral-800 transition-colors cursor-pointer"
+                        title="Copy Order ID"
+                      >
+                        {copiedField === 'order_id' ? (
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        ) : (
+                          <Copy className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="flex items-center space-x-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     {/* Payment status badge */}
                     <span
-                      className={`text-[10px] uppercase font-bold px-2.5 py-0.5 rounded-full border ${
+                      className={`text-[10px] uppercase font-bold px-2.5 py-1 rounded-full border ${
                         String(selectedOrder.payment_status).toLowerCase().includes('success') || String(selectedOrder.payment_status).toLowerCase() === 'paid'
                           ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          : String(selectedOrder.payment_status).toLowerCase().includes('fail')
+                          : isPaymentFailed
                           ? 'bg-red-50 text-red-700 border-red-200'
                           : 'bg-amber-50 text-amber-800 border-amber-200'
                       }`}
                     >
-                      {selectedOrder.payment_status || 'Payment Pending'}
+                      {selectedOrder.payment_status ? `Payment: ${selectedOrder.payment_status}` : 'Payment Pending'}
                     </span>
 
                     {/* Order status badge */}
                     <span
-                      className={`text-[10px] uppercase font-extrabold px-2.5 py-0.5 rounded-full ${
+                      className={`text-[10px] uppercase font-extrabold px-2.5 py-1 rounded-full ${
                         isCancelled
                           ? 'bg-red-600 text-white'
                           : currentStatusRaw.toLowerCase().includes('deliver')
@@ -383,10 +445,22 @@ export const TrackOrderModal: React.FC<TrackOrderModalProps> = ({
                     >
                       {currentStatusRaw.replace(/_/g, ' ')}
                     </span>
+
+                    {/* Customer Refresh Tracking Button */}
+                    <button
+                      type="button"
+                      onClick={handleRefreshTracking}
+                      disabled={refreshing}
+                      className="px-2.5 py-1 bg-white hover:bg-neutral-100 text-neutral-800 border border-[#D9C4A2] rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-colors cursor-pointer disabled:opacity-50 shadow-2xs"
+                      title="Refresh tracking data from server"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 text-[#993300] ${refreshing ? 'animate-spin' : ''}`} />
+                      <span>{refreshing ? (isKn ? 'ನವೀಕರಿಸಲಾಗುತ್ತಿದೆ...' : 'Refreshing...') : (isKn ? 'ನವೀಕರಿಸಿ' : 'Refresh Tracking')}</span>
+                    </button>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-[#F0E6D2] text-xs">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2.5 border-t border-[#F0E6D2] text-xs">
                   <div>
                     <span className="text-[10px] text-neutral-500 block uppercase font-semibold">
                       {isKn ? 'ಆರ್ಡರ್ ದಿನಾಂಕ' : 'Ordered On'}
@@ -429,63 +503,7 @@ export const TrackOrderModal: React.FC<TrackOrderModalProps> = ({
                 </div>
               </div>
 
-              {/* Carrier & Shipment Tracking Banner */}
-              <div className="bg-white p-4 rounded-xl border border-[#D9C4A2] shadow-2xs space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-lg bg-[#FAF6EE] border border-[#DFC7A2] flex items-center justify-center text-[#993300]">
-                      <Truck className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-xs text-neutral-500 font-semibold">{isKn ? 'ಕೊರಿಯರ್ ವಾಹಕ:' : 'Carrier:'}</span>
-                        <span className="font-bold text-neutral-900 text-xs sm:text-sm">
-                          {carrier ? getCarrierDisplayName(carrier) : 'Standard Express Delivery'}
-                        </span>
-                      </div>
-                      {trackingNumber ? (
-                        <div className="flex items-center space-x-2 mt-0.5">
-                          <span className="text-xs text-neutral-500 font-semibold">{isKn ? 'AWB ಸಂಖ್ಯೆ:' : 'AWB Number:'}</span>
-                          <span className="font-mono text-xs font-bold text-[#993300] bg-[#FAF6EE] px-2 py-0.5 rounded border border-[#EADBCA]">
-                            {trackingNumber}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => copyToClipboard(trackingNumber, 'awb')}
-                            className="p-1 hover:bg-neutral-200/60 rounded text-neutral-500 hover:text-neutral-800 transition-colors cursor-pointer"
-                            title="Copy AWB Number"
-                          >
-                            {copiedField === 'awb' ? (
-                              <Check className="w-3.5 h-3.5 text-emerald-600" />
-                            ) : (
-                              <Copy className="w-3.5 h-3.5" />
-                            )}
-                          </button>
-                        </div>
-                      ) : (
-                        <p className="text-[11px] text-neutral-500 italic mt-0.5">
-                          {isKn ? 'ರವಾನೆಯ ನಂತರ AWB ಸಂಖ್ಯೆ ಲಭ್ಯವಾಗಲಿದೆ' : 'AWB number will be generated upon dispatch'}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* External courier portal tracking link */}
-                  {courierExternalUrl && (
-                    <a
-                      href={courierExternalUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-3.5 py-1.5 bg-[#FAF6EE] hover:bg-[#F2E8D7] text-[#993300] border border-[#D9C4A2] font-bold text-xs rounded-lg flex items-center space-x-1.5 transition-colors cursor-pointer shadow-2xs"
-                    >
-                      <span>{isKn ? 'ಕೊರಿಯರ್ ವೆಬ್‌ಸೈಟ್‌ನಲ್ಲಿ ನೋಡಿ' : 'Track on Courier Site'}</span>
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                  )}
-                </div>
-              </div>
-
-              {/* Status Timeline */}
+              {/* 2. STATUS TIMELINE (Exact 7 Steps) */}
               {isCancelled ? (
                 <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 space-y-1">
                   <div className="flex items-center space-x-2 font-bold text-red-900 text-sm">
@@ -500,12 +518,20 @@ export const TrackOrderModal: React.FC<TrackOrderModalProps> = ({
                 </div>
               ) : (
                 <div className="bg-[#FAF6EE] p-4 sm:p-5 rounded-xl border border-[#EADBCA] space-y-4">
-                  <h4 className="font-serif text-xs font-bold uppercase tracking-wider text-neutral-800 flex items-center space-x-1.5">
-                    <Clock className="w-3.5 h-3.5 text-[#993300]" />
-                    <span>{isKn ? 'ವಿತರಣಾ ಪ್ರಗತಿ ಹಂತಗಳು' : 'Consignment Timeline'}</span>
-                  </h4>
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-serif text-xs font-bold uppercase tracking-wider text-neutral-800 flex items-center space-x-1.5">
+                      <Clock className="w-3.5 h-3.5 text-[#993300]" />
+                      <span>{isKn ? 'ವಿತರಣಾ ಪ್ರಗತಿ ಹಂತಗಳು' : 'Delivery Status Timeline'}</span>
+                    </h4>
+                    {lastRefreshedAt && (
+                      <span className="text-[10px] text-neutral-500">
+                        {isKn ? 'ನವೀಕರಿಸಿದ ಸಮಯ:' : 'Last checked:'} {lastRefreshedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    )}
+                  </div>
 
-                  <div className="relative pl-6 space-y-5 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-[#D9C4A2]">
+                  {/* Vertical responsive timeline */}
+                  <div className="relative pl-6 space-y-4 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-[#D9C4A2]">
                     {timelineSteps.map((s, idx) => {
                       const isCompleted = currentStepIdx >= idx;
                       const isCurrent = currentStepIdx === idx;
@@ -546,7 +572,7 @@ export const TrackOrderModal: React.FC<TrackOrderModalProps> = ({
                               )}
                             </div>
                             <p className="text-[11px] text-neutral-500 mt-0.5">
-                              {s.desc_en}
+                              {isKn ? s.desc_kn : s.desc_en}
                             </p>
                           </div>
                         </div>
@@ -556,17 +582,81 @@ export const TrackOrderModal: React.FC<TrackOrderModalProps> = ({
                 </div>
               )}
 
-              {/* Delivery Location Map (Interactive Leaflet Map) */}
+              {/* 3. CURRENT DELIVERY LOCATION (Leaflet Map with latest admin checkpoint) */}
               <div className="space-y-2">
                 <DeliveryMap order={selectedOrder} />
               </div>
 
-              {/* Consignment Items Snapshot */}
+              {/* 4. LOGISTICS CARRIER & TRACKING INFORMATION */}
+              <div className="bg-white p-4 rounded-xl border border-[#D9C4A2] shadow-2xs space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-lg bg-[#FAF6EE] border border-[#DFC7A2] flex items-center justify-center text-[#993300]">
+                      <Truck className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xs text-neutral-500 font-semibold">{isKn ? 'ಕೊರಿಯರ್ ವಾಹಕ:' : 'Carrier:'}</span>
+                        <span className="font-bold text-neutral-900 text-xs sm:text-sm">
+                          {carrier ? getCarrierDisplayName(carrier) : 'Standard Express Delivery'}
+                        </span>
+                      </div>
+                      {trackingNumber ? (
+                        <div className="flex items-center space-x-2 mt-0.5">
+                          <span className="text-xs text-neutral-500 font-semibold">{isKn ? 'AWB ಸಂಖ್ಯೆ:' : 'AWB Number:'}</span>
+                          <span className="font-mono text-xs font-bold text-[#993300] bg-[#FAF6EE] px-2 py-0.5 rounded border border-[#EADBCA]">
+                            {trackingNumber}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(trackingNumber, 'awb')}
+                            className="p-1 hover:bg-neutral-200/60 rounded text-neutral-500 hover:text-neutral-800 transition-colors cursor-pointer"
+                            title="Copy AWB Number"
+                          >
+                            {copiedField === 'awb' ? (
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-neutral-500 italic mt-0.5">
+                          {isKn ? 'ರವಾನೆಯ ನಂತರ AWB ಸಂಖ್ಯೆ ಲಭ್ಯವಾಗಲಿದೆ' : 'AWB number will be generated upon dispatch'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* External courier tracking link */}
+                  {courierExternalUrl && (
+                    <a
+                      href={courierExternalUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3.5 py-1.5 bg-[#FAF6EE] hover:bg-[#F2E8D7] text-[#993300] border border-[#D9C4A2] font-bold text-xs rounded-lg flex items-center space-x-1.5 transition-colors cursor-pointer shadow-2xs"
+                    >
+                      <span>{isKn ? 'ಕೊರಿಯರ್ ವೆಬ್‌ಸೈಟ್‌ನಲ್ಲಿ ನೋಡಿ' : 'Track on Courier Site'}</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  )}
+                </div>
+
+                {expectedDelivery && (
+                  <div className="flex items-center space-x-2 pt-2 border-t border-[#F0E6D2] text-xs text-neutral-700">
+                    <Calendar className="w-3.5 h-3.5 text-[#993300]" />
+                    <span className="font-semibold">{isKn ? 'ನಿರೀಕ್ಷಿತ ವಿತರಣಾ ದಿನಾಂಕ:' : 'Expected Delivery:'}</span>
+                    <span className="font-bold text-emerald-800">{expectedDelivery}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* 5. PRODUCT / ORDER SUMMARY */}
               {(selectedOrder.items || []).length > 0 && (
                 <div className="bg-white p-4 rounded-xl border border-[#D9C4A2] space-y-3 shadow-2xs">
                   <h4 className="font-serif text-xs font-bold uppercase tracking-wider text-neutral-800 flex items-center space-x-1.5">
                     <Package className="w-3.5 h-3.5 text-[#993300]" />
-                    <span>{isKn ? 'ಆರ್ಡರ್ ಮಾಡಿದ ವಸ್ತುಗಳು' : 'Package Items'}</span>
+                    <span>{isKn ? 'ಆರ್ಡರ್ ಮಾಡಿದ ವಸ್ತುಗಳು' : 'Product Summary'}</span>
                   </h4>
 
                   <div className="divide-y divide-[#F0E6D2]">
@@ -596,10 +686,15 @@ export const TrackOrderModal: React.FC<TrackOrderModalProps> = ({
                       </div>
                     ))}
                   </div>
+
+                  <div className="pt-2 border-t border-[#F0E6D2] flex justify-between items-center text-xs">
+                    <span className="font-bold text-neutral-700">{isKn ? 'ಒಟ್ಟು ಪಾವತಿಸಿದ ಮೊತ್ತ:' : 'Total Amount Paid:'}</span>
+                    <span className="font-serif text-sm font-bold text-[#993300]">₹{selectedOrder.total_amount}</span>
+                  </div>
                 </div>
               )}
 
-              {/* Delivery Destination (Data-Minimized Privacy Snapshot) */}
+              {/* 6. DELIVERY DESTINATION (Snapshot) */}
               {selectedOrder.address_snapshot && (
                 <div className="p-4 bg-[#FAF6EE] rounded-xl border border-[#EADBCA] text-xs text-neutral-800 space-y-1.5">
                   <h4 className="font-serif text-xs font-bold uppercase tracking-wider text-[#993300] flex items-center space-x-1.5">

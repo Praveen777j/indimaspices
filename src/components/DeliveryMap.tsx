@@ -330,17 +330,25 @@ export const DeliveryMap: React.FC<DeliveryMapProps> = ({
           <MapPin className="w-4 h-4 shrink-0" />
           <span className="font-serif text-sm">📍 Delivery Location</span>
         </div>
-        <div className="bg-white/80 p-3.5 rounded-lg border border-[#DFC7A2] flex items-start space-x-3">
+        <div className="bg-white/90 p-3.5 rounded-lg border border-[#DFC7A2] flex items-start space-x-3">
           <div className="w-7 h-7 rounded-full bg-amber-50 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
             <Navigation className="w-4 h-4 opacity-70" />
           </div>
           <div>
-            <p className="font-bold text-neutral-900">
-              Live delivery location is not available yet.
+            <p className="font-bold text-neutral-900 text-xs sm:text-sm">
+              Delivery location will appear when the shipment is updated.
             </p>
-            <p className="text-[11px] text-neutral-500 mt-0.5">
-              Location will appear after your order is dispatched.
-            </p>
+            {resolvedLocName && (
+              <p className="text-[11px] text-neutral-700 mt-1 flex items-center space-x-1">
+                <span className="font-semibold text-neutral-900">Current Checkpoint:</span>
+                <span>{resolvedLocName}</span>
+              </p>
+            )}
+            {formattedTime && (
+              <p className="text-[10px] text-neutral-500 mt-0.5">
+                Last updated: {formattedTime}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -354,7 +362,7 @@ export const DeliveryMap: React.FC<DeliveryMapProps> = ({
         <div>
           <div className="flex items-center space-x-1.5 text-[#993300] font-bold">
             <MapPin className="w-4 h-4" />
-            <span className="font-serif text-sm">📍 Delivery Location</span>
+            <span className="font-serif text-sm">📍 Current Delivery Location</span>
           </div>
           {resolvedLocName && (
             <p className="text-xs font-semibold text-neutral-900 mt-0.5">
@@ -365,7 +373,7 @@ export const DeliveryMap: React.FC<DeliveryMapProps> = ({
 
         <div className="flex items-center space-x-2 text-[11px]">
           {formattedTime && (
-            <span className="text-neutral-500 flex items-center space-x-1 bg-white px-2 py-0.5 rounded-md border border-[#EADBCA]">
+            <span className="text-neutral-600 flex items-center space-x-1 bg-white px-2 py-0.5 rounded-md border border-[#EADBCA]">
               <Clock className="w-3 h-3 text-neutral-400" />
               <span>Last updated: {formattedTime}</span>
             </span>
@@ -373,13 +381,13 @@ export const DeliveryMap: React.FC<DeliveryMapProps> = ({
 
           <span
             className={`px-2 py-0.5 rounded-md font-bold uppercase tracking-wider text-[10px] flex items-center space-x-1 ${
-              resolvedIsLive
+              isAdminPicker && resolvedIsLive
                 ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                : 'bg-amber-100 text-amber-800 border border-amber-300'
+                : 'bg-amber-100 text-amber-900 border border-amber-300'
             }`}
           >
-            <span className={`w-1.5 h-1.5 rounded-full ${resolvedIsLive ? 'bg-emerald-600 animate-pulse' : 'bg-amber-600'}`} />
-            <span>{resolvedIsLive ? 'Live Tracking: Active' : 'Status: ' + resolvedStatusText}</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
+            <span>Status: {resolvedStatusText}</span>
           </span>
         </div>
       </div>

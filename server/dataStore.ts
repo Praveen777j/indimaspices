@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { getFirebaseAdmin, getAdminStorageBucketInstance, markStorageUnavailable } from './firebaseAdmin';
 import { verifyPassword, hashPassword } from './security';
@@ -1209,6 +1210,15 @@ class DataStore {
     const fsDb = await this.getFirestoreInstance();
     const nowIso = new Date().toISOString();
 
+    if (!order.delivery_dispatch_token) {
+      const dispatchToken = crypto.randomBytes(32).toString('hex');
+      order.delivery_dispatch_token = dispatchToken;
+      if (!order.tracking) {
+        order.tracking = {};
+      }
+      order.tracking.delivery_dispatch_token = dispatchToken;
+    }
+
     if (fsDb && this.isFirestoreReady) {
       try {
         await fsDb.runTransaction(async (transaction) => {
@@ -1551,6 +1561,29 @@ class DataStore {
     await this.setFirestoreDoc('orders', orderId, order);
     this.save();
     return order;
+  }
+
+  /**
+   * Generates or retrieves the high-entropy 256-bit cryptographically secure delivery dispatch token
+   * for an order. Stored securely with the order/tracking data in memory and Firestore.
+   */
+  public getOrderDeliveryDispatchToken(orderId: string): string | null {
+    const order = this.getOrderById(orderId);
+    if (!order) return null;
+    if (order.delivery_dispatch_token) return order.delivery_dispatch_token;
+    if (order.tracking?.delivery_dispatch_token) {
+      order.delivery_dispatch_token = order.tracking.delivery_dispatch_token;
+      return order.delivery_dispatch_token;
+    }
+    const token = crypto.randomBytes(32).toString('hex');
+    order.delivery_dispatch_token = token;
+    if (!order.tracking) {
+      order.tracking = {};
+    }
+    order.tracking.delivery_dispatch_token = token;
+    this.setFirestoreDoc('orders', order.id, order).catch(() => {});
+    this.save();
+    return token;
   }
 
   public async updateOrderLocation(

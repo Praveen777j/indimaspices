@@ -108,13 +108,56 @@ function getRazorpayInstance() {
   }
 }
 
-// Constant-time string comparison to mitigate timing attacks
+// Constant-time string comparison to mitigate timing attacks (SHA-256 digested to guarantee identical buffer length)
 function timingSafeEqual(a: string, b: string): boolean {
   if (!a || !b) return false;
-  const bufA = Buffer.from(a);
-  const bufB = Buffer.from(b);
-  if (bufA.length !== bufB.length) return false;
-  return crypto.timingSafeEqual(bufA, bufB);
+  const hashA = crypto.createHash('sha256').update(String(a)).digest();
+  const hashB = crypto.createHash('sha256').update(String(b)).digest();
+  return crypto.timingSafeEqual(hashA, hashB);
+}
+
+// Cryptographically random, high-entropy (256-bit / 64 hex characters) delivery dispatch token generator
+function generateDeliveryDispatchToken(): string {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+// Retrieve or generate order-specific delivery dispatch token securely stored with order
+function getOrderDeliveryDispatchToken(order: Order): string {
+  if (order.delivery_dispatch_token) return order.delivery_dispatch_token;
+  if (order.tracking?.delivery_dispatch_token) {
+    order.delivery_dispatch_token = order.tracking.delivery_dispatch_token;
+    return order.delivery_dispatch_token;
+  }
+  const token = generateDeliveryDispatchToken();
+  order.delivery_dispatch_token = token;
+  if (!order.tracking) {
+    order.tracking = {};
+  }
+  order.tracking.delivery_dispatch_token = token;
+  db.setFirestoreDoc('orders', order.id, order).catch(() => {});
+  db.save();
+  return token;
+}
+
+// Verify delivery dispatch token using constant-time comparison
+function verifyDeliveryDispatchToken(order: Order, providedToken?: string): boolean {
+  if (!providedToken || typeof providedToken !== 'string') return false;
+  const cleanProvided = providedToken.trim();
+  const validToken = getOrderDeliveryDispatchToken(order);
+  return timingSafeEqual(cleanProvided, validToken);
+}
+
+// Strip delivery dispatch token from customer-facing order payloads
+function stripDeliveryDispatchToken<T extends Order | undefined | null>(order: T): T {
+  if (!order) return order;
+  const clone = { ...order };
+  delete (clone as any).delivery_dispatch_token;
+  if (clone.tracking) {
+    const cloneTracking = { ...clone.tracking };
+    delete (cloneTracking as any).delivery_dispatch_token;
+    clone.tracking = cloneTracking;
+  }
+  return clone as T;
 }
 
 // Cryptographic Order Access Token Generation & Timing-Safe Verification
@@ -1428,6 +1471,7 @@ async function processOrderCreation(reqBody: any) {
     id: orderId,
     internal_order_id: orderId,
     order_token: orderToken,
+    delivery_dispatch_token: generateDeliveryDispatchToken(),
     customer_id: customer.id,
     customer_name: customer_name.trim(),
     customer_phone: cleanPhone,
@@ -1456,7 +1500,7 @@ async function processOrderCreation(reqBody: any) {
   const savedOrder = await db.createOrder(newOrder);
 
   return {
-    order: savedOrder,
+    order: stripDeliveryDispatchToken(savedOrder),
     order_token: orderToken,
     razorpay_order: rzpOrder,
     key_id: isRealOrder ? key_id : '',
@@ -1675,7 +1719,7 @@ async function verifyPaymentInternal(body: any, req?: Request) {
   return {
     success: true,
     message: 'Payment verified successfully',
-    order: updatedOrder,
+    order: stripDeliveryDispatchToken(updatedOrder),
     order_token: updatedOrder.order_token || getOrderAccessToken(updatedOrder)
   };
 }
@@ -2492,28 +2536,94 @@ app.put('/api/admin/orders/:id/location', adminAuthMiddleware, async (req: Reque
   }
 });
 
-// Phase 2-Ready Delivery Partner GPS Location Endpoint
+// Phase 2-Ready Delivery Partner GPS Location Endpoint (Order-Specific Dispatch Token Hardened)
 app.put('/api/delivery/orders/:id/location', deliveryLocationLimiter, async (req: Request, res: Response) => {
   try {
+    const { id } = req.params;
+    if (!id || typeof id !== 'string') {
+      return res.status(400).json({ error: 'Valid Order ID is required in URL parameter' });
+    }
+
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const bearerToken = (authHeader && authHeader.startsWith('Bearer ')) ? authHeader.slice(7).trim() : '';
+    const deliverySecretHeader = (
+      (req.headers['x-delivery-secret'] as string) ||
+      (req.headers['x-delivery-key'] as string) ||
+      ''
+    ).trim();
+    const dispatchTokenHeader = (
+      (req.headers['x-delivery-dispatch-token'] as string) ||
+      (req.headers['x-delivery-token'] as string) ||
+      (req.headers['x-dispatch-token'] as string) ||
+      ''
+    ).trim();
+
+    // Must provide either an Authorization header or explicit delivery secret header
+    if (!bearerToken && !deliverySecretHeader) {
       return res.status(401).json({ error: 'Authorization header with Bearer token required for delivery updates' });
     }
-    const token = authHeader.split(' ')[1].trim();
 
+    // 1. Admin Session Check: Administrators can update any order's location directly
+    const isValidAdmin = bearerToken ? validateAdminToken(bearerToken) : false;
     let actor = 'Delivery Partner';
-    const isValidAdmin = validateAdminToken(token);
-    const deliverySecret = process.env.DELIVERY_AGENT_SECRET || process.env.DELIVERY_SECRET;
-    const isValidDriver = deliverySecret && token === deliverySecret;
 
-    if (!isValidAdmin && !isValidDriver) {
-      return res.status(403).json({ error: 'Invalid or unauthorized delivery partner credentials' });
-    }
     if (isValidAdmin) {
       actor = 'Admin';
+    } else {
+      // 2. Delivery Partner Authentication: Resolve delivery secret and order dispatch token
+      let providedSecret = deliverySecretHeader;
+      let providedDispatchToken = dispatchTokenHeader;
+
+      if (bearerToken.includes(':')) {
+        // Format: Bearer <DELIVERY_AGENT_SECRET>:<delivery_dispatch_token>
+        const [sec, ...rest] = bearerToken.split(':');
+        if (!providedSecret) providedSecret = sec.trim();
+        if (!providedDispatchToken) providedDispatchToken = rest.join(':').trim();
+      } else if (!providedSecret && dispatchTokenHeader) {
+        // Bearer is the delivery secret, header contains dispatch token
+        providedSecret = bearerToken;
+      } else if (deliverySecretHeader && !providedDispatchToken) {
+        // Delivery secret provided in header, Bearer is the dispatch token
+        providedDispatchToken = bearerToken;
+      } else if (!providedSecret && !providedDispatchToken) {
+        // Single bearer token provided without dispatch token
+        providedSecret = bearerToken;
+      }
+
+      // Check delivery partner authentication (DELIVERY_AGENT_SECRET / DELIVERY_SECRET)
+      const configuredSecret = process.env.DELIVERY_AGENT_SECRET || process.env.DELIVERY_SECRET || (process.env.NODE_ENV !== 'production' ? 'indima-delivery-agent-secret' : undefined);
+      if (!configuredSecret) {
+        return res.status(503).json({ error: 'Delivery partner integration is not configured on server (DELIVERY_AGENT_SECRET missing)' });
+      }
+
+      if (!providedSecret || !timingSafeEqual(providedSecret, configuredSecret)) {
+        return res.status(403).json({ error: 'Invalid or unauthorized delivery partner credentials' });
+      }
+
+      // Check order-specific delivery dispatch token presence
+      if (!providedDispatchToken) {
+        return res.status(401).json({
+          error: 'Order-specific delivery dispatch token is required (provide via X-Delivery-Dispatch-Token header or Bearer credentials)'
+        });
+      }
+
+      // Look up target order
+      let targetOrder = db.getOrderById(id);
+      if (!targetOrder) {
+        targetOrder = await db.findOrFetchOrder(id);
+      }
+      if (!targetOrder) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+
+      // Verify dispatch token belongs to THIS specific order (timing-safe comparison)
+      const hasValidDispatchToken = verifyDeliveryDispatchToken(targetOrder, providedDispatchToken);
+      if (!hasValidDispatchToken) {
+        return res.status(403).json({ error: 'Forbidden: Invalid delivery dispatch token for this order' });
+      }
     }
 
-    const { id } = req.params;
+    // 3. Coordinate validation
     const { latitude, longitude, location_name } = req.body;
 
     if (latitude === undefined || longitude === undefined || latitude === null || longitude === null) {
@@ -2529,6 +2639,7 @@ app.put('/api/delivery/orders/:id/location', deliveryLocationLimiter, async (req
       return res.status(400).json({ error: 'Longitude must be between -180 and 180 degrees' });
     }
 
+    // 4. Update order location in data store and Firestore
     const updated = await db.updateOrderLocation(
       id,
       numLat,
@@ -2542,6 +2653,7 @@ app.put('/api/delivery/orders/:id/location', deliveryLocationLimiter, async (req
       return res.status(404).json({ error: 'Order not found' });
     }
 
+    // 5. Return sanitized response (never expose tokens)
     res.json({
       success: true,
       message: 'Delivery location updated successfully',
@@ -2552,6 +2664,64 @@ app.put('/api/delivery/orders/:id/location', deliveryLocationLimiter, async (req
         location_updated_at: updated.tracking?.location_updated_at,
         live_tracking_available: true
       }
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Admin: Retrieve order delivery dispatch token for assigning to delivery agent/device
+app.get('/api/admin/orders/:id/dispatch-token', adminAuthMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    let order = db.getOrderById(id);
+    if (!order) {
+      order = await db.findOrFetchOrder(id);
+    }
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    const token = getOrderDeliveryDispatchToken(order);
+    res.json({
+      success: true,
+      order_id: order.id,
+      delivery_dispatch_token: token
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Admin: Rotate order delivery dispatch token (e.g. if driver device changed or credential revoked)
+app.post('/api/admin/orders/:id/dispatch-token/rotate', adminAuthMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    let order = db.getOrderById(id);
+    if (!order) {
+      order = await db.findOrFetchOrder(id);
+    }
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    const newToken = generateDeliveryDispatchToken();
+    order.delivery_dispatch_token = newToken;
+    if (!order.tracking) {
+      order.tracking = {};
+    }
+    order.tracking.delivery_dispatch_token = newToken;
+    await db.setFirestoreDoc('orders', order.id, order);
+    db.save();
+    const session = (req as any).adminSession;
+    await db.logAudit(
+      session?.username || 'Admin',
+      'ORDER_DISPATCH_TOKEN_ROTATED',
+      order.id,
+      `Rotated delivery dispatch token for order ${order.id}`
+    );
+    res.json({
+      success: true,
+      order_id: order.id,
+      delivery_dispatch_token: newToken
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
