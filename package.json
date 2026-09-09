@@ -19,6 +19,7 @@
     "canvas-confetti": "^1.9.4",
     "cloudinary": "^2.11.0",
     "dotenv": "^17.2.3",
+    "esbuild": "~0.28.2",
     "express": "^4.21.2",
     "firebase": "^12.18.0",
     "firebase-admin": "^14.3.0",
@@ -45,7 +46,6 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "autoprefixer": "^10.4.21",
-    "esbuild": "~0.28.2",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2"
