@@ -20,7 +20,6 @@ import {
 import { Order, OrderStatus } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { api } from '../services/api';
-import { DeliveryMap } from './DeliveryMap';
 import { getVerifiedTrackingUrl, getCarrierDisplayName } from '../utils/carrierTracking';
 
 interface TrackOrderModalProps {
@@ -292,7 +291,7 @@ export const TrackOrderModal: React.FC<TrackOrderModalProps> = ({
                 {isKn ? 'ನಿಮ್ಮ ಆರ್ಡರ್ ಅನ್ನು ಟ್ರ್ಯಾಕ್ ಮಾಡಿ' : 'Track Your Order'}
               </h2>
               <p className="text-[11px] text-neutral-500 font-medium">
-                {isKn ? 'ಲೈವ್ ವಿತರಣಾ ಸ್ಥಿತಿ ಮತ್ತು ಪರಿಶೀಲಿಸಿದ ಶಿಪ್‌ಮೆಂಟ್ ಮಾಹಿತಿ' : 'Verified courier shipment status & delivery checkpoint'}
+                {isKn ? 'ಪರಿಶೀಲಿಸಿದ ಶಿಪ್‌ಮೆಂಟ್ ಸ್ಥಿತಿ ಮತ್ತು ಆರ್ಡರ್ ಪ್ರಗತಿ' : 'Verified courier shipment status & order progress'}
               </p>
             </div>
           </div>
@@ -503,7 +502,7 @@ export const TrackOrderModal: React.FC<TrackOrderModalProps> = ({
                 </div>
               </div>
 
-              {/* 2. STATUS TIMELINE (Exact 7 Steps) */}
+              {/* 2. ORDER PROGRESS */}
               {isCancelled ? (
                 <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 space-y-1">
                   <div className="flex items-center space-x-2 font-bold text-red-900 text-sm">
@@ -521,57 +520,72 @@ export const TrackOrderModal: React.FC<TrackOrderModalProps> = ({
                   <div className="flex items-center justify-between">
                     <h4 className="font-serif text-xs font-bold uppercase tracking-wider text-neutral-800 flex items-center space-x-1.5">
                       <Clock className="w-3.5 h-3.5 text-[#993300]" />
-                      <span>{isKn ? 'ವಿತರಣಾ ಪ್ರಗತಿ ಹಂತಗಳು' : 'Delivery Status Timeline'}</span>
+                      <span>{isKn ? 'ಆರ್ಡರ್ ಪ್ರಗತಿ' : 'ORDER PROGRESS'}</span>
                     </h4>
-                    {lastRefreshedAt && (
-                      <span className="text-[10px] text-neutral-500">
-                        {isKn ? 'ನವೀಕರಿಸಿದ ಸಮಯ:' : 'Last checked:'} {lastRefreshedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {formattedUpdateTime && (
+                      <span className="text-[11px] text-neutral-500">
+                        {isKn ? 'ಕೊನೆಯ ನವೀಕರಣ:' : 'Last updated:'} {formattedUpdateTime}
                       </span>
                     )}
                   </div>
 
-                  {/* Vertical responsive timeline */}
-                  <div className="relative pl-6 space-y-4 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-[#D9C4A2]">
+                  {/* Clean, readable stage-by-stage progress list */}
+                  <div className="relative pl-6 space-y-3.5 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-[#D9C4A2]">
                     {timelineSteps.map((s, idx) => {
-                      const isCompleted = currentStepIdx >= idx;
+                      const isCompleted = currentStepIdx > idx;
                       const isCurrent = currentStepIdx === idx;
+                      const isFuture = currentStepIdx < idx;
 
                       return (
-                        <div key={s.key} className="relative flex items-start space-x-3">
+                        <div
+                          key={s.key}
+                          className={`relative flex items-start space-x-3 p-2.5 rounded-lg transition-all ${
+                            isCurrent
+                              ? 'bg-white border border-[#DFC7A2] shadow-2xs -ml-1 pl-3'
+                              : ''
+                          }`}
+                        >
                           <div
                             className={`absolute -left-6 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
                               isCompleted
                                 ? 'bg-emerald-600 border-emerald-600 text-white shadow-2xs'
+                                : isCurrent
+                                ? 'bg-[#993300] border-[#993300] text-white shadow-xs'
                                 : 'bg-white border-[#D9C4A2] text-neutral-300'
                             }`}
                           >
                             {isCompleted ? (
-                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <Check className="w-3 h-3 stroke-[3]" />
+                            ) : isCurrent ? (
+                              <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
                             ) : (
-                              <div className="w-1.5 h-1.5 rounded-full bg-neutral-300" />
+                              <span className="text-[10px] text-neutral-400 font-bold">○</span>
                             )}
                           </div>
 
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
                               <p
-                                className={`text-xs font-bold ${
+                                className={`text-xs ${
                                   isCurrent
-                                    ? 'text-[#993300]'
+                                    ? 'font-bold text-[#993300] text-sm'
                                     : isCompleted
-                                    ? 'text-neutral-900'
-                                    : 'text-neutral-400'
+                                    ? 'font-semibold text-neutral-900'
+                                    : 'font-medium text-neutral-400'
                                 }`}
                               >
+                                {isCompleted && <span className="text-emerald-700 font-bold mr-1">✓</span>}
+                                {isCurrent && <span className="text-[#993300] font-bold mr-1">●</span>}
+                                {isFuture && <span className="text-neutral-400 font-bold mr-1">○</span>}
                                 {isKn ? s.label_kn : s.label_en}
                               </p>
                               {isCurrent && (
-                                <span className="text-[10px] font-bold px-2 py-0.2 bg-amber-100 text-amber-800 rounded-full animate-pulse">
-                                  {isKn ? 'ಪ್ರಸ್ತುತ ಹಂತ' : 'In Progress'}
+                                <span className="text-[10px] font-extrabold px-2 py-0.5 bg-[#993300] text-white rounded-full uppercase tracking-wider">
+                                  {isKn ? 'ಪ್ರಸ್ತುತ ಸ್ಥಿತಿ' : 'CURRENT STATUS'}
                                 </span>
                               )}
                             </div>
-                            <p className="text-[11px] text-neutral-500 mt-0.5">
+                            <p className={`text-[11px] mt-0.5 ${isCurrent ? 'text-neutral-700 font-medium' : isCompleted ? 'text-neutral-600' : 'text-neutral-400'}`}>
                               {isKn ? s.desc_kn : s.desc_en}
                             </p>
                           </div>
@@ -582,74 +596,87 @@ export const TrackOrderModal: React.FC<TrackOrderModalProps> = ({
                 </div>
               )}
 
-              {/* 3. CURRENT DELIVERY LOCATION (Leaflet Map with latest admin checkpoint) */}
-              <div className="space-y-2">
-                <DeliveryMap order={selectedOrder} />
-              </div>
-
-              {/* 4. LOGISTICS CARRIER & TRACKING INFORMATION */}
-              <div className="bg-white p-4 rounded-xl border border-[#D9C4A2] shadow-2xs space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-lg bg-[#FAF6EE] border border-[#DFC7A2] flex items-center justify-center text-[#993300]">
-                      <Truck className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-xs text-neutral-500 font-semibold">{isKn ? 'ಕೊರಿಯರ್ ವಾಹಕ:' : 'Carrier:'}</span>
-                        <span className="font-bold text-neutral-900 text-xs sm:text-sm">
-                          {carrier ? getCarrierDisplayName(carrier) : 'Standard Express Delivery'}
-                        </span>
-                      </div>
-                      {trackingNumber ? (
-                        <div className="flex items-center space-x-2 mt-0.5">
-                          <span className="text-xs text-neutral-500 font-semibold">{isKn ? 'AWB ಸಂಖ್ಯೆ:' : 'AWB Number:'}</span>
-                          <span className="font-mono text-xs font-bold text-[#993300] bg-[#FAF6EE] px-2 py-0.5 rounded border border-[#EADBCA]">
-                            {trackingNumber}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => copyToClipboard(trackingNumber, 'awb')}
-                            className="p-1 hover:bg-neutral-200/60 rounded text-neutral-500 hover:text-neutral-800 transition-colors cursor-pointer"
-                            title="Copy AWB Number"
-                          >
-                            {copiedField === 'awb' ? (
-                              <Check className="w-3.5 h-3.5 text-emerald-600" />
-                            ) : (
-                              <Copy className="w-3.5 h-3.5" />
-                            )}
-                          </button>
-                        </div>
-                      ) : (
-                        <p className="text-[11px] text-neutral-500 italic mt-0.5">
-                          {isKn ? 'ರವಾನೆಯ ನಂತರ AWB ಸಂಖ್ಯೆ ಲಭ್ಯವಾಗಲಿದೆ' : 'AWB number will be generated upon dispatch'}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* External courier tracking link */}
-                  {courierExternalUrl && (
-                    <a
-                      href={courierExternalUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-3.5 py-1.5 bg-[#FAF6EE] hover:bg-[#F2E8D7] text-[#993300] border border-[#D9C4A2] font-bold text-xs rounded-lg flex items-center space-x-1.5 transition-colors cursor-pointer shadow-2xs"
-                    >
-                      <span>{isKn ? 'ಕೊರಿಯರ್ ವೆಬ್‌ಸೈಟ್‌ನಲ್ಲಿ ನೋಡಿ' : 'Track on Courier Site'}</span>
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                  )}
+              {/* 3. EXPECTED DELIVERY (Prominent Display) */}
+              <div className="bg-[#FAF6EE] p-4 sm:p-5 rounded-xl border border-[#DFC7A2] space-y-1">
+                <div className="flex items-center space-x-1.5 text-neutral-600">
+                  <Calendar className="w-4 h-4 text-[#993300]" />
+                  <span className="text-[10px] font-bold text-neutral-600 uppercase tracking-wider">
+                    {isKn ? 'ನಿರೀಕ್ಷಿತ ವಿತರಣಾ ದಿನಾಂಕ' : 'EXPECTED DELIVERY'}
+                  </span>
                 </div>
-
-                {expectedDelivery && (
-                  <div className="flex items-center space-x-2 pt-2 border-t border-[#F0E6D2] text-xs text-neutral-700">
-                    <Calendar className="w-3.5 h-3.5 text-[#993300]" />
-                    <span className="font-semibold">{isKn ? 'ನಿರೀಕ್ಷಿತ ವಿತರಣಾ ದಿನಾಂಕ:' : 'Expected Delivery:'}</span>
-                    <span className="font-bold text-emerald-800">{expectedDelivery}</span>
-                  </div>
-                )}
+                <p className="font-serif text-base sm:text-lg font-bold text-emerald-800">
+                  {expectedDelivery ? expectedDelivery : (isKn ? 'ನಿರೀಕ್ಷಿತ ವಿತರಣಾ ದಿನಾಂಕ ಶೀಘ್ರದಲ್ಲೇ ನವೀಕರಿಸಲಾಗುವುದು.' : 'Expected delivery date will be updated soon.')}
+                </p>
               </div>
+
+              {/* 4. OPTIONAL SHIPPING INFORMATION (Courier & Tracking Number / AWB) */}
+              {(carrier || trackingNumber) && (
+                <div className="bg-white p-4 rounded-xl border border-[#D9C4A2] shadow-2xs space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-lg bg-[#FAF6EE] border border-[#DFC7A2] flex items-center justify-center text-[#993300]">
+                        <Truck className="w-5 h-5" />
+                      </div>
+                      <div>
+                        {carrier && (
+                          <div className="flex items-center space-x-2">
+                            <span className="text-xs text-neutral-500 font-semibold">{isKn ? 'ಕೊರಿಯರ್:' : 'Courier:'}</span>
+                            <span className="font-bold text-neutral-900 text-xs sm:text-sm">
+                              {getCarrierDisplayName(carrier)}
+                            </span>
+                          </div>
+                        )}
+                        {trackingNumber && (
+                          <div className="flex items-center space-x-2 mt-0.5">
+                            <span className="text-xs text-neutral-500 font-semibold">{isKn ? 'AWB ಸಂಖ್ಯೆ:' : 'Tracking Number / AWB:'}</span>
+                            <span className="font-mono text-xs font-bold text-[#993300] bg-[#FAF6EE] px-2 py-0.5 rounded border border-[#EADBCA]">
+                              {trackingNumber}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(trackingNumber, 'awb')}
+                              className="p-1 hover:bg-neutral-200/60 rounded text-neutral-500 hover:text-neutral-800 transition-colors cursor-pointer"
+                              title="Copy AWB Number"
+                            >
+                              {copiedField === 'awb' ? (
+                                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* External courier tracking link */}
+                    {courierExternalUrl && (
+                      <a
+                        href={courierExternalUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3.5 py-1.5 bg-[#FAF6EE] hover:bg-[#F2E8D7] text-[#993300] border border-[#D9C4A2] font-bold text-xs rounded-lg flex items-center space-x-1.5 transition-colors cursor-pointer shadow-2xs"
+                      >
+                        <span>{isKn ? 'ಕೊರಿಯರ್ ವೆಬ್‌ಸೈಟ್‌ನಲ್ಲಿ ನೋಡಿ' : 'Track on Courier Site'}</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* 5. OPTIONAL SHIPMENT NOTE / CHECKPOINT */}
+              {checkpointName && (
+                <div className="bg-white p-3.5 rounded-xl border border-[#D9C4A2] shadow-2xs flex items-start space-x-2.5 text-xs">
+                  <Package className="w-4 h-4 text-[#993300] shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold text-neutral-700 block">
+                      {isKn ? 'ಶಿಪ್‌ಮೆಂಟ್ ವಿವರಣೆ:' : 'Shipment Note:'}
+                    </span>
+                    <span className="text-neutral-900 font-medium">{checkpointName}</span>
+                  </div>
+                </div>
+              )}
 
               {/* 5. PRODUCT / ORDER SUMMARY */}
               {(selectedOrder.items || []).length > 0 && (

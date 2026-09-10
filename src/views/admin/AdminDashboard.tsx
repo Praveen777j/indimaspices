@@ -50,7 +50,6 @@ import { HeroBannerManager } from './components/HeroBannerManager';
 import { AdminSecuritySettings } from './components/AdminSecuritySettings';
 import { AdminPaymentsTab } from './components/AdminPaymentsTab';
 import { AdminReportsTab } from './components/AdminReportsTab';
-import { DeliveryMap } from '../../components/DeliveryMap';
 import { SUPPORTED_CARRIERS, getCarrierDisplayName, getVerifiedTrackingUrl } from '../../utils/carrierTracking';
 import {
   downloadReceiptFile,
@@ -366,16 +365,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
     const paymentStatus = isConfirming && order?.payment_status !== 'Successful' ? 'Successful' : undefined;
 
     const updatedTracking = {
+      ...order?.tracking,
       carrier: newCarrier || order?.carrier || order?.tracking?.carrier,
       tracking_number: newTrackingNumber || order?.tracking_number || order?.tracking?.tracking_number,
       status: targetStatus,
       expected_delivery: newExpectedDelivery || order?.expected_delivery || order?.tracking?.expected_delivery,
-      latitude: newLatitude,
-      longitude: newLongitude,
       location_name: newLocationName || order?.tracking?.location_name,
-      location_updated_at: newLatitude !== undefined ? new Date().toISOString() : order?.tracking?.location_updated_at,
-      location_updated_by: newLatitude !== undefined ? 'Admin' : order?.tracking?.location_updated_by,
-      live_tracking_available: newLiveTrackingAvailable
+      location_updated_at: new Date().toISOString(),
+      location_updated_by: 'Admin'
     };
 
     // Optimistically update order in state immediately
@@ -401,10 +398,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
         carrier: newCarrier || undefined,
         expected_delivery: newExpectedDelivery || undefined,
         payment_status: paymentStatus,
-        latitude: newLatitude,
-        longitude: newLongitude,
-        location_name: newLocationName || undefined,
-        live_tracking_available: newLiveTrackingAvailable
+        location_name: newLocationName || undefined
       });
     } catch (e: any) {
       console.error(e);
@@ -2487,9 +2481,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
             <div className="bg-[#FAF6EE] p-4 rounded-xl border border-[#DFC7A2] space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#EADBCA] pb-3">
                 <div>
-                  <h4 className="font-bold text-neutral-900 uppercase text-sm">Shipment Status & Delivery Tracking</h4>
+                  <h4 className="font-bold text-neutral-900 uppercase text-sm">Shipment Status & Delivery Progress</h4>
                   <p className="text-xs text-neutral-600">
-                    Manage carrier assignment, tracking numbers, and verified delivery checkpoints.
+                    Update order progress, carrier details, expected delivery date, and shipment notes.
                   </p>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -2516,9 +2510,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
                   >
                     <option value="placed">Order Placed</option>
                     <option value="confirmed">Payment Confirmed</option>
-                    <option value="processing">In Preparation</option>
-                    <option value="packed">Packed</option>
-                    <option value="shipped">Dispatched / In Transit</option>
+                    <option value="processing">Processing</option>
+                    <option value="shipped">Shipped</option>
+                    <option value="in_transit">In Transit</option>
                     <option value="out_for_delivery">Out for Delivery</option>
                     <option value="delivered">Delivered</option>
                     <option value="cancelled">Cancelled</option>
@@ -2552,15 +2546,32 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
                 </div>
 
                 <div>
-                  <label className="block font-bold text-neutral-900 text-xs mb-1">Expected Delivery</label>
+                  <label className="block font-bold text-neutral-900 text-xs mb-1">Expected Delivery Date</label>
                   <input
                     type="text"
                     value={newExpectedDelivery}
                     onChange={e => setNewExpectedDelivery(e.target.value)}
-                    placeholder="e.g. 24 Oct 2025"
+                    placeholder="e.g. 18 September 2026"
                     className="w-full px-3 py-2 bg-white border border-[#D9C4A2] rounded-lg text-neutral-900 text-xs"
                   />
                 </div>
+              </div>
+
+              {/* Optional Shipment Note / Checkpoint */}
+              <div>
+                <label className="block font-bold text-neutral-900 text-xs mb-1">
+                  Optional Shipment Note / Checkpoint
+                </label>
+                <input
+                  type="text"
+                  value={newLocationName}
+                  onChange={e => setNewLocationName(e.target.value)}
+                  placeholder="e.g. Departed Bengaluru Hub, Arrived at Mysuru Facility, Package packed and sealed..."
+                  className="w-full px-3 py-2 bg-white border border-[#D9C4A2] rounded-lg text-xs text-neutral-900"
+                />
+                <p className="text-[11px] text-neutral-500 mt-1">
+                  Current location or shipment note visible to the customer on their order tracking page.
+                </p>
               </div>
 
               {/* Carrier Portal Link if available */}
@@ -2587,134 +2598,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
                   )}
                 </div>
               )}
-
-              {/* Delivery Geolocation & Live Map Tracking Section */}
-              <div className="bg-white p-3.5 rounded-xl border border-[#DFC7A2] space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center space-x-2 text-[#993300]">
-                    <MapPin className="w-4 h-4" />
-                    <span className="font-bold text-xs uppercase tracking-wide">
-                      Delivery Location & Live Tracking Checkpoint
-                    </span>
-                  </div>
-
-                  {/* Last updated badge */}
-                  {editingOrder.tracking?.location_updated_at && (
-                    <span className="text-[11px] text-neutral-500 bg-neutral-50 px-2 py-0.5 rounded border border-neutral-200 flex items-center space-x-1">
-                      <Clock className="w-3 h-3 text-neutral-400" />
-                      <span>
-                        Last updated: {new Date(editingOrder.tracking.location_updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        {editingOrder.tracking.location_updated_by ? ` by ${editingOrder.tracking.location_updated_by}` : ''}
-                      </span>
-                    </span>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                  <div className="sm:col-span-1">
-                    <label className="block text-[11px] font-bold text-neutral-700 mb-1">
-                      Checkpoint Name / Hub
-                    </label>
-                    <input
-                      type="text"
-                      value={newLocationName}
-                      onChange={e => setNewLocationName(e.target.value)}
-                      placeholder="e.g. Nelamangala Sorting Center"
-                      className="w-full px-2.5 py-1.5 bg-[#FAF6EE] border border-[#D9C4A2] rounded text-xs text-neutral-900"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold text-neutral-700 mb-1">
-                      Latitude
-                    </label>
-                    <input
-                      type="number"
-                      step="0.0001"
-                      value={newLatitude !== undefined ? newLatitude : ''}
-                      onChange={e => {
-                        const val = e.target.value.trim();
-                        setNewLatitude(val === '' ? undefined : parseFloat(val));
-                      }}
-                      placeholder="e.g. 13.0995"
-                      className="w-full px-2.5 py-1.5 bg-[#FAF6EE] border border-[#D9C4A2] rounded font-mono text-xs text-neutral-900"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold text-neutral-700 mb-1">
-                      Longitude
-                    </label>
-                    <input
-                      type="number"
-                      step="0.0001"
-                      value={newLongitude !== undefined ? newLongitude : ''}
-                      onChange={e => {
-                        const val = e.target.value.trim();
-                        setNewLongitude(val === '' ? undefined : parseFloat(val));
-                      }}
-                      placeholder="e.g. 77.3917"
-                      className="w-full px-2.5 py-1.5 bg-[#FAF6EE] border border-[#D9C4A2] rounded font-mono text-xs text-neutral-900"
-                    />
-                  </div>
-                </div>
-
-                {/* Live tracking availability checkbox */}
-                <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-neutral-100">
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={newLiveTrackingAvailable}
-                      onChange={e => setNewLiveTrackingAvailable(e.target.checked)}
-                      className="rounded border-[#D9C4A2] text-[#993300] focus:ring-[#993300] w-4 h-4 cursor-pointer"
-                    />
-                    <span className="text-xs font-semibold text-neutral-800">
-                      Live GPS Tracking Broadcast Active
-                    </span>
-                  </label>
-
-                  {(newLatitude !== undefined || newLongitude !== undefined) && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setNewLatitude(undefined);
-                        setNewLongitude(undefined);
-                        setNewLocationName('');
-                        setNewLiveTrackingAvailable(false);
-                      }}
-                      className="text-[11px] text-red-600 hover:text-red-800 hover:underline cursor-pointer font-medium"
-                    >
-                      Clear Pin Location
-                    </button>
-                  )}
-                </div>
-
-                <p className="text-[10px] text-neutral-500 italic">
-                  Note: Do not mark live tracking active unless there is an actual GPS broadcasting feed or delivery driver update stream. Customers will see exact coordinates and verified timestamps.
-                </p>
-
-                {/* Interactive Map Picker */}
-                <div className="mt-2">
-                  <DeliveryMap
-                    latitude={newLatitude}
-                    longitude={newLongitude}
-                    locationName={newLocationName}
-                    lastUpdated={editingOrder.tracking?.location_updated_at}
-                    statusText={newOrderStatus}
-                    isLiveTracking={newLiveTrackingAvailable}
-                    destinationCity={editingOrder.address_snapshot?.city}
-                    destinationState={editingOrder.address_snapshot?.state}
-                    isAdminPicker={true}
-                    onLocationSelect={(coords) => {
-                      setNewLatitude(coords.latitude);
-                      setNewLongitude(coords.longitude);
-                      if (coords.locationName) {
-                        setNewLocationName(coords.locationName);
-                      }
-                    }}
-                  />
-                </div>
-              </div>
 
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#DFC7A2]">
