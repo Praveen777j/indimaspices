@@ -13,6 +13,7 @@ import { CartDrawer } from './components/CartDrawer';
 import { CheckoutModal } from './components/CheckoutModal';
 import { OrderConfirmationModal } from './components/OrderConfirmationModal';
 import { TrackOrderModal } from './components/TrackOrderModal';
+import { WelcomeBackOrderCard } from './components/WelcomeBackOrderCard';
 import { RecipeSection } from './components/RecipeSection';
 import { HeritageStorySection } from './components/HeritageStorySection';
 import { HealthWisdomSection } from './components/HealthWisdomSection';
@@ -59,6 +60,7 @@ const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToA
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const [isTrackOrderOpen, setIsTrackOrderOpen] = useState(false);
+  const [trackInitialOrderId, setTrackInitialOrderId] = useState<string | undefined>(undefined);
   const [isAiAssistantOpen, setIsAiAssistantOpen] = useState(false);
   const [confirmedOrder, setConfirmedOrder] = useState<Order | null>(null);
   const [policyModalType, setPolicyModalType] = useState<'privacy' | 'terms' | 'refund' | 'shipping' | null>(null);
@@ -249,6 +251,14 @@ const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToA
           banner={(banners || []).find(b => b.type === 'hero' && b.active !== false && b.enabled !== false) || (banners || []).find(b => b.active !== false && b.enabled !== false) || banners?.[0]}
           onShopClick={() => scrollToSection('products-section')}
           onOffersClick={() => scrollToSection('offers-section')}
+        />
+
+        {/* Personalized Returning Customer Welcome Back & Order Tracking (Token-authorized only) */}
+        <WelcomeBackOrderCard
+          onTrackOrder={orderId => {
+            setTrackInitialOrderId(orderId);
+            setIsTrackOrderOpen(true);
+          }}
         />
 
         {/* Categories Bar */}
@@ -462,13 +472,18 @@ const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToA
         onClose={() => setConfirmedOrder(null)}
         onTrackOrder={(orderId, phone) => {
           setConfirmedOrder(null);
+          if (orderId) setTrackInitialOrderId(orderId);
           setIsTrackOrderOpen(true);
         }}
       />
 
       <TrackOrderModal
         isOpen={isTrackOrderOpen}
-        onClose={() => setIsTrackOrderOpen(false)}
+        onClose={() => {
+          setIsTrackOrderOpen(false);
+          setTrackInitialOrderId(undefined);
+        }}
+        initialOrderId={trackInitialOrderId}
       />
 
       <WishlistModal

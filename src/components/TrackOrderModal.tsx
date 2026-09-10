@@ -51,6 +51,7 @@ export const TrackOrderModal: React.FC<TrackOrderModalProps> = ({
 
   // Initialize and auto-track if initial values provided
   useEffect(() => {
+    let savedToken = '';
     if (initialPhone) setPhone(initialPhone);
     if (initialOrderId) {
       setOrderId(initialOrderId);
@@ -58,13 +59,14 @@ export const TrackOrderModal: React.FC<TrackOrderModalProps> = ({
       try {
         const stored = JSON.parse(localStorage.getItem('indima_order_tokens') || '{}');
         if (stored[initialOrderId]) {
-          setManualToken(stored[initialOrderId]);
+          savedToken = stored[initialOrderId];
+          setManualToken(savedToken);
         }
       } catch (_) {}
     }
 
     if (isOpen && (initialOrderId || initialPhone)) {
-      handleSearch(initialPhone, initialOrderId);
+      handleSearch(initialPhone, initialOrderId, savedToken || undefined);
     }
   }, [initialPhone, initialOrderId, isOpen]);
 
