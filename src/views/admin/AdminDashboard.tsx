@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   LayoutDashboard,
   Package,
@@ -42,7 +42,8 @@ import {
   Download,
   Printer,
   Navigation,
-  MapPin
+  MapPin,
+  ShoppingBag
 } from 'lucide-react';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 import { api } from '../../services/api';
@@ -50,6 +51,10 @@ import { HeroBannerManager } from './components/HeroBannerManager';
 import { AdminSecuritySettings } from './components/AdminSecuritySettings';
 import { AdminPaymentsTab } from './components/AdminPaymentsTab';
 import { AdminReportsTab } from './components/AdminReportsTab';
+import { AdminNotificationCenter } from './components/AdminNotificationCenter';
+import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { db, handleFirestoreError, OperationType } from '../../lib/firebase';
+import { playOrderAlertChime } from '../../utils/audioAlert';
 import { SUPPORTED_CARRIERS, getCarrierDisplayName, getVerifiedTrackingUrl } from '../../utils/carrierTracking';
 import {
   downloadReceiptFile,
@@ -154,7 +159,110 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
 
   // Search queries
   const [orderSearch, setOrderSearch] = useState('');
+  const [orderSourceFilter, setOrderSourceFilter] = useState<'all' | 'web' | 'whatsapp'>('all');
   const [productSearch, setProductSearch] = useState('');
+
+  // Real-time Firestore 'orders' collection toast notification
+  const [realtimeOrderToast, setRealtimeOrderToast] = useState<Order | null>(null);
+  const orderToastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Subtle indicator for new unread orders in sidebar
+  const [hasUnreadNewOrders, setHasUnreadNewOrders] = useState(false);
+  const [unreadNewOrdersCount, setUnreadNewOrdersCount] = useState(0);
+
+  // Listen to the 'orders' collection in Firestore in real-time
+  useEffect(() => {
+    if (!token) return;
+
+    let unsubscribe: (() => void) | null = null;
+    let isInitialLoad = true;
+    const knownOrderIds = new Set<string>();
+
+    try {
+      const ordersCol = collection(db, 'orders');
+
+      const setupListener = (useOrdering: boolean): (() => void) => {
+        const q = useOrdering
+          ? query(ordersCol, orderBy('created_at', 'desc'), limit(35))
+          : query(ordersCol, limit(35));
+
+        return onSnapshot(
+          q,
+          (snapshot) => {
+            if (isInitialLoad) {
+              snapshot.docs.forEach((doc) => knownOrderIds.add(doc.id));
+              isInitialLoad = false;
+              return;
+            }
+
+            snapshot.docChanges().forEach((change) => {
+              if (change.type === 'added') {
+                const docData = change.doc.data() as Order;
+                const orderId = docData.id || change.doc.id;
+
+                if (!knownOrderIds.has(orderId)) {
+                  knownOrderIds.add(orderId);
+
+                  const newOrder: Order = {
+                    ...docData,
+                    id: orderId
+                  };
+
+                  const source: 'whatsapp' | 'web' = (newOrder.order_source || (newOrder.id.startsWith('WA-') ? 'whatsapp' : 'web')) as 'whatsapp' | 'web';
+
+                  // 1. Play auditory notification chime
+                  playOrderAlertChime(source);
+
+                  // 2. Trigger real-time order notification toast
+                  setRealtimeOrderToast(newOrder);
+
+                  // 3. Mark unread orders for sidebar badge
+                  setHasUnreadNewOrders(true);
+                  setUnreadNewOrdersCount((prev) => prev + 1);
+
+                  if (orderToastTimeoutRef.current) {
+                    clearTimeout(orderToastTimeoutRef.current);
+                  }
+                  orderToastTimeoutRef.current = setTimeout(() => {
+                    setRealtimeOrderToast(null);
+                  }, 12000);
+
+                  // 4. Immediately prepend to local orders list
+                  setOrders((prev) => {
+                    if (prev.some((o) => o.id === orderId)) return prev;
+                    return [newOrder, ...prev];
+                  });
+
+                  // 5. Silently refresh overview statistics
+                  api.getAdminStats(token).then((res) => {
+                    if (res && !(res as any).error) setStats(res);
+                  }).catch(() => {});
+                }
+              }
+            });
+          },
+          (error) => {
+            if (useOrdering) {
+              console.warn('Orders sorted listener error, falling back to unordered listener:', error);
+              if (unsubscribe) unsubscribe();
+              unsubscribe = setupListener(false);
+            } else {
+              handleFirestoreError(error, OperationType.LIST, 'orders');
+            }
+          }
+        );
+      };
+
+      unsubscribe = setupListener(true);
+    } catch (e) {
+      console.warn('Firestore orders collection listener init notice:', e);
+    }
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+      if (orderToastTimeoutRef.current) clearTimeout(orderToastTimeoutRef.current);
+    };
+  }, [token]);
 
   const loadAllData = async () => {
     if (!token) return;
@@ -717,7 +825,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
             </div>
           </div>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <AdminNotificationCenter
+              token={token || ''}
+              onSelectOrder={(orderId) => {
+                setActiveTab('orders');
+                setOrderSearch(orderId);
+                setHasUnreadNewOrders(false);
+                setUnreadNewOrdersCount(0);
+              }}
+              onNewOrderReceived={() => {
+                setHasUnreadNewOrders(true);
+                setUnreadNewOrdersCount((prev) => prev + 1);
+                if (token) {
+                  api.getAdminOrders(token).then((res) => {
+                    if (Array.isArray(res)) setOrders(res);
+                  });
+                  api.getAdminStats(token).then((res) => {
+                    if (res && !(res as any).error) setStats(res);
+                  });
+                }
+              }}
+            />
+
             <button
               onClick={loadAllData}
               title="Refresh Data"
@@ -753,6 +883,123 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
         </div>
       )}
 
+      {/* Real-time Incoming Order Alert Toast (Firestore 'orders' collection listener) */}
+      {realtimeOrderToast && (
+        <div
+          id="admin-realtime-order-toast"
+          role="alert"
+          aria-live="assertive"
+          className="fixed top-18 right-4 sm:right-6 z-50 max-w-md w-[calc(100vw-2rem)] sm:w-full bg-zinc-900/98 backdrop-blur-xl border-2 border-amber-500 shadow-2xl rounded-2xl p-4 text-white animate-in slide-in-from-top-4 fade-in duration-300 ring-4 ring-amber-500/20"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center space-x-3 min-w-0">
+              <div
+                className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 shadow-lg ${
+                  realtimeOrderToast.order_source === 'whatsapp' || realtimeOrderToast.id.startsWith('WA-')
+                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50'
+                    : 'bg-amber-500/20 text-amber-400 border border-amber-500/50'
+                }`}
+              >
+                {realtimeOrderToast.order_source === 'whatsapp' || realtimeOrderToast.id.startsWith('WA-') ? (
+                  <MessageCircle className="w-6 h-6 text-emerald-400 animate-pulse" />
+                ) : (
+                  <ShoppingBag className="w-6 h-6 text-amber-400 animate-pulse" />
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center space-x-2">
+                  <span
+                    className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-sm tracking-wider ${
+                      realtimeOrderToast.order_source === 'whatsapp' || realtimeOrderToast.id.startsWith('WA-')
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-amber-600 text-white'
+                    }`}
+                  >
+                    {realtimeOrderToast.order_source === 'whatsapp' || realtimeOrderToast.id.startsWith('WA-')
+                      ? 'New WhatsApp Order'
+                      : 'New Web Store Order'}
+                  </span>
+                  <span className="font-mono text-xs text-amber-400 font-bold truncate">
+                    #{realtimeOrderToast.id}
+                  </span>
+                </div>
+                <h4 className="text-sm font-bold text-zinc-100 mt-1 flex items-center space-x-1.5 truncate">
+                  <span className="text-amber-400 font-extrabold text-base">₹{realtimeOrderToast.total_amount}</span>
+                  <span className="text-zinc-500">•</span>
+                  <span className="truncate">{realtimeOrderToast.customer_name}</span>
+                </h4>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                if (orderToastTimeoutRef.current) clearTimeout(orderToastTimeoutRef.current);
+                setRealtimeOrderToast(null);
+              }}
+              className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
+              title="Dismiss Alert"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Destination & Phone details */}
+          <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-400">
+            <span>📞 +91 {realtimeOrderToast.customer_phone}</span>
+            {realtimeOrderToast.address_snapshot && (
+              <span>
+                📍 {realtimeOrderToast.address_snapshot.city}, {realtimeOrderToast.address_snapshot.state}
+              </span>
+            )}
+            <span className="font-semibold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800/60 text-[10px]">
+              {realtimeOrderToast.payment_status?.toUpperCase() || 'PAID'}
+            </span>
+          </div>
+
+          {/* Ordered items preview */}
+          {realtimeOrderToast.items && realtimeOrderToast.items.length > 0 && (
+            <p className="text-xs text-zinc-300 mt-2 line-clamp-1 bg-zinc-950/80 px-2.5 py-1.5 rounded-lg border border-zinc-800 font-medium">
+              {realtimeOrderToast.items.map((i) => `${i.name_en} (${i.quantity}x)`).join(', ')}
+            </p>
+          )}
+
+          {/* Footer with actions */}
+          <div className="mt-3 flex items-center justify-between pt-2.5 border-t border-zinc-800/80">
+            <span className="text-[10px] text-zinc-500 font-mono flex items-center space-x-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping inline-block mr-1"></span>
+              Firestore 'orders' collection
+            </span>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => {
+                  if (orderToastTimeoutRef.current) clearTimeout(orderToastTimeoutRef.current);
+                  setRealtimeOrderToast(null);
+                }}
+                className="text-xs px-2.5 py-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+              >
+                Dismiss
+              </button>
+              <button
+                onClick={() => {
+                  if (orderToastTimeoutRef.current) clearTimeout(orderToastTimeoutRef.current);
+                  setActiveTab('orders');
+                  setOrderSearch(realtimeOrderToast.id);
+                  setEditingOrder(realtimeOrderToast);
+                  setIsOrderModalOpen(true);
+                  setRealtimeOrderToast(null);
+                  setHasUnreadNewOrders(false);
+                  setUnreadNewOrdersCount(0);
+                }}
+                className="text-xs font-bold px-3 py-1 rounded-lg bg-amber-600 hover:bg-amber-500 text-white transition-colors flex items-center space-x-1 shadow-xs cursor-pointer"
+              >
+                <span>View Order Details</span>
+                <ExternalLink className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Admin Content Container */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 flex flex-col md:flex-row gap-6 w-full">
         {/* Sidebar Navigation - Responsive Horizontal Strip on Mobile, Sidebar on Desktop */}
@@ -771,22 +1018,48 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
             </button>
 
             <button
-              onClick={() => setActiveTab('orders')}
-              className={`shrink-0 md:w-full flex items-center justify-between space-x-2 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              id="admin-sidebar-orders-btn"
+              onClick={() => {
+                setActiveTab('orders');
+                setHasUnreadNewOrders(false);
+                setUnreadNewOrdersCount(0);
+              }}
+              className={`shrink-0 md:w-full flex items-center justify-between space-x-2 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap relative ${
                 activeTab === 'orders'
                   ? 'bg-amber-600 text-white shadow-xs'
+                  : hasUnreadNewOrders
+                  ? 'text-white bg-zinc-800/80 ring-1 ring-emerald-500/50 hover:bg-zinc-800'
                   : 'text-zinc-400 hover:bg-zinc-800/60 hover:text-white'
               }`}
             >
               <div className="flex items-center space-x-2">
-                <Truck className="w-4 h-4 shrink-0" />
+                <div className="relative">
+                  <Truck className={`w-4 h-4 shrink-0 ${hasUnreadNewOrders ? 'text-emerald-400' : ''}`} />
+                  {hasUnreadNewOrders && (
+                    <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                  )}
+                </div>
                 <span>Orders</span>
               </div>
-              {orders.filter(o => o.status === 'placed' || o.status === 'confirmed').length > 0 && (
-                <span className="bg-amber-500 text-black text-[10px] px-1.5 py-0.2 rounded-full font-black ml-1.5">
-                  {orders.filter(o => o.status === 'placed' || o.status === 'confirmed').length}
-                </span>
-              )}
+              <div className="flex items-center space-x-1.5">
+                {hasUnreadNewOrders && (
+                  <span
+                    id="admin-orders-flashing-badge"
+                    className="inline-flex items-center space-x-1 animate-pulse bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping inline-block"></span>
+                    <span>NEW{unreadNewOrdersCount > 1 ? ` (${unreadNewOrdersCount})` : ''}</span>
+                  </span>
+                )}
+                {orders.filter(o => o.status === 'placed' || o.status === 'confirmed').length > 0 && (
+                  <span className="bg-amber-500 text-black text-[10px] px-1.5 py-0.2 rounded-full font-black ml-1">
+                    {orders.filter(o => o.status === 'placed' || o.status === 'confirmed').length}
+                  </span>
+                )}
+              </div>
             </button>
 
             <button
@@ -1004,7 +1277,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
                     Recent Pan-India Orders
                   </h3>
                   <button
-                    onClick={() => setActiveTab('orders')}
+                    onClick={() => {
+                      setActiveTab('orders');
+                      setHasUnreadNewOrders(false);
+                      setUnreadNewOrdersCount(0);
+                    }}
                     className="text-xs text-[#993300] font-bold hover:underline cursor-pointer"
                   >
                     View All Orders →
@@ -1014,8 +1291,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
                   {(orders || []).slice(0, 5).map(ord => (
                     <div key={ord.id} className="p-3.5 flex items-center justify-between text-xs min-w-[500px]">
                       <div>
-                        <p className="font-mono font-bold text-neutral-900">{ord.id}</p>
-                        <p className="text-neutral-500 text-[11px]">
+                        <div className="flex items-center space-x-2">
+                          <p className="font-mono font-bold text-neutral-900">{ord.id}</p>
+                          {ord.order_source === 'whatsapp' || ord.id.startsWith('WA-') ? (
+                            <span className="inline-flex items-center space-x-1 text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
+                              <MessageCircle className="w-2.5 h-2.5" />
+                              <span>WhatsApp</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center space-x-1 text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-300">
+                              <ShoppingBag className="w-2.5 h-2.5" />
+                              <span>Web Store</span>
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-neutral-500 text-[11px] mt-0.5">
                           {ord.customer_name} (+91 {ord.customer_phone}) • {ord.address_snapshot?.city || 'Bengaluru'}, {ord.address_snapshot?.state || 'Karnataka'}
                         </p>
                       </div>
@@ -1336,6 +1626,42 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
                     className="w-full pl-9 pr-3 py-2 text-xs bg-[#FAF6EE] border border-[#D9C4A2] rounded-lg text-neutral-900 placeholder:text-neutral-500 font-medium focus:outline-hidden focus:border-[#993300]"
                   />
                 </div>
+
+                {/* Channel Source Filter Tabs */}
+                <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 sm:pb-0">
+                  <button
+                    onClick={() => setOrderSourceFilter('all')}
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer whitespace-nowrap ${
+                      orderSourceFilter === 'all'
+                        ? 'bg-[#993300] text-white shadow-2xs'
+                        : 'bg-[#FAF6EE] text-neutral-700 hover:bg-[#F0E6D2] border border-[#EADBCA]'
+                    }`}
+                  >
+                    All ({orders.length})
+                  </button>
+                  <button
+                    onClick={() => setOrderSourceFilter('web')}
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center space-x-1 whitespace-nowrap ${
+                      orderSourceFilter === 'web'
+                        ? 'bg-amber-700 text-white shadow-2xs'
+                        : 'bg-[#FAF6EE] text-neutral-700 hover:bg-[#F0E6D2] border border-[#EADBCA]'
+                    }`}
+                  >
+                    <ShoppingBag className="w-3 h-3" />
+                    <span>Web Store ({orders.filter(o => o.order_source !== 'whatsapp' && !o.id.startsWith('WA-')).length})</span>
+                  </button>
+                  <button
+                    onClick={() => setOrderSourceFilter('whatsapp')}
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center space-x-1 whitespace-nowrap ${
+                      orderSourceFilter === 'whatsapp'
+                        ? 'bg-emerald-700 text-white shadow-2xs'
+                        : 'bg-[#FAF6EE] text-neutral-700 hover:bg-[#F0E6D2] border border-[#EADBCA]'
+                    }`}
+                  >
+                    <MessageCircle className="w-3 h-3" />
+                    <span>WhatsApp ({orders.filter(o => o.order_source === 'whatsapp' || o.id.startsWith('WA-')).length})</span>
+                  </button>
+                </div>
               </div>
 
               {/* Orders Table */}
@@ -1354,19 +1680,36 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
                     </thead>
                     <tbody className="divide-y divide-[#F0E6D2]">
                       {(orders || [])
-                        .filter(
-                          o =>
+                        .filter(o => {
+                          const isWA = o.order_source === 'whatsapp' || o.id.startsWith('WA-');
+                          if (orderSourceFilter === 'whatsapp' && !isWA) return false;
+                          if (orderSourceFilter === 'web' && isWA) return false;
+                          return (
                             o.id.toLowerCase().includes(orderSearch.toLowerCase()) ||
                             o.customer_name.toLowerCase().includes(orderSearch.toLowerCase()) ||
                             o.customer_phone.includes(orderSearch) ||
                             o.address_snapshot.state.toLowerCase().includes(orderSearch.toLowerCase()) ||
                             o.address_snapshot.city.toLowerCase().includes(orderSearch.toLowerCase())
-                        )
+                          );
+                        })
                         .map(ord => (
                           <tr key={ord.id} className="hover:bg-[#FAF6EE]/50 transition-colors">
                             <td className="p-3">
-                              <p className="font-mono font-bold text-neutral-900">{ord.id}</p>
-                              <p className="text-[11px] text-neutral-500">
+                              <div className="flex items-center space-x-1.5">
+                                <p className="font-mono font-bold text-neutral-900">{ord.id}</p>
+                                {ord.order_source === 'whatsapp' || ord.id.startsWith('WA-') ? (
+                                  <span className="inline-flex items-center space-x-1 text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                    <MessageCircle className="w-2.5 h-2.5" />
+                                    <span>WhatsApp</span>
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center space-x-1 text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-300">
+                                    <ShoppingBag className="w-2.5 h-2.5" />
+                                    <span>Web</span>
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-neutral-500 mt-0.5">
                                 {new Date(ord.created_at).toLocaleString()}
                               </p>
                             </td>

@@ -15,6 +15,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useCart } from '../contexts/CartContext';
 import { BusinessSettings, Offer } from '../types';
 import { BrandLogo } from './BrandLogo';
+import { api } from '../services/api';
 
 interface CartDrawerProps {
   settings: BusinessSettings;
@@ -84,6 +85,21 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
   const handleWhatsAppOrder = () => {
     const url = generateWhatsAppOrderUrl(settings);
+    // Asynchronously log the WhatsApp order into Firestore & server store for real-time admin alerting
+    api.createWhatsAppOrder({
+      items: items.map(i => ({
+        product_id: i.product.id,
+        sku: i.product.sku,
+        name_en: i.product.name_en,
+        name_kn: i.product.name_kn,
+        image: i.product.images?.[0] || '',
+        quantity: i.quantity,
+        unit_price: i.product.price,
+        weight: i.product.weight
+      })),
+      coupon_code: appliedCoupon?.code
+    }).catch(err => console.debug('WhatsApp order register notice:', err));
+
     window.open(url, '_blank');
   };
 

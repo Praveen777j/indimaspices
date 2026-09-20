@@ -183,6 +183,8 @@ export interface Order {
   carrier?: string;
   expected_delivery?: string;
   tracking?: OrderTrackingInfo;
+  order_source?: 'web' | 'whatsapp';
+  notes?: string;
   whatsapp_notification_status?: 'Sent' | 'Pending' | 'Failed' | 'sent' | 'pending' | 'failed';
   whatsapp_notification_error?: string;
   stock_restored?: boolean;
@@ -365,4 +367,19 @@ export interface Lead {
   phone: string;
   created_at: string;
   source: string;
+}
+
+export interface OrderNotification {
+  id: string;
+  order_id: string;
+  customer_name: string;
+  customer_phone?: string;
+  total_amount: number;
+  item_count: number;
+  order_source: 'web' | 'whatsapp';
+  status: string;
+  payment_method?: string;
+  item_summary?: string;
+  created_at: string;
+  read?: boolean;
 }

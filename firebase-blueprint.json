@@ -136,9 +136,30 @@
         "support_email": { "type": "string" }
       },
       "required": ["store_name"]
+    },
+    "OrderNotification": {
+      "title": "OrderNotification",
+      "description": "Real-time incoming order notifications for Web Store and WhatsApp orders",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "order_id": { "type": "string" },
+        "customer_name": { "type": "string" },
+        "customer_phone": { "type": "string" },
+        "total_amount": { "type": "number" },
+        "item_count": { "type": "number" },
+        "order_source": { "type": "string", "enum": ["web", "whatsapp"] },
+        "status": { "type": "string" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["id", "order_id", "customer_name", "total_amount", "order_source", "created_at"]
     }
   },
   "firestore": {
+    "/order_notifications/{notificationId}": {
+      "schema": "OrderNotification",
+      "description": "Real-time alerts for web and WhatsApp orders"
+    },
     "/products/{productId}": {
       "schema": "Product",
       "description": "Catalog of authentic spice powders and whole spices"

@@ -18,7 +18,8 @@ import {
   Review,
   BusinessSettings,
   AdminAuditLog,
-  Lead
+  Lead,
+  OrderNotification
 } from '../src/types';
 
 interface DatabaseSchema {
@@ -33,6 +34,7 @@ interface DatabaseSchema {
   settings: BusinessSettings;
   auditLogs: AdminAuditLog[];
   leads: Lead[];
+  orderNotifications?: OrderNotification[];
 }
 
 const DB_FILE = path.join(process.cwd(), 'data', 'db.json');
@@ -733,6 +735,20 @@ class DataStore {
         this.data.settings = { ...INITIAL_SETTINGS, ...(setDoc.data() as BusinessSettings) };
       }
 
+      // 12. Order Notifications
+      try {
+        const notifSnap = await this.firestore.collection('order_notifications').limit(50).get();
+        if (!notifSnap.empty) {
+          const notifs: OrderNotification[] = [];
+          notifSnap.forEach(d => notifs.push(d.data() as OrderNotification));
+          this.data.orderNotifications = notifs.sort(
+            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+        }
+      } catch {
+        // Safe fallback if collection not populated
+      }
+
       this.persistNow(this.data);
     } catch (e: any) {
       console.warn('[Firestore Admin] Notice loading collections from Firestore:', e.message);
@@ -811,7 +827,8 @@ class DataStore {
           reviews: Array.isArray(parsed.reviews) ? parsed.reviews : INITIAL_REVIEWS,
           settings: { ...INITIAL_SETTINGS, ...(parsed.settings || {}) },
           auditLogs: Array.isArray(parsed.auditLogs) ? parsed.auditLogs : [],
-          leads: Array.isArray(parsed.leads) ? parsed.leads : []
+          leads: Array.isArray(parsed.leads) ? parsed.leads : [],
+          orderNotifications: Array.isArray(parsed.orderNotifications) ? parsed.orderNotifications : []
         };
       }
     } catch (e) {
@@ -829,7 +846,8 @@ class DataStore {
       reviews: INITIAL_REVIEWS,
       settings: INITIAL_SETTINGS,
       auditLogs: [],
-      leads: []
+      leads: [],
+      orderNotifications: []
     };
     this.persistNow(initial);
     return initial;
@@ -1430,16 +1448,72 @@ class DataStore {
     }
 
     this.data.orders.unshift(order);
+
+    // Create sanitized real-time order notification event for admin dashboard
+    const source: 'web' | 'whatsapp' = (order.order_source || (order.payment_method?.toLowerCase().includes('whatsapp') ? 'whatsapp' : 'web')) as 'web' | 'whatsapp';
+    const notif: OrderNotification = {
+      id: `notif_${order.id}`,
+      order_id: order.id,
+      customer_name: order.customer_name || 'Customer',
+      customer_phone: order.customer_phone || '',
+      total_amount: order.total_amount,
+      item_count: order.items?.length || 1,
+      order_source: source,
+      status: order.status || 'placed',
+      payment_method: order.payment_method || 'UPI / Razorpay',
+      item_summary: order.items?.map(i => `${i.name_en} (${i.quantity})`).join(', ') || 'Authentic Spices',
+      created_at: order.created_at || nowIso,
+      read: false
+    };
+
+    if (!this.data.orderNotifications) {
+      this.data.orderNotifications = [];
+    }
+    this.data.orderNotifications.unshift(notif);
+    if (this.data.orderNotifications.length > 100) {
+      this.data.orderNotifications = this.data.orderNotifications.slice(0, 100);
+    }
+
     this.save();
 
     // Attempt non-blocking background Firestore sync for resilience
     Promise.allSettled([
       this.setFirestoreDoc('orders', order.id, order),
+      this.setFirestoreDoc('order_notifications', notif.id, notif),
       this.setFirestoreDoc('customers', `cust-${cleanPhone}`, existingCust || this.findCustomerByPhone(cleanPhone)),
-      this.logAudit('System', 'ORDER_CREATED', order.id, `Order of ₹${order.total_amount} placed by ${order.customer_name}`)
+      this.logAudit('System', 'ORDER_CREATED', order.id, `Order of ₹${order.total_amount} placed by ${order.customer_name} via ${source.toUpperCase()}`)
     ]).catch(() => {});
 
     return order;
+  }
+
+  public getOrderNotifications(): OrderNotification[] {
+    return this.data.orderNotifications || [];
+  }
+
+  public async markNotificationRead(id: string): Promise<boolean> {
+    if (!this.data.orderNotifications) return false;
+    const notif = this.data.orderNotifications.find(n => n.id === id);
+    if (notif) {
+      notif.read = true;
+      this.save();
+      this.setFirestoreDoc('order_notifications', id, notif).catch(() => {});
+      return true;
+    }
+    return false;
+  }
+
+  public async createNotification(notif: OrderNotification): Promise<OrderNotification> {
+    if (!this.data.orderNotifications) {
+      this.data.orderNotifications = [];
+    }
+    this.data.orderNotifications.unshift(notif);
+    if (this.data.orderNotifications.length > 100) {
+      this.data.orderNotifications = this.data.orderNotifications.slice(0, 100);
+    }
+    this.save();
+    await this.setFirestoreDoc('order_notifications', notif.id, notif).catch(() => {});
+    return notif;
   }
 
   public async createOrder(order: Order): Promise<Order> {
@@ -1626,6 +1700,18 @@ class DataStore {
     const idx = this.data.orders.findIndex(o => o.id === order.id);
     if (idx !== -1) {
       this.data.orders[idx] = { ...order };
+    }
+    await this.setFirestoreDoc('orders', order.id, order);
+    this.save();
+    return order;
+  }
+
+  public async saveOrderDirectly(order: Order): Promise<Order> {
+    const idx = this.data.orders.findIndex(o => o.id === order.id);
+    if (idx !== -1) {
+      this.data.orders[idx] = { ...order };
+    } else {
+      this.data.orders.unshift({ ...order });
     }
     await this.setFirestoreDoc('orders', order.id, order);
     this.save();

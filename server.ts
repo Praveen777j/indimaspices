@@ -22,7 +22,7 @@ import {
 } from './server/cloudinary';
 import { validateMediaContent } from './server/mediaValidator';
 import { lookupPincode } from './src/data/indiaLocations';
-import { Order, Address } from './src/types';
+import { Order, Address, OrderItem, OrderNotification } from './src/types';
 import {
   validateSecurityConfiguration,
   getSessionSecret,
@@ -1489,6 +1489,7 @@ async function processOrderCreation(reqBody: any) {
     payment_status: 'Pending',
     status: 'placed',
     order_status: 'Order Placed',
+    order_source: 'web',
     razorpay_order_id: rzpOrder.id,
     expected_delivery: expectedDeliveryStr,
     whatsapp_notification_status: 'Pending',
@@ -1547,6 +1548,148 @@ app.post('/api/orders/create', orderCreateLimiter, async (req: Request, res: Res
   } catch (err: any) {
     console.error('Create Order Error:', err);
     res.status(400).json({ success: false, error: err.message || 'Failed to initialize payment order' });
+  }
+});
+
+// WhatsApp Order Ingestion Endpoint: POST /api/orders/whatsapp
+app.post('/api/orders/whatsapp', orderCreateLimiter, async (req: Request, res: Response) => {
+  try {
+    const {
+      items,
+      customer_name,
+      customer_phone,
+      customer_email,
+      address,
+      notes,
+      coupon_code
+    } = req.body;
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, error: 'Cart cannot be empty' });
+    }
+
+    const cleanPhone = (customer_phone ? String(customer_phone).replace(/\D/g, '') : '').slice(-10) || '9845012345';
+    const settings = db.getSettings();
+
+    // Validate items and recalculate
+    let calculatedSubtotal = 0;
+    const validatedItems: OrderItem[] = [];
+
+    for (const rawItem of items) {
+      const prod = db.getProductById(rawItem.product_id || rawItem.id);
+      const qty = Math.max(1, Math.min(Number(rawItem.quantity) || 1, 100));
+      const unitPrice = prod ? prod.price : (Number(rawItem.unit_price) || 0);
+      const itemSubtotal = unitPrice * qty;
+      calculatedSubtotal += itemSubtotal;
+
+      validatedItems.push({
+        product_id: prod ? prod.id : String(rawItem.product_id || 'unknown'),
+        sku: prod ? prod.sku || prod.id : String(rawItem.sku || 'SKU'),
+        name_en: prod ? prod.name_en : String(rawItem.name_en || 'Spice Item'),
+        name_kn: prod ? prod.name_kn : String(rawItem.name_kn || ''),
+        image: (prod && prod.images && prod.images[0]) ? prod.images[0] : String(rawItem.image || ''),
+        quantity: qty,
+        unit_price: unitPrice,
+        mrp: prod ? prod.mrp || prod.price : unitPrice,
+        discount: prod && prod.mrp ? Math.max(0, prod.mrp - prod.price) : 0,
+        subtotal: itemSubtotal,
+        weight: prod ? prod.weight : String(rawItem.weight || '100g')
+      });
+    }
+
+    // Coupon discount
+    let discountAmount = 0;
+    if (coupon_code) {
+      const offer = db.getOffers().find(o => o.code.toUpperCase() === String(coupon_code).toUpperCase() && o.active);
+      if (offer && calculatedSubtotal >= (offer.min_order_amount || 0)) {
+        if (offer.discount_type === 'percentage') {
+          const calculatedDiscount = Math.round((calculatedSubtotal * offer.discount_value) / 100);
+          discountAmount = offer.max_discount_amount ? Math.min(calculatedDiscount, offer.max_discount_amount) : calculatedDiscount;
+        } else {
+          discountAmount = Math.min(offer.discount_value, calculatedSubtotal);
+        }
+      }
+    }
+
+    const shippingFee = (calculatedSubtotal - discountAmount >= settings.free_delivery_threshold) ? 0 : settings.standard_shipping_fee;
+    const finalTotal = Math.max(0, calculatedSubtotal - discountAmount + shippingFee);
+
+    const dateStr = new Date().toISOString().slice(2, 7).replace('-', '');
+    const cryptoSuffix = crypto.randomBytes(3).toString('hex').toUpperCase();
+    const orderId = `WA-${dateStr}-${cryptoSuffix}`;
+    const orderToken = crypto.randomBytes(32).toString('hex');
+
+    const customer = await db.upsertCustomer({
+      phone: cleanPhone,
+      name: (customer_name || 'WhatsApp Customer').trim(),
+      email: (customer_email || 'care@indimaspice.com').trim(),
+      saved_address: address || {
+        fullName: (customer_name || 'WhatsApp Customer').trim(),
+        phone: cleanPhone,
+        streetAddress: 'WhatsApp Direct Order',
+        city: 'Bengaluru',
+        state: 'Karnataka',
+        pincode: '560001'
+      }
+    });
+
+    const expectedDate = new Date();
+    expectedDate.setDate(expectedDate.getDate() + 4);
+    const expectedDeliveryStr = expectedDate.toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+
+    const newOrder: Order = {
+      id: orderId,
+      internal_order_id: orderId,
+      order_token: orderToken,
+      delivery_dispatch_token: generateDeliveryDispatchToken(),
+      customer_id: customer.id,
+      customer_name: (customer_name || 'WhatsApp Customer').trim(),
+      customer_phone: cleanPhone,
+      customer_email: (customer_email || 'care@indimaspice.com').trim(),
+      items: validatedItems,
+      subtotal: calculatedSubtotal,
+      discount_amount: discountAmount,
+      coupon_code: coupon_code || undefined,
+      shipping_fee: shippingFee,
+      total_amount: finalTotal,
+      amount: finalTotal,
+      currency: 'INR',
+      address_snapshot: address || {
+        fullName: (customer_name || 'WhatsApp Customer').trim(),
+        phone: cleanPhone,
+        streetAddress: 'Order via WhatsApp Chat',
+        city: 'Bengaluru',
+        state: 'Karnataka',
+        pincode: '560001'
+      },
+      payment_method: 'WhatsApp / UPI',
+      payment_status: 'Pending',
+      status: 'placed',
+      order_status: 'Order Placed',
+      order_source: 'whatsapp',
+      expected_delivery: expectedDeliveryStr,
+      whatsapp_notification_status: 'Pending',
+      notes: notes || 'Direct order placed via WhatsApp chat channel',
+      created_at: new Date().toISOString(),
+      order_date: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    const savedOrder = await db.createOrder(newOrder);
+
+    res.json({
+      success: true,
+      order: stripDeliveryDispatchToken(savedOrder),
+      order_id: savedOrder.id,
+      order_token: orderToken
+    });
+  } catch (err: any) {
+    console.error('WhatsApp Order Error:', err);
+    res.status(400).json({ success: false, error: err.message || 'Failed to place WhatsApp order' });
   }
 });
 
@@ -2755,6 +2898,94 @@ app.post('/api/admin/orders/:id/retry-notification', adminAuthMiddleware, async 
     }
     await db.updateNotificationStatus(id, 'Sent');
     res.json({ success: true, message: 'WhatsApp notification triggered successfully' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Admin Order Notifications API
+app.get('/api/admin/notifications', adminAuthMiddleware, (req: Request, res: Response) => {
+  const notifs = db.getOrderNotifications();
+  res.json(notifs);
+});
+
+app.put('/api/admin/notifications/:id/read', adminAuthMiddleware, async (req: Request, res: Response) => {
+  const success = await db.markNotificationRead(req.params.id);
+  res.json({ success });
+});
+
+app.post('/api/admin/notifications/test', adminAuthMiddleware, async (req: Request, res: Response) => {
+  try {
+    const source: 'web' | 'whatsapp' = req.body?.source === 'whatsapp' ? 'whatsapp' : 'web';
+    const testId = source === 'whatsapp' ? `WA-${Date.now().toString().slice(-4)}` : `IND-${Date.now().toString().slice(-4)}`;
+    const nowIso = new Date().toISOString();
+    const testOrder: Order = {
+      id: testId,
+      customer_id: `cust-${Date.now().toString().slice(-4)}`,
+      customer_name: source === 'whatsapp' ? 'Pooja Hegde' : 'Suresh Kumar',
+      customer_email: source === 'whatsapp' ? 'pooja.hegde@example.com' : 'suresh.k@example.com',
+      customer_phone: '9845012345',
+      address_snapshot: {
+        fullName: source === 'whatsapp' ? 'Pooja Hegde' : 'Suresh Kumar',
+        phone: '9845012345',
+        email: source === 'whatsapp' ? 'pooja.hegde@example.com' : 'suresh.k@example.com',
+        houseFlat: '42',
+        street: 'Heritage Spice Path',
+        area: 'Malleshwaram',
+        city: 'Bengaluru',
+        district: 'Bengaluru Urban',
+        state: 'Karnataka',
+        pincode: '560003'
+      },
+      items: [
+        {
+          product_id: 'indima-sambar-special',
+          sku: 'IND-SMB-250',
+          name_en: 'Heritage Sambar Powder',
+          name_kn: 'ಸಾಂಬಾರ್ ಪುಡಿ',
+          image: '',
+          quantity: 2,
+          unit_price: source === 'whatsapp' ? 270 : 445,
+          mrp: source === 'whatsapp' ? 300 : 490,
+          discount: source === 'whatsapp' ? 30 : 45,
+          subtotal: source === 'whatsapp' ? 540 : 890,
+          weight: '250g'
+        }
+      ],
+      subtotal: source === 'whatsapp' ? 540 : 890,
+      discount_amount: 0,
+      shipping_fee: 0,
+      total_amount: source === 'whatsapp' ? 540 : 890,
+      payment_method: source === 'whatsapp' ? 'WhatsApp / UPI Direct' : 'UPI / Razorpay Verified',
+      payment_status: 'PAID',
+      status: 'placed',
+      order_status: 'placed',
+      order_source: source,
+      order_date: nowIso,
+      created_at: nowIso,
+      updated_at: nowIso
+    };
+
+    // Save test order to both memory and Firestore 'orders' collection
+    await db.saveOrderDirectly(testOrder);
+
+    const testNotif: OrderNotification = {
+      id: `notif_${testId}_${Date.now()}`,
+      order_id: testId,
+      customer_name: testOrder.customer_name,
+      customer_phone: testOrder.customer_phone,
+      total_amount: testOrder.total_amount,
+      item_count: testOrder.items.length,
+      order_source: source,
+      status: 'placed',
+      payment_method: testOrder.payment_method,
+      item_summary: `${testOrder.items[0].name_en} (${testOrder.items[0].quantity}x)`,
+      created_at: nowIso,
+      read: false
+    };
+
+    await db.createNotification(testNotif);
+    res.json({ success: true, notification: testNotif, order: testOrder });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

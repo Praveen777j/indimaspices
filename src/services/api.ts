@@ -9,7 +9,8 @@ import {
   Review,
   BusinessSettings,
   AdminAuditLog,
-  Lead
+  Lead,
+  OrderNotification
 } from '../types';
 
 async function safeFetchJson<T>(url: string, options?: RequestInit, fallback?: T): Promise<T> {
@@ -667,5 +668,37 @@ export const api = {
     } catch {
       return null;
     }
+  },
+
+  createWhatsAppOrder: async (payload: any): Promise<{ success: boolean; order?: Order; order_id?: string; error?: string }> => {
+    return safeFetchJson<{ success: boolean; order?: Order; order_id?: string; error?: string }>('/api/orders/whatsapp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }, { success: false, error: 'Failed to record WhatsApp order' });
+  },
+
+  getAdminNotifications: async (token: string): Promise<OrderNotification[]> => {
+    return safeFetchJson<OrderNotification[]>('/api/admin/notifications', {
+      headers: { Authorization: `Bearer ${token}` }
+    }, []);
+  },
+
+  markNotificationRead: async (token: string, id: string): Promise<{ success: boolean }> => {
+    return safeFetchJson<{ success: boolean }>(`/api/admin/notifications/${id}/read`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}` }
+    }, { success: false });
+  },
+
+  sendTestNotification: async (token: string, source: 'whatsapp' | 'web'): Promise<{ success: boolean; notification?: OrderNotification }> => {
+    return safeFetchJson<{ success: boolean; notification?: OrderNotification }>('/api/admin/notifications/test', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ source })
+    }, { success: false });
   }
 };

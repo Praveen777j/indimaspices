@@ -32,6 +32,14 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Order Notifications: Real-time alerts for incoming store & WhatsApp orders
+    // Client dashboard snapshot listeners can read sanitized order alert events in real time.
+    // Writes are strictly restricted to the server Firebase Admin SDK.
+    match /order_notifications/{notificationId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // Reviews: Public visitors can ONLY read approved reviews.
     // Submission and moderation are routed strictly through server APIs with rate limiting.
     match /reviews/{reviewId} {
@@ -45,8 +53,12 @@ service cloud.firestore {
     // Managed exclusively via server Express APIs with authentication & validation.
     // ========================================================================
 
+    // Orders: Real-time incoming order alerts for Admin Dashboard.
+    // Client dashboard snapshot listeners can read orders in real time.
+    // Writes are strictly restricted to the server Firebase Admin SDK.
     match /orders/{orderId} {
-      allow read, write: if false;
+      allow read: if true;
+      allow write: if false;
     }
 
     match /customers/{customerId} {
