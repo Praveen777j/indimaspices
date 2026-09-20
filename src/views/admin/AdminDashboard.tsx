@@ -1770,7 +1770,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
                                 </div>
                               )}
                             </td>
-                            <td className="p-3 text-right space-x-1">
+                            <td className="p-3 text-right space-x-1 whitespace-nowrap">
                               <button
                                 onClick={() => {
                                   setEditingOrder(ord);
@@ -1785,9 +1785,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
                                   setModifiedAddress({ ...ord.address_snapshot });
                                   setIsOrderModalOpen(true);
                                 }}
-                                className="px-3 py-1.5 bg-[#FAF6EE] hover:bg-[#EADBCA] text-[#993300] font-bold text-xs rounded-lg border border-[#D9C4A2] cursor-pointer"
+                                className="px-3 py-1.5 bg-[#FAF6EE] hover:bg-[#EADBCA] text-[#993300] font-bold text-xs rounded-lg border border-[#D9C4A2] cursor-pointer inline-flex items-center space-x-1"
                               >
-                                Manage
+                                <span>Manage</span>
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setDeleteTarget({
+                                    type: 'order',
+                                    id: ord.id,
+                                    title: `Order #${ord.id} (${ord.customer_name || 'Customer'})`
+                                  });
+                                }}
+                                className="px-2.5 py-1.5 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg text-xs font-bold transition-colors cursor-pointer inline-flex items-center space-x-1"
+                                title="Delete Order"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span className="hidden sm:inline">Delete</span>
                               </button>
                             </td>
                           </tr>
@@ -3026,6 +3040,32 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
                 className="px-4 py-2 bg-neutral-900 hover:bg-black text-white font-bold rounded-lg disabled:opacity-40 cursor-pointer shadow-xs"
               >
                 Confirm Address Correction
+              </button>
+            </div>
+
+            {/* Modal Actions Footer */}
+            <div className="pt-3 border-t border-[#EADBCA] flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteTarget({
+                    type: 'order',
+                    id: editingOrder.id,
+                    title: `Order #${editingOrder.id} (${editingOrder.customer_name || 'Customer'})`
+                  });
+                  setIsOrderModalOpen(false);
+                }}
+                className="px-3.5 py-2 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center space-x-1.5"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Delete This Order</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsOrderModalOpen(false)}
+                className="px-5 py-2 bg-[#993300] hover:bg-[#802b00] text-white font-bold text-xs rounded-lg cursor-pointer transition-colors shadow-xs"
+              >
+                Done
               </button>
             </div>
           </div>

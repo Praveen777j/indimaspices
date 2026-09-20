@@ -164,20 +164,27 @@ export const AdminNotificationCenter: React.FC<AdminNotificationCenterProps> = (
     }
   };
 
-  // Trigger Live Test Alert
-  const handleTestAlert = async (source: 'whatsapp' | 'web') => {
+  // Trigger Live Test Alert (Client-side audio & visual check only - DOES NOT create real orders)
+  const handleTestAlert = (source: 'whatsapp' | 'web') => {
     setIsTesting(true);
     try {
-      const res = await api.sendTestNotification(token, source);
-      if (res.success && res.notification) {
-        playOrderAlertChime(source);
-        triggerToastAlert(res.notification);
-        if (onNewOrderReceived) {
-          onNewOrderReceived();
-        }
-      }
+      playOrderAlertChime(source);
+      triggerToastAlert({
+        id: `demo-${Date.now()}`,
+        order_id: source === 'whatsapp' ? 'WA-DEMO' : 'IND-DEMO',
+        customer_name: source === 'whatsapp' ? 'WhatsApp Sound Check' : 'Web Store Sound Check',
+        customer_phone: '9999999999',
+        total_amount: 540,
+        item_count: 1,
+        order_source: source,
+        status: 'placed',
+        payment_method: source === 'whatsapp' ? 'WhatsApp' : 'UPI',
+        item_summary: 'Audio test only - no order was created in database',
+        created_at: new Date().toISOString(),
+        read: false
+      });
     } finally {
-      setIsTesting(false);
+      setTimeout(() => setIsTesting(false), 300);
     }
   };
 
@@ -356,23 +363,27 @@ export const AdminNotificationCenter: React.FC<AdminNotificationCenterProps> = (
             </div>
           </div>
 
-          {/* Test Alert Buttons for Operator Verification */}
+          {/* Test Alert Buttons for Operator Audio Check */}
           <div className="bg-zinc-950/60 px-3 py-2 border-b border-zinc-800 flex items-center justify-between text-xs">
-            <span className="text-[11px] text-zinc-400 font-medium">Test Real-time Alerts:</span>
+            <span className="text-[11px] text-zinc-400 font-medium">Test Alert Sound:</span>
             <div className="flex items-center space-x-1.5">
               <button
                 disabled={isTesting}
                 onClick={() => handleTestAlert('web')}
-                className="text-[10px] font-bold px-2 py-1 rounded bg-amber-900/60 hover:bg-amber-800 text-amber-200 border border-amber-700/50 transition-colors disabled:opacity-50"
+                title="Play web store alert sound tone (does not create orders)"
+                className="text-[10px] font-bold px-2 py-1 rounded bg-amber-900/60 hover:bg-amber-800 text-amber-200 border border-amber-700/50 transition-colors disabled:opacity-50 flex items-center space-x-1"
               >
-                + Web Alert
+                <Volume2 className="w-3 h-3" />
+                <span>Web Chime</span>
               </button>
               <button
                 disabled={isTesting}
                 onClick={() => handleTestAlert('whatsapp')}
-                className="text-[10px] font-bold px-2 py-1 rounded bg-emerald-900/60 hover:bg-emerald-800 text-emerald-200 border border-emerald-700/50 transition-colors disabled:opacity-50"
+                title="Play WhatsApp alert sound tone (does not create orders)"
+                className="text-[10px] font-bold px-2 py-1 rounded bg-emerald-900/60 hover:bg-emerald-800 text-emerald-200 border border-emerald-700/50 transition-colors disabled:opacity-50 flex items-center space-x-1"
               >
-                + WhatsApp Alert
+                <Volume2 className="w-3 h-3" />
+                <span>WhatsApp Chime</span>
               </button>
             </div>
           </div>

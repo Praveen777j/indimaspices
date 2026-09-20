@@ -2966,8 +2966,8 @@ app.post('/api/admin/notifications/test', adminAuthMiddleware, async (req: Reque
       updated_at: nowIso
     };
 
-    // Save test order to both memory and Firestore 'orders' collection
-    await db.saveOrderDirectly(testOrder);
+    // Do NOT save testOrder to db.orders or Firestore - alerts should never pollute real store orders
+    // await db.saveOrderDirectly(testOrder);
 
     const testNotif: OrderNotification = {
       id: `notif_${testId}_${Date.now()}`,
