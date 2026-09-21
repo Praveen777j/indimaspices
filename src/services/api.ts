@@ -700,5 +700,12 @@ export const api = {
       },
       body: JSON.stringify({ source })
     }, { success: false });
+  },
+
+  sendOrderWhatsAppAlert: async (token: string, orderId: string): Promise<{ success: boolean; result?: any; order?: Order; error?: string }> => {
+    return safeFetchJson<{ success: boolean; result?: any; order?: Order; error?: string }>(`/api/admin/orders/${orderId}/send-whatsapp-alert`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` }
+    }, { success: false, error: 'Failed to send WhatsApp alert' });
   }
 };

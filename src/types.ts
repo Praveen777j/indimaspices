@@ -340,6 +340,10 @@ export interface BusinessSettings {
   default_whatsapp_msg_kn?: string;
   whatsapp_api_configured?: boolean;
   whatsapp_api_token?: string;
+  admin_whatsapp_alerts_enabled?: boolean;
+  admin_whatsapp_number?: string;
+  callmebot_api_key?: string;
+  whatsapp_webhook_url?: string;
   admin_password?: string;
   policy_privacy_en: string;
   policy_privacy_kn: string;
@@ -378,7 +382,9 @@ export interface OrderNotification {
   item_count: number;
   order_source: 'web' | 'whatsapp';
   status: string;
+  payment_status?: string;
   payment_method?: string;
+  whatsapp_status?: string;
   item_summary?: string;
   created_at: string;
   read?: boolean;

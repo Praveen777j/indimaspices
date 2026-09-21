@@ -98,7 +98,7 @@ export const AdminNotificationCenter: React.FC<AdminNotificationCenterProps> = (
             });
           });
 
-          // Check for newly incoming orders (skip on first render load)
+          // Check for newly incoming orders or unread on page open
           if (!isInitialLoadRef.current) {
             snapshot.docChanges().forEach((change) => {
               if (change.type === 'added') {
@@ -112,6 +112,16 @@ export const AdminNotificationCenter: React.FC<AdminNotificationCenterProps> = (
             });
           } else {
             isInitialLoadRef.current = false;
+            // Alert admin if there are unread order notifications upon opening the admin page
+            const unreadOnOpen = loaded.filter((n) => !n.read);
+            if (unreadOnOpen.length > 0) {
+              const latestUnread = unreadOnOpen[0];
+              triggerToastAlert(latestUnread);
+              playOrderAlertChime(latestUnread.order_source || 'web');
+              if (onNewOrderReceived) {
+                onNewOrderReceived();
+              }
+            }
           }
 
           setNotifications(loaded);
@@ -317,6 +327,16 @@ export const AdminNotificationCenter: React.FC<AdminNotificationCenterProps> = (
               >
                 Dismiss
               </button>
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(`🌿 *NEW PAID ORDER ALERT — INDIMA SPICE CO.* 🌿\n\n*Order ID:* ${activeToast.order_id}\n*Customer:* ${activeToast.customer_name} (+91 ${activeToast.customer_phone || ''})\n*Amount:* ₹${activeToast.total_amount}\n*Items:* ${activeToast.item_summary || 'Spices'}`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-bold px-2.5 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white transition-colors flex items-center space-x-1"
+                title="Open WhatsApp Alert"
+              >
+                <MessageCircle className="w-3 h-3" />
+                <span>WhatsApp</span>
+              </a>
               <button
                 onClick={() => handleViewOrder(activeToast.order_id)}
                 className="text-xs font-bold px-3 py-1 rounded-lg bg-amber-600 hover:bg-amber-500 text-white transition-colors flex items-center space-x-1"

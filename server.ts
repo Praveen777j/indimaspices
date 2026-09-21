@@ -22,7 +22,7 @@ import {
 } from './server/cloudinary';
 import { validateMediaContent } from './server/mediaValidator';
 import { lookupPincode } from './src/data/indiaLocations';
-import { Order, Address, OrderItem, OrderNotification } from './src/types';
+import { Order, Address, OrderItem, OrderNotification, BusinessSettings } from './src/types';
 import {
   validateSecurityConfiguration,
   getSessionSecret,
@@ -1693,6 +1693,106 @@ app.post('/api/orders/whatsapp', orderCreateLimiter, async (req: Request, res: R
   }
 });
 
+// Automated Dispatch of WhatsApp Order Alerts to Store Admin
+async function dispatchAdminWhatsAppAlert(order: Order, settings: BusinessSettings): Promise<{ success: boolean; status: 'Sent' | 'Pending' | 'Failed'; error?: string; detail?: string }> {
+  try {
+    const rawAdminNumber = settings.admin_whatsapp_number || settings.whatsapp_number || '919845012345';
+    let cleanNumber = rawAdminNumber.replace(/\D/g, '');
+    if (cleanNumber.length === 10) cleanNumber = `91${cleanNumber}`;
+    else if (cleanNumber.length === 11 && cleanNumber.startsWith('0')) cleanNumber = `91${cleanNumber.slice(1)}`;
+
+    const itemsSummary = (order.items || [])
+      .map((it, idx) => `${idx + 1}. *${it.name_en}* (${it.weight || 'Std'}) × ${it.quantity} = ₹${it.subtotal ?? it.total_price ?? (it.unit_price * it.quantity)}`)
+      .join('\n');
+
+    const msg = `🌿 *NEW PAID ORDER ALERT — INDIMA SPICE CO.* 🌿\n\n` +
+      `*Order ID:* ${order.id}\n` +
+      `*Amount Paid:* ₹${order.total_amount} ✅ (UPI Confirmed)\n` +
+      `*Payment Method:* ${order.payment_method || 'UPI / Razorpay'}\n` +
+      `*Customer:* ${order.customer_name} (+91 ${order.customer_phone})\n` +
+      `*Address:* ${order.address_snapshot?.houseFlat || ''}, ${order.address_snapshot?.street || ''}, ${order.address_snapshot?.city || ''}, ${order.address_snapshot?.state || ''} - ${order.address_snapshot?.pincode || ''}\n\n` +
+      `📦 *Items Ordered (${order.items?.length || 0}):*\n${itemsSummary}\n\n` +
+      `⏰ *Time:* ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}\n` +
+      `_Please check your Admin Dashboard to dispatch this order._`;
+
+    // 1. CallMeBot API (free automated WhatsApp message to admin phone)
+    const callmebotKey = settings.callmebot_api_key || process.env.CALLMEBOT_API_KEY;
+    if (callmebotKey) {
+      try {
+        const callmebotUrl = `https://api.callmebot.com/whatsapp.php?phone=${encodeURIComponent(cleanNumber)}&text=${encodeURIComponent(msg)}&apikey=${encodeURIComponent(callmebotKey)}`;
+        const resp = await fetch(callmebotUrl, { method: 'GET' });
+        if (resp.ok) {
+          return { success: true, status: 'Sent', detail: 'Sent via CallMeBot' };
+        }
+      } catch (e: any) {
+        console.warn('[CallMeBot WhatsApp error]:', e?.message);
+      }
+    }
+
+    // 2. Custom Webhook (Make / Zapier / n8n / custom WhatsApp bot)
+    const webhookUrl = settings.whatsapp_webhook_url || process.env.WHATSAPP_WEBHOOK_URL;
+    if (webhookUrl) {
+      try {
+        const resp = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event: 'new_paid_order',
+            order_id: order.id,
+            admin_phone: cleanNumber,
+            customer_name: order.customer_name,
+            customer_phone: order.customer_phone,
+            amount: order.total_amount,
+            message: msg,
+            order
+          })
+        });
+        if (resp.ok) {
+          return { success: true, status: 'Sent', detail: 'Sent via Webhook' };
+        }
+      } catch (e: any) {
+        console.warn('[WhatsApp Webhook error]:', e?.message);
+      }
+    }
+
+    // 3. Meta WhatsApp Cloud API (if configured)
+    const metaToken = settings.whatsapp_api_token || process.env.WHATSAPP_API_TOKEN;
+    const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+    if (metaToken && phoneNumberId) {
+      try {
+        const metaUrl = `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`;
+        const resp = await fetch(metaUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${metaToken}`
+          },
+          body: JSON.stringify({
+            messaging_product: 'whatsapp',
+            to: cleanNumber,
+            type: 'text',
+            text: { body: msg }
+          })
+        });
+        if (resp.ok) {
+          return { success: true, status: 'Sent', detail: 'Sent via WhatsApp Cloud API' };
+        }
+      } catch (e: any) {
+        console.warn('[Meta WhatsApp Cloud API error]:', e?.message);
+      }
+    }
+
+    return {
+      success: true,
+      status: 'Pending',
+      detail: 'Ready (Direct WhatsApp available)'
+    };
+  } catch (err: any) {
+    console.error('[WhatsApp Dispatch Error]:', err);
+    return { success: false, status: 'Failed', error: err?.message || 'Unknown error' };
+  }
+}
+
 // Helper for Razorpay Signature Verification & Order Finalization
 async function verifyPaymentInternal(body: any, req?: Request) {
   const internal_order_id = body.internal_order_id || body.internalOrderId || '';
@@ -1844,10 +1944,16 @@ async function verifyPaymentInternal(body: any, req?: Request) {
     method: 'Razorpay UPI/Online'
   };
 
+  // Dispatch automated WhatsApp Order Alert to Store Admin
   try {
-    order.whatsapp_notification_status = 'Sent';
+    const currentSettings = db.getSettings();
+    const whatsappResult = await dispatchAdminWhatsAppAlert(order, currentSettings);
+    order.whatsapp_notification_status = whatsappResult.status;
+    if (whatsappResult.error) {
+      order.whatsapp_notification_error = whatsappResult.error;
+    }
   } catch (e: any) {
-    order.whatsapp_notification_status = 'Failed';
+    order.whatsapp_notification_status = 'Pending';
     order.whatsapp_notification_error = e.message;
   }
 
@@ -1866,6 +1972,28 @@ async function verifyPaymentInternal(body: any, req?: Request) {
     order_token: updatedOrder.order_token || getOrderAccessToken(updatedOrder)
   };
 }
+
+// Endpoint to manually dispatch or re-send WhatsApp order alert to admin
+app.post('/api/admin/orders/:id/send-whatsapp-alert', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : '';
+    if (!token || !validateAdminToken(token)) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Admin authentication required' });
+    }
+    const order = db.getOrderById(req.params.id) || await db.findOrFetchOrder(req.params.id);
+    if (!order) {
+      return res.status(404).json({ success: false, error: 'Order not found' });
+    }
+    const settings = db.getSettings();
+    const result = await dispatchAdminWhatsAppAlert(order, settings);
+    order.whatsapp_notification_status = result.status;
+    await db.updateOrder(order);
+    res.json({ success: true, result, order: stripDeliveryDispatchToken(order) });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message || 'Failed to send WhatsApp alert' });
+  }
+});
 
 // 12. Server-Side Payment Verification: POST /api/payments/verify
 app.post('/api/payments/verify', paymentVerifyLimiter, async (req: Request, res: Response) => {

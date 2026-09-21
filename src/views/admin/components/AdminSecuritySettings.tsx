@@ -21,7 +21,10 @@ import {
   Youtube,
   Twitter,
   Image as ImageIcon,
-  Check
+  Check,
+  Bell,
+  Send,
+  ExternalLink
 } from 'lucide-react';
 import { BusinessSettings } from '../../../types';
 import { api } from '../../../services/api';
@@ -83,6 +86,18 @@ export const AdminSecuritySettings: React.FC<AdminSecuritySettingsProps> = ({
   const [policyShippingEn, setPolicyShippingEn] = useState(settings?.policy_shipping_en || '');
   const [policyRefundEn, setPolicyRefundEn] = useState(settings?.policy_refund_en || '');
 
+  // Admin WhatsApp Alert Notification Settings
+  const [adminWhatsappAlertsEnabled, setAdminWhatsappAlertsEnabled] = useState(
+    settings?.admin_whatsapp_alerts_enabled ?? true
+  );
+  const [adminWhatsappNumber, setAdminWhatsappNumber] = useState(
+    settings?.admin_whatsapp_number || settings?.whatsapp_number || '919845012345'
+  );
+  const [callmebotApiKey, setCallmebotApiKey] = useState(settings?.callmebot_api_key || '');
+  const [whatsappWebhookUrl, setWhatsappWebhookUrl] = useState(settings?.whatsapp_webhook_url || '');
+  const [isSendingTestAlert, setIsSendingTestAlert] = useState(false);
+  const [testAlertStatus, setTestAlertStatus] = useState<{ ok: boolean; message: string } | null>(null);
+
   const [isSavingGeneral, setIsSavingGeneral] = useState(false);
   const [isUploadingQr, setIsUploadingQr] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
@@ -112,6 +127,10 @@ export const AdminSecuritySettings: React.FC<AdminSecuritySettingsProps> = ({
       if (settings.default_whatsapp_msg_kn !== undefined) setDefaultWhatsappMsgKn(settings.default_whatsapp_msg_kn);
       if (settings.policy_shipping_en !== undefined) setPolicyShippingEn(settings.policy_shipping_en);
       if (settings.policy_refund_en !== undefined) setPolicyRefundEn(settings.policy_refund_en);
+      if (settings.admin_whatsapp_alerts_enabled !== undefined) setAdminWhatsappAlertsEnabled(settings.admin_whatsapp_alerts_enabled);
+      if (settings.admin_whatsapp_number !== undefined) setAdminWhatsappNumber(settings.admin_whatsapp_number);
+      if (settings.callmebot_api_key !== undefined) setCallmebotApiKey(settings.callmebot_api_key);
+      if (settings.whatsapp_webhook_url !== undefined) setWhatsappWebhookUrl(settings.whatsapp_webhook_url);
     }
   }, [settings]);
 
@@ -254,7 +273,11 @@ export const AdminSecuritySettings: React.FC<AdminSecuritySettingsProps> = ({
         default_whatsapp_msg_en: defaultWhatsappMsgEn.trim(),
         default_whatsapp_msg_kn: defaultWhatsappMsgKn.trim(),
         policy_shipping_en: policyShippingEn.trim(),
-        policy_refund_en: policyRefundEn.trim()
+        policy_refund_en: policyRefundEn.trim(),
+        admin_whatsapp_alerts_enabled: adminWhatsappAlertsEnabled,
+        admin_whatsapp_number: adminWhatsappNumber.trim(),
+        callmebot_api_key: callmebotApiKey.trim(),
+        whatsapp_webhook_url: whatsappWebhookUrl.trim()
       };
 
       const res = await api.updateSettings(token, updates);
@@ -263,7 +286,7 @@ export const AdminSecuritySettings: React.FC<AdminSecuritySettingsProps> = ({
           onSettingsUpdated(res.settings);
         }
         if (onShowSuccess) {
-          onShowSuccess('Store settings, payment QR code, contact & social links updated successfully!');
+          onShowSuccess('Store settings, payment QR code, WhatsApp alerts & contact links updated successfully!');
         }
       } else {
         alert('Failed to update settings: ' + (res.error || 'Unknown error'));
@@ -272,6 +295,33 @@ export const AdminSecuritySettings: React.FC<AdminSecuritySettingsProps> = ({
       alert('Error updating settings: ' + err.message);
     } finally {
       setIsSavingGeneral(false);
+    }
+  };
+
+  // Test WhatsApp alert
+  const handleSendTestWhatsAppAlert = async () => {
+    setIsSendingTestAlert(true);
+    setTestAlertStatus(null);
+    try {
+      const res = await api.sendTestNotification(token, 'whatsapp');
+      if (res.success) {
+        setTestAlertStatus({
+          ok: true,
+          message: 'Test WhatsApp order alert triggered! Check your WhatsApp and the notification bell.'
+        });
+      } else {
+        setTestAlertStatus({
+          ok: false,
+          message: 'Test notification note: ' + ((res as any).error || 'Server processed test alert.')
+        });
+      }
+    } catch (err: any) {
+      setTestAlertStatus({
+        ok: false,
+        message: 'Could not send test WhatsApp alert: ' + (err.message || 'Network error')
+      });
+    } finally {
+      setIsSendingTestAlert(false);
     }
   };
 
@@ -664,6 +714,144 @@ export const AdminSecuritySettings: React.FC<AdminSecuritySettingsProps> = ({
                   className="w-full px-3.5 py-2.5 text-xs bg-[#FAF6EE] border border-[#DFC7A2] rounded-xl text-[#2C1810] font-serif focus:outline-hidden focus:border-[#993300]"
                 />
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 3.5 Real-Time Paid Order Alerts & Admin WhatsApp Integration */}
+        <div className="bg-white border-2 border-emerald-600/30 rounded-3xl p-6 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-5 border-b border-[#F0E6D2]">
+            <div className="flex items-center space-x-3">
+              <div className="p-2.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800">
+                <Bell className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center space-x-2">
+                  <h3 className="font-serif text-lg font-bold text-[#2C1810]">
+                    Real-Time Paid Order Alerts & Admin WhatsApp
+                  </h3>
+                  <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                    Live
+                  </span>
+                </div>
+                <p className="text-xs text-[#5C4535] mt-0.5">
+                  When customers complete payment, alerts sound on your dashboard and dispatch to your WhatsApp.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              disabled={isSendingTestAlert}
+              onClick={handleSendTestWhatsAppAlert}
+              className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition-colors flex items-center space-x-1.5 cursor-pointer shrink-0 disabled:opacity-50 shadow-2xs"
+            >
+              <Send className="w-3.5 h-3.5" />
+              <span>{isSendingTestAlert ? 'Triggering...' : 'Test WhatsApp Alert'}</span>
+            </button>
+          </div>
+
+          {testAlertStatus && (
+            <div
+              className={`mt-4 p-3 rounded-xl text-xs flex items-center space-x-2 ${
+                testAlertStatus.ok
+                  ? 'bg-emerald-50 border border-emerald-200 text-emerald-900'
+                  : 'bg-amber-50 border border-amber-200 text-amber-900'
+              }`}
+            >
+              {testAlertStatus.ok ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              ) : (
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+              )}
+              <span className="font-medium">{testAlertStatus.message}</span>
+            </div>
+          )}
+
+          <div className="mt-6 space-y-4">
+            {/* Toggle Enable */}
+            <div className="flex items-center justify-between p-3.5 bg-[#FAF6EE] rounded-2xl border border-[#DFC7A2]">
+              <div>
+                <p className="text-xs font-bold text-[#2C1810]">
+                  Automated WhatsApp Notification on Payment Confirmation
+                </p>
+                <p className="text-[11px] text-[#5C4535]">
+                  Immediately dispatch order details, items, customer phone, and address to admin upon successful UPI payment.
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer shrink-0 ml-3">
+                <input
+                  type="checkbox"
+                  checked={adminWhatsappAlertsEnabled}
+                  onChange={(e) => setAdminWhatsappAlertsEnabled(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-neutral-300 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+              </label>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-[#2C1810] mb-1">
+                  Admin WhatsApp Alert Recipient Number
+                </label>
+                <div className="relative">
+                  <Phone className="w-4 h-4 text-emerald-600 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={adminWhatsappNumber}
+                    onChange={(e) => setAdminWhatsappNumber(e.target.value)}
+                    placeholder="919845012345"
+                    className="w-full pl-9 pr-3.5 py-2.5 text-xs bg-[#FAF6EE] border border-[#DFC7A2] rounded-xl text-[#2C1810] font-mono font-bold focus:outline-hidden focus:border-[#993300]"
+                  />
+                </div>
+                <p className="text-[10px] text-[#5C4535] mt-1">
+                  Phone number of the store owner to receive new paid order alerts (with country code, e.g. 919845012345).
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#2C1810] mb-1">
+                  CallMeBot Free API Key (Instant WhatsApp Alerts)
+                </label>
+                <div className="relative">
+                  <KeyRound className="w-4 h-4 text-amber-600 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={callmebotApiKey}
+                    onChange={(e) => setCallmebotApiKey(e.target.value)}
+                    placeholder="e.g. 123456"
+                    className="w-full pl-9 pr-3.5 py-2.5 text-xs bg-[#FAF6EE] border border-[#DFC7A2] rounded-xl text-[#2C1810] font-mono focus:outline-hidden focus:border-[#993300]"
+                  />
+                </div>
+                <p className="text-[10px] text-[#5C4535] mt-1">
+                  Free personal bot. To get your key: Send message{' '}
+                  <span className="font-mono font-bold text-neutral-800 bg-neutral-100 px-1 py-0.5 rounded">
+                    I allow callmebot to send me messages
+                  </span>{' '}
+                  to{' '}
+                  <span className="font-mono font-bold text-neutral-800 bg-neutral-100 px-1 py-0.5 rounded">
+                    +34 644 44 49 64
+                  </span>{' '}
+                  on WhatsApp.
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-[#2C1810] mb-1">
+                Custom WhatsApp Webhook URL (Optional)
+              </label>
+              <input
+                type="url"
+                value={whatsappWebhookUrl}
+                onChange={(e) => setWhatsappWebhookUrl(e.target.value)}
+                placeholder="https://hook.eu1.make.com/your-webhook or https://api.wati.io/..."
+                className="w-full px-3.5 py-2.5 text-xs bg-[#FAF6EE] border border-[#DFC7A2] rounded-xl text-[#2C1810] font-mono focus:outline-hidden focus:border-[#993300]"
+              />
+              <p className="text-[10px] text-[#5C4535] mt-1">
+                Optional: Connect to Make.com, Zapier, Evolution API, or your custom WhatsApp gateway to forward orders.
+              </p>
             </div>
           </div>
         </div>

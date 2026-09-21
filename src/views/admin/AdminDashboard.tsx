@@ -43,7 +43,9 @@ import {
   Printer,
   Navigation,
   MapPin,
-  ShoppingBag
+  ShoppingBag,
+  Bell,
+  BellRing
 } from 'lucide-react';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 import { api } from '../../services/api';
@@ -177,6 +179,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
     let unsubscribe: (() => void) | null = null;
     let isInitialLoad = true;
     const knownOrderIds = new Set<string>();
+    const alertedPaidOrderKeys = new Set<string>();
 
     try {
       const ordersCol = collection(db, 'orders');
@@ -192,52 +195,99 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
             if (isInitialLoad) {
               snapshot.docs.forEach((doc) => knownOrderIds.add(doc.id));
               isInitialLoad = false;
+
+              // Check for unread or newly paid orders upon opening the admin page
+              const lastViewedStr = localStorage.getItem('indima_admin_last_viewed_order_time');
+              const lastViewedTime = lastViewedStr ? new Date(lastViewedStr).getTime() : Date.now() - 24 * 60 * 60 * 1000;
+
+              const unreadPaidOrders: Order[] = [];
+              snapshot.docs.forEach((doc) => {
+                const data = doc.data() as Order;
+                const orderId = data.id || doc.id;
+                const orderTime = new Date(data.paid_at || data.created_at || 0).getTime();
+                const isPaidOrNew =
+                  data.payment_status === 'Successful' ||
+                  data.order_status === 'Payment Confirmed' ||
+                  data.status === 'confirmed' ||
+                  data.status === 'placed';
+
+                if (isPaidOrNew && orderTime > lastViewedTime) {
+                  unreadPaidOrders.push({ ...data, id: orderId });
+                }
+              });
+
+              if (unreadPaidOrders.length > 0) {
+                setHasUnreadNewOrders(true);
+                setUnreadNewOrdersCount(unreadPaidOrders.length);
+                const newest = unreadPaidOrders[0];
+                setRealtimeOrderToast(newest);
+                const src: 'whatsapp' | 'web' =
+                  newest.order_source === 'whatsapp' || newest.id.startsWith('WA-') ? 'whatsapp' : 'web';
+                playOrderAlertChime(src);
+
+                if (orderToastTimeoutRef.current) {
+                  clearTimeout(orderToastTimeoutRef.current);
+                }
+                orderToastTimeoutRef.current = setTimeout(() => {
+                  setRealtimeOrderToast(null);
+                }, 15000);
+              }
               return;
             }
 
             snapshot.docChanges().forEach((change) => {
-              if (change.type === 'added') {
-                const docData = change.doc.data() as Order;
-                const orderId = docData.id || change.doc.id;
+              const docData = change.doc.data() as Order;
+              const orderId = docData.id || change.doc.id;
 
-                if (!knownOrderIds.has(orderId)) {
-                  knownOrderIds.add(orderId);
+              const isNew = change.type === 'added' && !knownOrderIds.has(orderId);
+              const isPaymentConfirmed =
+                docData.payment_status === 'Successful' || docData.order_status === 'Payment Confirmed';
+              const alertKey = `paid_${orderId}_${docData.paid_at || docData.payment_status || docData.updated_at}`;
 
-                  const newOrder: Order = {
-                    ...docData,
-                    id: orderId
-                  };
+              if (isNew || (isPaymentConfirmed && !alertedPaidOrderKeys.has(alertKey))) {
+                knownOrderIds.add(orderId);
+                if (isPaymentConfirmed) alertedPaidOrderKeys.add(alertKey);
 
-                  const source: 'whatsapp' | 'web' = (newOrder.order_source || (newOrder.id.startsWith('WA-') ? 'whatsapp' : 'web')) as 'whatsapp' | 'web';
+                const newOrder: Order = {
+                  ...docData,
+                  id: orderId
+                };
 
-                  // 1. Play auditory notification chime
-                  playOrderAlertChime(source);
+                const source: 'whatsapp' | 'web' =
+                  newOrder.order_source || (newOrder.id.startsWith('WA-') ? 'whatsapp' : 'web');
 
-                  // 2. Trigger real-time order notification toast
-                  setRealtimeOrderToast(newOrder);
+                // 1. Play auditory notification chime
+                playOrderAlertChime(source);
 
-                  // 3. Mark unread orders for sidebar badge
-                  setHasUnreadNewOrders(true);
-                  setUnreadNewOrdersCount((prev) => prev + 1);
+                // 2. Trigger real-time order notification toast
+                setRealtimeOrderToast(newOrder);
 
-                  if (orderToastTimeoutRef.current) {
-                    clearTimeout(orderToastTimeoutRef.current);
-                  }
-                  orderToastTimeoutRef.current = setTimeout(() => {
-                    setRealtimeOrderToast(null);
-                  }, 12000);
+                // 3. Mark unread orders for sidebar badge & alert banner
+                setHasUnreadNewOrders(true);
+                setUnreadNewOrdersCount((prev) => prev + 1);
 
-                  // 4. Immediately prepend to local orders list
-                  setOrders((prev) => {
-                    if (prev.some((o) => o.id === orderId)) return prev;
-                    return [newOrder, ...prev];
-                  });
-
-                  // 5. Silently refresh overview statistics
-                  api.getAdminStats(token).then((res) => {
-                    if (res && !(res as any).error) setStats(res);
-                  }).catch(() => {});
+                if (orderToastTimeoutRef.current) {
+                  clearTimeout(orderToastTimeoutRef.current);
                 }
+                orderToastTimeoutRef.current = setTimeout(() => {
+                  setRealtimeOrderToast(null);
+                }, 15000);
+
+                // 4. Prepend or update in local orders list
+                setOrders((prev) => {
+                  const idx = prev.findIndex((o) => o.id === orderId);
+                  if (idx !== -1) {
+                    const copy = [...prev];
+                    copy[idx] = newOrder;
+                    return copy;
+                  }
+                  return [newOrder, ...prev];
+                });
+
+                // 5. Silently refresh overview statistics
+                api.getAdminStats(token).then((res) => {
+                  if (res && !(res as any).error) setStats(res);
+                }).catch(() => {});
               }
             });
           },
@@ -979,6 +1029,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
               >
                 Dismiss
               </button>
+              <a
+                href={`https://wa.me/${(settings?.admin_whatsapp_number || settings?.whatsapp_number || '919845012345').replace(/\D/g, '')}?text=${encodeURIComponent(
+                  `🌿 *PAID ORDER ALERT — INDIMA SPICE CO.* 🌿\n\n*Order ID:* ${realtimeOrderToast.id}\n*Amount:* ₹${realtimeOrderToast.total_amount} ✅ (UPI Confirmed)\n*Customer:* ${realtimeOrderToast.customer_name} (+91 ${realtimeOrderToast.customer_phone})\n*Delivery:* ${realtimeOrderToast.address_snapshot?.city || ''}, ${realtimeOrderToast.address_snapshot?.state || ''} - ${realtimeOrderToast.address_snapshot?.pincode || ''}\n*Items:* ${realtimeOrderToast.items?.map(i => `${i.name_en} (${i.quantity})`).join(', ')}`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-bold px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-colors flex items-center space-x-1 shadow-xs cursor-pointer"
+                title="Open WhatsApp Alert for Admin"
+              >
+                <MessageCircle className="w-3 h-3" />
+                <span>WhatsApp</span>
+              </a>
               <button
                 onClick={() => {
                   if (orderToastTimeoutRef.current) clearTimeout(orderToastTimeoutRef.current);
@@ -989,6 +1051,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
                   setRealtimeOrderToast(null);
                   setHasUnreadNewOrders(false);
                   setUnreadNewOrdersCount(0);
+                  localStorage.setItem('indima_admin_last_viewed_order_time', new Date().toISOString());
                 }}
                 className="text-xs font-bold px-3 py-1 rounded-lg bg-amber-600 hover:bg-amber-500 text-white transition-colors flex items-center space-x-1 shadow-xs cursor-pointer"
               >
@@ -1193,6 +1256,54 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
 
         {/* Tab Body View */}
         <main className="flex-1 min-w-0 space-y-6">
+          {/* Real-time Order Alert Banner for Admin (Appears when customer orders and payment is confirmed) */}
+          {hasUnreadNewOrders && unreadNewOrdersCount > 0 && (
+            <div className="bg-gradient-to-r from-emerald-950/90 via-zinc-900 to-amber-950/80 border-2 border-emerald-500/60 rounded-2xl p-4 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in slide-in-from-top-3">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center shrink-0">
+                  <BellRing className="w-5 h-5 text-emerald-400 animate-bounce" />
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <span className="bg-emerald-500 text-black font-extrabold text-[10px] uppercase px-2 py-0.5 rounded-full shadow-xs">
+                      Payment Successful
+                    </span>
+                    <h3 className="text-sm font-black text-white">
+                      {unreadNewOrdersCount} New Paid Order{unreadNewOrdersCount > 1 ? 's' : ''} Received!
+                    </h3>
+                  </div>
+                  <p className="text-xs text-zinc-300 mt-0.5">
+                    Customer payment verified. Alerted via Dashboard chime & WhatsApp notification channel.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2 shrink-0 self-end sm:self-auto">
+                <button
+                  onClick={() => {
+                    setActiveTab('orders');
+                    setHasUnreadNewOrders(false);
+                    setUnreadNewOrdersCount(0);
+                    localStorage.setItem('indima_admin_last_viewed_order_time', new Date().toISOString());
+                  }}
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl flex items-center space-x-1.5 shadow-md transition-all cursor-pointer"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>View Orders</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setHasUnreadNewOrders(false);
+                    setUnreadNewOrdersCount(0);
+                    localStorage.setItem('indima_admin_last_viewed_order_time', new Date().toISOString());
+                  }}
+                  className="px-2.5 py-1.5 text-xs text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-colors cursor-pointer"
+                >
+                  Mark as Seen
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* TAB 1: OVERVIEW */}
           {activeTab === 'overview' && (
             <div className="space-y-6">
@@ -1771,6 +1882,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
                               )}
                             </td>
                             <td className="p-3 text-right space-x-1 whitespace-nowrap">
+                              <a
+                                href={`https://wa.me/${(settings?.admin_whatsapp_number || settings?.whatsapp_number || '919845012345').replace(/\D/g, '')}?text=${encodeURIComponent(
+                                  `🌿 *PAID ORDER ALERT — INDIMA SPICE CO.* 🌿\n\n*Order ID:* ${ord.id}\n*Customer:* ${ord.customer_name} (+91 ${ord.customer_phone})\n*Amount:* ₹${ord.total_amount} (${ord.payment_status || 'Paid'})\n*Status:* ${ord.order_status || ord.status}\n*Items:* ${ord.items?.map((i) => `${i.name_en} (${i.quantity})`).join(', ')}\n*Address:* ${ord.address_snapshot?.city || ''}, ${ord.address_snapshot?.state || ''} - ${ord.address_snapshot?.pincode || ''}`
+                                )}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="px-2 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs rounded-lg border border-emerald-300 cursor-pointer inline-flex items-center space-x-1"
+                                title="Send WhatsApp alert to Store Admin"
+                              >
+                                <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                                <span className="hidden xl:inline">WhatsApp</span>
+                              </a>
                               <button
                                 onClick={() => {
                                   setEditingOrder(ord);
@@ -2831,6 +2954,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
                   <Printer className="w-3.5 h-3.5 text-neutral-600" />
                   <span>Print Receipt</span>
                 </button>
+                <a
+                  href={`https://wa.me/${(settings?.admin_whatsapp_number || settings?.whatsapp_number || '919845012345').replace(/\D/g, '')}?text=${encodeURIComponent(
+                    `🌿 *PAID ORDER ALERT — INDIMA SPICE CO.* 🌿\n\n*Order ID:* ${editingOrder.id}\n*Customer:* ${editingOrder.customer_name} (+91 ${editingOrder.customer_phone})\n*Amount Paid:* ₹${editingOrder.total_amount} ✅ (${editingOrder.payment_status || 'Paid'})\n*Status:* ${editingOrder.order_status || editingOrder.status}\n*Items:* ${editingOrder.items?.map((i) => `${i.name_en} (${i.quantity})`).join(', ')}\n*Address:* ${editingOrder.address_snapshot?.houseFlat || ''}, ${editingOrder.address_snapshot?.street || ''}, ${editingOrder.address_snapshot?.city || ''}, ${editingOrder.address_snapshot?.state || ''} - ${editingOrder.address_snapshot?.pincode || ''}`
+                  )}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg flex items-center space-x-1 cursor-pointer transition-colors shadow-2xs"
+                  title="Forward Order Details to Store Admin on WhatsApp"
+                >
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  <span>Admin WhatsApp Alert</span>
+                </a>
+                <a
+                  href={`https://wa.me/91${(editingOrder.customer_phone || '').replace(/\D/g, '')}?text=${encodeURIComponent(
+                    `Namaskara ${editingOrder.customer_name}! Indima Spice Co. has received your order #${editingOrder.id} (₹${editingOrder.total_amount}). Payment is confirmed and our spice masters are preparing your fresh package for dispatch. Thank you for choosing pure, authentic tradition!`
+                  )}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-300 font-bold rounded-lg flex items-center space-x-1 cursor-pointer transition-colors"
+                  title="Send confirmation message to customer on WhatsApp"
+                >
+                  <MessageCircle className="w-3.5 h-3.5 text-teal-600" />
+                  <span>WhatsApp Customer</span>
+                </a>
               </div>
             </div>
 

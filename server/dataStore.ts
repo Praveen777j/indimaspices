@@ -67,6 +67,10 @@ const INITIAL_SETTINGS: BusinessSettings = {
   default_whatsapp_msg_en: 'Namaskara Indima Spice Co! I would like to inquire about your traditional pure spices.',
   default_whatsapp_msg_kn: 'ನಮಸ್ಕಾರ ಇಂದಿಮಾ ಸ್ಪೈಸ್ ಕಂ! ನಿಮ್ಮ ಸಾಂಪ್ರದಾಯಿಕ ಮಸಾಲೆಗಳ ಬಗ್ಗೆ ವಿಚಾರಿಸಬೇಕಾಗಿದೆ.',
   whatsapp_api_configured: false,
+  admin_whatsapp_alerts_enabled: true,
+  admin_whatsapp_number: '919845012345',
+  callmebot_api_key: process.env.CALLMEBOT_API_KEY || '',
+  whatsapp_webhook_url: process.env.WHATSAPP_WEBHOOK_URL || '',
   admin_password: process.env.ADMIN_PASSWORD || '',
   policy_privacy_en: 'At Indima Spice Co., we prioritize your privacy. We collect minimal customer contact and Pan-India delivery address information purely to process and safely fulfill your spice orders. We do not sell or trade your personal details with third parties.',
   policy_privacy_kn: 'ಇಂದಿಮಾ ಸ್ಪೈಸ್ ಕಂ. ನಲ್ಲಿ ನಿಮ್ಮ ಗೌಪ್ಯತೆಗೆ ನಾವು ಮೊದಲ ಆದ್ಯತೆ ನೀಡುತ್ತೇವೆ. ನಿಮ್ಮ ಆರ್ಡರ್‌ಗಳನ್ನು ತಲುಪಿಸಲು ಮಾತ್ರ ನಾವು ಅಗತ್ಯ ವಿಳಾಸ ಮತ್ತು ಫೋನ್ ವಿವರಗಳನ್ನು ಬಳಸುತ್ತೇವೆ. ನಿಮ್ಮ ವಿವರಗಳನ್ನು ಬೇರೆಯವರಿಗೆ ಮಾರಾಟ ಮಾಡುವುದಿಲ್ಲ.',
@@ -1701,8 +1705,44 @@ class DataStore {
     if (idx !== -1) {
       this.data.orders[idx] = { ...order };
     }
-    await this.setFirestoreDoc('orders', order.id, order);
+
+    if (!this.data.orderNotifications) {
+      this.data.orderNotifications = [];
+    }
+
+    const notifId = `notif_${order.id}`;
+    const notifIdx = this.data.orderNotifications.findIndex(n => n.id === notifId || n.order_id === order.id);
+    const source: 'web' | 'whatsapp' = (order.order_source || (order.payment_method?.toLowerCase().includes('whatsapp') ? 'whatsapp' : 'web')) as 'web' | 'whatsapp';
+    
+    const notifData: OrderNotification = {
+      id: notifId,
+      order_id: order.id,
+      customer_name: order.customer_name || 'Customer',
+      customer_phone: order.customer_phone || '',
+      total_amount: order.total_amount,
+      item_count: order.items?.length || 1,
+      order_source: source,
+      status: order.status || 'confirmed',
+      payment_status: order.payment_status || 'Successful',
+      payment_method: order.payment_method || 'UPI / Razorpay',
+      item_summary: order.items?.map(i => `${i.name_en} (${i.quantity})`).join(', ') || 'Authentic Spices',
+      created_at: order.paid_at || order.updated_at || new Date().toISOString(),
+      read: false
+    };
+
+    if (notifIdx !== -1) {
+      this.data.orderNotifications[notifIdx] = { ...this.data.orderNotifications[notifIdx], ...notifData };
+    } else {
+      this.data.orderNotifications.unshift(notifData);
+    }
+
     this.save();
+
+    await Promise.allSettled([
+      this.setFirestoreDoc('orders', order.id, order),
+      this.setFirestoreDoc('order_notifications', notifId, notifData)
+    ]);
+
     return order;
   }
 
