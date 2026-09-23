@@ -45,7 +45,9 @@ import {
   MapPin,
   ShoppingBag,
   Bell,
-  BellRing
+  BellRing,
+  Menu,
+  ChevronDown
 } from 'lucide-react';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 import { api } from '../../services/api';
@@ -54,6 +56,7 @@ import { AdminSecuritySettings } from './components/AdminSecuritySettings';
 import { AdminPaymentsTab } from './components/AdminPaymentsTab';
 import { AdminReportsTab } from './components/AdminReportsTab';
 import { AdminNotificationCenter } from './components/AdminNotificationCenter';
+import { AdminAuditLogsSection } from './components/AdminAuditLogsSection';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../../lib/firebase';
 import { playOrderAlertChime } from '../../utils/audioAlert';
@@ -101,6 +104,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
     | 'settings'
     | 'audit_logs'
   >('overview');
+
+  // Mobile Navigation Drawer & Audit View state
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [auditDefaultSubTab, setAuditDefaultSubTab] = useState<'audit' | 'leads'>('audit');
+
+  const getTabLabel = (tab: string): string => {
+    switch (tab) {
+      case 'overview': return 'Overview';
+      case 'orders': return 'Orders';
+      case 'products': return 'Products';
+      case 'inventory': return 'Inventory';
+      case 'customers': return 'Customers';
+      case 'payments': return 'UPI Payments';
+      case 'banners': return 'Banners';
+      case 'recipes': return 'Recipes';
+      case 'offers': return 'Offers';
+      case 'reports': return 'Reports';
+      case 'settings': return 'Business & Security';
+      case 'audit_logs': return auditDefaultSubTab === 'leads' ? 'WhatsApp Leads' : 'Audit Logs';
+      default: return 'Admin Menu';
+    }
+  };
 
   // Master States
   const [stats, setStats] = useState<any>(null);
@@ -847,12 +872,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
     <div className="min-h-screen bg-[#09090b] text-zinc-100 flex flex-col font-sans">
       {/* Top Admin Navigation Bar */}
       <header className="bg-zinc-950 text-white sticky top-0 z-30 border-b border-zinc-800 shadow-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3 flex items-center justify-between gap-2">
+          <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+            {/* Mobile Hamburger Menu Toggle (< md) */}
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(true)}
+              aria-label="Open Admin Menu"
+              className="md:hidden p-2 rounded-xl bg-zinc-900 border border-zinc-800 text-amber-400 hover:bg-zinc-800 transition-colors flex items-center justify-center shrink-0 cursor-pointer shadow-2xs"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+
             <img
               src={settings?.logo_url || '/indima-logo.svg'}
               alt={settings?.business_name || 'Indima Logo'}
-              className="h-10 w-auto max-w-[120px] object-contain rounded-xl p-0.5 bg-white border border-zinc-700 shadow-xs"
+              className="h-8 sm:h-10 w-auto max-w-[75px] sm:max-w-[120px] object-contain rounded-xl p-0.5 bg-white border border-zinc-700 shadow-xs shrink-0"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 if (!target.src.includes('indima-logo.svg')) {
@@ -860,22 +895,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
                 }
               }}
             />
-            <div>
-              <div className="flex items-center space-x-2">
-                <span className="font-serif text-lg font-bold text-white">
+            <div className="min-w-0">
+              <div className="flex items-center space-x-1.5 sm:space-x-2">
+                <span className="font-serif text-sm sm:text-lg font-bold text-white truncate max-w-[100px] xs:max-w-[150px] sm:max-w-none">
                   {settings?.business_name || 'Indima Spice Co.'}
                 </span>
-                <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider">
+                <span className="hidden xs:inline-block bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-md uppercase tracking-wider shrink-0">
                   Admin Portal
                 </span>
               </div>
-              <p className="text-[11px] text-zinc-400 font-light">
+              <p className="text-[10px] sm:text-[11px] text-zinc-400 font-light truncate hidden sm:block">
                 Logged in as <span className="font-semibold text-zinc-200">{adminUser?.name || 'Administrator'}</span> ({adminUser?.role})
               </p>
             </div>
           </div>
 
-          <div className="flex items-center space-x-2 sm:space-x-3">
+          <div className="flex items-center space-x-1.5 sm:space-x-3 shrink-0">
             <AdminNotificationCenter
               token={token || ''}
               onSelectOrder={(orderId) => {
@@ -901,22 +936,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
             <button
               onClick={loadAllData}
               title="Refresh Data"
-              className="p-2 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+              className="p-1.5 sm:p-2 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white transition-colors cursor-pointer"
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
 
             <button
               onClick={onBackToStore}
-              className="px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-xs font-semibold text-amber-400 hover:text-white flex items-center space-x-1 transition-colors cursor-pointer"
+              title="View Store"
+              className="px-2 sm:px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-xs font-semibold text-amber-400 hover:text-white flex items-center space-x-1 transition-colors cursor-pointer"
             >
-              <span>View Store</span>
+              <span className="hidden sm:inline">View Store</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </button>
 
             <button
               onClick={logout}
-              className="px-3 py-1.5 rounded-lg bg-red-950/60 border border-red-800/60 hover:bg-red-900/60 text-xs font-bold text-red-300 flex items-center space-x-1 transition-colors cursor-pointer"
+              title="Logout"
+              className="px-2 sm:px-3 py-1.5 rounded-lg bg-red-950/60 border border-red-800/60 hover:bg-red-900/60 text-xs font-bold text-red-300 flex items-center space-x-1 transition-colors cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Logout</span>
@@ -924,6 +961,77 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
           </div>
         </div>
       </header>
+
+      {/* Mobile Sticky Navigation Strip (< md) */}
+      <div className="md:hidden bg-zinc-900/95 backdrop-blur-md border-b border-zinc-800 px-3 py-2 sticky top-[53px] z-20 flex items-center justify-between gap-2 shadow-xs">
+        <button
+          type="button"
+          onClick={() => setIsMobileMenuOpen(true)}
+          className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold border border-zinc-700 transition-colors cursor-pointer shrink-0 shadow-xs"
+        >
+          <Menu className="w-3.5 h-3.5 text-amber-400" />
+          <span className="truncate max-w-[120px]">{getTabLabel(activeTab)}</span>
+          <ChevronDown className="w-3 h-3 text-zinc-400" />
+        </button>
+
+        <div className="flex items-center space-x-1.5 overflow-x-auto scrollbar-none py-0.5 max-w-[calc(100vw-170px)]">
+          <button
+            type="button"
+            onClick={() => setActiveTab('overview')}
+            className={`px-2.5 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${
+              activeTab === 'overview' ? 'bg-amber-600 text-white' : 'text-zinc-400 hover:text-white bg-zinc-800/60'
+            }`}
+          >
+            Overview
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('orders');
+              setHasUnreadNewOrders(false);
+              setUnreadNewOrdersCount(0);
+            }}
+            className={`px-2.5 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition-colors relative flex items-center space-x-1 cursor-pointer ${
+              activeTab === 'orders' ? 'bg-amber-600 text-white' : 'text-zinc-400 hover:text-white bg-zinc-800/60'
+            }`}
+          >
+            <span>Orders</span>
+            {orders.filter((o) => o.status === 'placed' || o.status === 'confirmed').length > 0 && (
+              <span className="bg-amber-500 text-black text-[9px] px-1 py-0.1 rounded-full font-black">
+                {orders.filter((o) => o.status === 'placed' || o.status === 'confirmed').length}
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('audit_logs');
+              setAuditDefaultSubTab('audit');
+            }}
+            className={`px-2.5 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${
+              activeTab === 'audit_logs' && auditDefaultSubTab === 'audit'
+                ? 'bg-amber-600 text-white'
+                : 'text-zinc-400 hover:text-white bg-zinc-800/60'
+            }`}
+          >
+            Audit Logs
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('audit_logs');
+              setAuditDefaultSubTab('leads');
+            }}
+            className={`px-2.5 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${
+              activeTab === 'audit_logs' && auditDefaultSubTab === 'leads'
+                ? 'bg-emerald-600 text-white'
+                : 'text-zinc-400 hover:text-white bg-zinc-800/60'
+            }`}
+          >
+            Leads
+          </button>
+        </div>
+      </div>
 
       {/* Action Notification Pill */}
       {actionSuccess && (
@@ -1064,9 +1172,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
       )}
 
       {/* Main Admin Content Container */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 flex flex-col md:flex-row gap-6 w-full">
-        {/* Sidebar Navigation - Responsive Horizontal Strip on Mobile, Sidebar on Desktop */}
-        <aside className="w-full md:w-60 shrink-0">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 flex-1 flex flex-col md:flex-row gap-4 sm:gap-6 w-full min-w-0 max-w-full overflow-hidden">
+        {/* Sidebar Navigation - Hidden on mobile in favor of mobile menu & sticky strip, vertical on Desktop */}
+        <aside className="hidden md:block w-60 shrink-0">
           <nav className="bg-zinc-900/90 backdrop-blur-md rounded-2xl md:rounded-3xl border border-zinc-800 p-2 md:p-3 flex md:flex-col overflow-x-auto md:overflow-visible gap-1.5 md:space-y-1 shadow-md sticky top-16 md:top-20 z-20 scrollbar-none">
             <button
               onClick={() => setActiveTab('overview')}
@@ -1255,7 +1363,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
         </aside>
 
         {/* Tab Body View */}
-        <main className="flex-1 min-w-0 space-y-6">
+        <main className="flex-1 min-w-0 max-w-full overflow-hidden space-y-6">
           {/* Real-time Order Alert Banner for Admin (Appears when customer orders and payment is confirmed) */}
           {hasUnreadNewOrders && unreadNewOrdersCount > 0 && (
             <div className="bg-gradient-to-r from-emerald-950/90 via-zinc-900 to-amber-950/80 border-2 border-emerald-500/60 rounded-2xl p-4 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in slide-in-from-top-3">
@@ -2180,65 +2288,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
 
           {/* TAB 11: AUDIT LOGS & LEADS */}
           {activeTab === 'audit_logs' && (
-            <div className="space-y-6">
-              {/* WhatsApp Leads */}
-              <div className="bg-white rounded-2xl border border-[#EADBCA] shadow-2xs overflow-hidden">
-                <div className="p-4 bg-[#FAF6EE] border-b border-[#F0E6D2]">
-                  <h3 className="font-serif text-sm font-bold text-neutral-900">
-                    WhatsApp Lead Captures ({leads?.length || 0})
-                  </h3>
-                </div>
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-[#FAF6EE] border-b border-[#F0E6D2] text-neutral-600 uppercase font-semibold">
-                    <tr>
-                      <th className="p-3">Phone</th>
-                      <th className="p-3">Source</th>
-                      <th className="p-3">Timestamp</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#F0E6D2]">
-                    {(leads || []).map((l, i) => (
-                      <tr key={i} className="hover:bg-[#FAF6EE]/50">
-                        <td className="p-3 font-mono font-bold">+91 {l.phone}</td>
-                        <td className="p-3">{l.source}</td>
-                        <td className="p-3 text-neutral-500">{new Date(l.created_at).toLocaleString()}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Audit Logs */}
-              <div className="bg-white rounded-2xl border border-[#EADBCA] shadow-2xs overflow-hidden">
-                <div className="p-4 bg-[#FAF6EE] border-b border-[#F0E6D2]">
-                  <h3 className="font-serif text-sm font-bold text-neutral-900">
-                    Security & Admin Audit Trail ({auditLogs?.length || 0})
-                  </h3>
-                </div>
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-[#FAF6EE] border-b border-[#F0E6D2] text-neutral-600 uppercase font-semibold">
-                    <tr>
-                      <th className="p-3">Admin</th>
-                      <th className="p-3">Action</th>
-                      <th className="p-3">Details / Reason</th>
-                      <th className="p-3">Time</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#F0E6D2]">
-                    {(auditLogs || []).map(log => (
-                      <tr key={log.id} className="hover:bg-[#FAF6EE]/50">
-                        <td className="p-3 font-bold text-neutral-900">{log.admin_username}</td>
-                        <td className="p-3 font-mono text-[11px] text-[#993300]">{log.action}</td>
-                        <td className="p-3 text-neutral-700">
-                          {log.details?.reason || JSON.stringify(log.details)}
-                        </td>
-                        <td className="p-3 text-neutral-500">{new Date(log.timestamp).toLocaleString()}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <AdminAuditLogsSection
+              auditLogs={auditLogs}
+              leads={leads}
+              defaultView={auditDefaultSubTab}
+            />
           )}
         </main>
       </div>
@@ -3497,6 +3551,353 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
                   </>
                 )}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MOBILE NAVIGATION DRAWER OVERLAY (< md screens) */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex flex-col justify-end bg-black/75 backdrop-blur-xs animate-in fade-in duration-200">
+          <div
+            className="fixed inset-0"
+            onClick={() => setIsMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
+          <div className="relative bg-zinc-950 border-t border-zinc-800 rounded-t-3xl max-h-[88vh] flex flex-col shadow-2xl overflow-hidden z-10 animate-in slide-in-from-bottom duration-300">
+            {/* Header of Drawer */}
+            <div className="p-4 border-b border-zinc-800/80 flex items-center justify-between bg-zinc-900/70">
+              <div className="flex items-center space-x-2.5">
+                <span className="p-1.5 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  <LayoutDashboard className="w-4 h-4" />
+                </span>
+                <div>
+                  <h3 className="font-serif font-bold text-sm text-white">☰ Admin Menu</h3>
+                  <p className="text-[10px] text-zinc-400">Indima Spice Co. Control Portal</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-2 rounded-xl bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                aria-label="Close Admin Menu"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Menu Items List */}
+            <div className="p-3.5 overflow-y-auto space-y-1.5 divide-y divide-zinc-900/60 overscroll-contain">
+              <div className="space-y-1 pb-2">
+                {/* 1. Dashboard */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('overview');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full min-h-[44px] flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'overview'
+                      ? 'bg-amber-600 text-white shadow-xs'
+                      : 'text-zinc-300 hover:bg-zinc-900 hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <LayoutDashboard className="w-4 h-4" />
+                    <span>Dashboard</span>
+                  </div>
+                </button>
+
+                {/* 2. Orders */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('orders');
+                    setHasUnreadNewOrders(false);
+                    setUnreadNewOrdersCount(0);
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full min-h-[44px] flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'orders'
+                      ? 'bg-amber-600 text-white shadow-xs'
+                      : 'text-zinc-300 hover:bg-zinc-900 hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <Truck className="w-4 h-4" />
+                    <span>Orders</span>
+                  </div>
+                  <div className="flex items-center space-x-1.5">
+                    {hasUnreadNewOrders && (
+                      <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[9px] font-black px-1.5 py-0.5 rounded uppercase animate-pulse">
+                        NEW
+                      </span>
+                    )}
+                    {orders.filter((o) => o.status === 'placed' || o.status === 'confirmed').length > 0 && (
+                      <span className="bg-amber-500 text-black text-[10px] px-2 py-0.5 rounded-full font-black">
+                        {orders.filter((o) => o.status === 'placed' || o.status === 'confirmed').length}
+                      </span>
+                    )}
+                  </div>
+                </button>
+
+                {/* 3. Products */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('products');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full min-h-[44px] flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'products'
+                      ? 'bg-amber-600 text-white shadow-xs'
+                      : 'text-zinc-300 hover:bg-zinc-900 hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <Package className="w-4 h-4" />
+                    <span>Products</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-zinc-500">
+                    {products.length}
+                  </span>
+                </button>
+
+                {/* 4. Customers */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('customers');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full min-h-[44px] flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'customers'
+                      ? 'bg-amber-600 text-white shadow-xs'
+                      : 'text-zinc-300 hover:bg-zinc-900 hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <Users className="w-4 h-4" />
+                    <span>Customers</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-zinc-500">
+                    {customers.length}
+                  </span>
+                </button>
+
+                {/* 5. Business & Security */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('settings');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full min-h-[44px] flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'settings'
+                      ? 'bg-amber-600 text-white shadow-xs'
+                      : 'text-zinc-300 hover:bg-zinc-900 hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>Business & Security</span>
+                  </div>
+                </button>
+
+                {/* 6. Audit Logs */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('audit_logs');
+                    setAuditDefaultSubTab('audit');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full min-h-[44px] flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'audit_logs' && auditDefaultSubTab === 'audit'
+                      ? 'bg-amber-600 text-white shadow-xs'
+                      : 'text-zinc-300 hover:bg-zinc-900 hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <FileText className="w-4 h-4 text-amber-400" />
+                    <span>Audit Logs</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-amber-400 font-bold bg-amber-500/10 px-2 py-0.5 rounded-md">
+                    {auditLogs.length} events
+                  </span>
+                </button>
+
+                {/* 7. WhatsApp Leads */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('audit_logs');
+                    setAuditDefaultSubTab('leads');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full min-h-[44px] flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'audit_logs' && auditDefaultSubTab === 'leads'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-zinc-300 hover:bg-zinc-900 hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <MessageCircle className="w-4 h-4 text-emerald-400" />
+                    <span>WhatsApp Leads</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-md">
+                    {leads.length} leads
+                  </span>
+                </button>
+              </div>
+
+              {/* Secondary Store Tools */}
+              <div className="space-y-1 py-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('inventory');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full min-h-[40px] flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                    activeTab === 'inventory'
+                      ? 'bg-amber-600 text-white font-bold'
+                      : 'text-zinc-400 hover:bg-zinc-900 hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <Boxes className="w-4 h-4" />
+                    <span>Inventory Control</span>
+                  </div>
+                  {products.filter((p) => p.stock <= p.low_stock_threshold).length > 0 && (
+                    <span className="bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">
+                      {products.filter((p) => p.stock <= p.low_stock_threshold).length} Low
+                    </span>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('payments');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full min-h-[40px] flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                    activeTab === 'payments'
+                      ? 'bg-amber-600 text-white font-bold'
+                      : 'text-zinc-400 hover:bg-zinc-900 hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <CreditCard className="w-4 h-4" />
+                    <span>UPI Payments</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('banners');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full min-h-[40px] flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                    activeTab === 'banners'
+                      ? 'bg-amber-600 text-white font-bold'
+                      : 'text-zinc-400 hover:bg-zinc-900 hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <ImageIcon className="w-4 h-4" />
+                    <span>Banners & Posters</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('recipes');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full min-h-[40px] flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                    activeTab === 'recipes'
+                      ? 'bg-amber-600 text-white font-bold'
+                      : 'text-zinc-400 hover:bg-zinc-900 hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <ChefHat className="w-4 h-4" />
+                    <span>Recipes</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('offers');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full min-h-[40px] flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                    activeTab === 'offers'
+                      ? 'bg-amber-600 text-white font-bold'
+                      : 'text-zinc-400 hover:bg-zinc-900 hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <Tag className="w-4 h-4" />
+                    <span>Offers & Coupons</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('reports');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full min-h-[40px] flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                    activeTab === 'reports'
+                      ? 'bg-amber-600 text-white font-bold'
+                      : 'text-zinc-400 hover:bg-zinc-900 hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <BarChart3 className="w-4 h-4" />
+                    <span>Reports & Analytics</span>
+                  </div>
+                </button>
+              </div>
+
+              {/* Action Buttons in Drawer */}
+              <div className="pt-2.5 space-y-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    onBackToStore();
+                  }}
+                  className="w-full min-h-[44px] flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs text-amber-400 hover:text-white bg-zinc-900 border border-zinc-800 transition-colors cursor-pointer"
+                >
+                  <span className="flex items-center space-x-2.5">
+                    <ExternalLink className="w-4 h-4" />
+                    <span>View Live Store</span>
+                  </span>
+                  <span className="text-zinc-500 font-bold text-sm">↗</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    logout();
+                  }}
+                  className="w-full min-h-[44px] flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold text-red-400 hover:text-red-300 bg-red-950/40 border border-red-900/60 transition-colors cursor-pointer"
+                >
+                  <span className="flex items-center space-x-2.5">
+                    <LogOut className="w-4 h-4" />
+                    <span>Logout Administrator</span>
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
