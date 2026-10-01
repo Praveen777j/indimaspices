@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { api } from '../services/api';
+import { safeStorage } from '../utils/safeStorage';
 
 interface AdminAuthContextType {
   token: string | null;
@@ -14,11 +15,15 @@ const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefin
 
 export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [token, setToken] = useState<string | null>(() => {
-    return localStorage.getItem('indima_admin_token');
+    return safeStorage.getItem('indima_admin_token');
   });
   const [adminUser, setAdminUser] = useState<{ username: string; name: string; role: string } | null>(() => {
-    const saved = localStorage.getItem('indima_admin_user');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = safeStorage.getItem('indima_admin_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
   });
   const [loading, setLoading] = useState(false);
 
@@ -26,8 +31,8 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const handleAuthExpired = () => {
       setToken(null);
       setAdminUser(null);
-      localStorage.removeItem('indima_admin_token');
-      localStorage.removeItem('indima_admin_user');
+      safeStorage.removeItem('indima_admin_token');
+      safeStorage.removeItem('indima_admin_user');
     };
 
     window.addEventListener('indima:admin_auth_expired', handleAuthExpired);
@@ -38,7 +43,7 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Validate session on initial load
   useEffect(() => {
-    const currentToken = localStorage.getItem('indima_admin_token');
+    const currentToken = safeStorage.getItem('indima_admin_token');
     if (currentToken) {
       fetch('/api/admin/me', {
         headers: { Authorization: `Bearer ${currentToken}` }
@@ -47,8 +52,8 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           if (!res.ok) {
             setToken(null);
             setAdminUser(null);
-            localStorage.removeItem('indima_admin_token');
-            localStorage.removeItem('indima_admin_user');
+            safeStorage.removeItem('indima_admin_token');
+            safeStorage.removeItem('indima_admin_user');
           }
         })
         .catch(() => {
@@ -64,8 +69,8 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (res.success && res.token) {
         setToken(res.token);
         setAdminUser(res.admin);
-        localStorage.setItem('indima_admin_token', res.token);
-        localStorage.setItem('indima_admin_user', JSON.stringify(res.admin));
+        safeStorage.setItem('indima_admin_token', res.token);
+        safeStorage.setItem('indima_admin_user', JSON.stringify(res.admin));
         setLoading(false);
         return true;
       }
@@ -83,8 +88,8 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
     setToken(null);
     setAdminUser(null);
-    localStorage.removeItem('indima_admin_token');
-    localStorage.removeItem('indima_admin_user');
+    safeStorage.removeItem('indima_admin_token');
+    safeStorage.removeItem('indima_admin_user');
   };
 
   return (

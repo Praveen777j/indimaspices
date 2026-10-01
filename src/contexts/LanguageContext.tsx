@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Language } from '../types';
 import { translations } from '../i18n/translations';
+import { safeStorage } from '../utils/safeStorage';
 
 interface LanguageContextType {
   language: Language;
@@ -12,13 +13,13 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguageState] = useState<Language>(() => {
-    const saved = localStorage.getItem('indima_language');
+    const saved = safeStorage.getItem('indima_language');
     return saved === 'kn' ? 'kn' : 'en';
   });
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
-    localStorage.setItem('indima_language', lang);
+    safeStorage.setItem('indima_language', lang);
   };
 
   const t = (key: keyof typeof translations.en | string, params?: Record<string, string | number>): string => {
