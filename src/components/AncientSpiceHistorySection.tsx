@@ -203,40 +203,40 @@ export const AncientSpiceHistorySection: React.FC = () => {
           </p>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="flex justify-center mb-8 relative z-10">
-          <div className="inline-flex p-1 bg-[#FAF6EE] border border-[#E0D0BE] rounded-2xl gap-1 shadow-inner">
+        {/* Navigation Tabs (Smooth horizontal scrolling on mobile, centered on desktop) */}
+        <div className="flex justify-start sm:justify-center mb-8 relative z-10 w-full overflow-x-auto pb-2 scrollbar-none">
+          <div className="inline-flex p-1 bg-[#FAF6EE] border border-[#E0D0BE] rounded-2xl gap-1 shadow-inner shrink-0">
             <button
               onClick={() => setActiveTab('timeline')}
-              className={`px-4 sm:px-6 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center space-x-2 ${
+              className={`px-3.5 sm:px-6 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center space-x-1.5 sm:space-x-2 whitespace-nowrap ${
                 activeTab === 'timeline'
                   ? 'bg-[#7A1F1D] text-white shadow-xs'
                   : 'text-[#5C4535] hover:text-[#2C1810]'
               }`}
             >
-              <History className="w-4 h-4" />
+              <History className="w-4 h-4 shrink-0" />
               <span>{isKn ? 'ಪ್ರಾಚೀನ ಇತಿಹಾಸ' : '5,000-Yr History'}</span>
             </button>
             <button
               onClick={() => setActiveTab('ayurveda')}
-              className={`px-4 sm:px-6 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center space-x-2 ${
+              className={`px-3.5 sm:px-6 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center space-x-1.5 sm:space-x-2 whitespace-nowrap ${
                 activeTab === 'ayurveda'
                   ? 'bg-[#7A1F1D] text-white shadow-xs'
                   : 'text-[#5C4535] hover:text-[#2C1810]'
               }`}
             >
-              <HeartPulse className="w-4 h-4" />
+              <HeartPulse className="w-4 h-4 shrink-0" />
               <span>{isKn ? 'ಔಷಧೀಯ ಗುಣಗಳು' : 'Ancient Health Benefits'}</span>
             </button>
             <button
               onClick={() => setActiveTab('doshas')}
-              className={`px-4 sm:px-6 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center space-x-2 ${
+              className={`px-3.5 sm:px-6 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center space-x-1.5 sm:space-x-2 whitespace-nowrap ${
                 activeTab === 'doshas'
                   ? 'bg-[#7A1F1D] text-white shadow-xs'
                   : 'text-[#5C4535] hover:text-[#2C1810]'
               }`}
             >
-              <Leaf className="w-4 h-4" />
+              <Leaf className="w-4 h-4 shrink-0" />
               <span>{isKn ? 'ತ್ರಿದೋಷ ಮಾರ್ಗದರ್ಶಿ' : 'Tridosha Spice Guide'}</span>
             </button>
           </div>

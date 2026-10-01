@@ -63,8 +63,8 @@ export const CustomerReviewsSection: React.FC<CustomerReviewsSectionProps> = ({
   const verifiedReviews = (reviews || []).filter(r => r?.verified_purchase !== false);
 
   return (
-    <section id="reviews-section" className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-      <div className="bg-[#FFFDF9] border border-[#E8DFD3] rounded-3xl p-6 sm:p-10 lg:p-12 shadow-sm">
+    <section id="reviews-section" className="py-8 sm:py-16 px-3.5 sm:px-6 lg:px-8 max-w-7xl 2xl:max-w-[1500px] mx-auto w-full">
+      <div className="bg-[#FFFDF9] border border-[#E8DFD3] rounded-3xl p-4 sm:p-8 lg:p-12 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
           <div>
             <div className="inline-flex items-center space-x-1.5 px-3 py-1 bg-[#FAF7F2] border border-[#DFCFC0] rounded-full text-xs font-bold text-[#8B3214] mb-2 shadow-2xs">

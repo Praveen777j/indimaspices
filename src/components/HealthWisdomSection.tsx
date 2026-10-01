@@ -168,42 +168,42 @@ export const HealthWisdomSection: React.FC = () => {
           </p>
         </div>
 
-        {/* Tab Switcher */}
-        <div className="flex justify-center mb-8">
-          <div className="inline-flex p-1 bg-[#FAF7F2] border border-[#DFCFC0] rounded-full">
+        {/* Tab Switcher (Scrollable on small screens, centered on desktop) */}
+        <div className="flex justify-start sm:justify-center mb-8 overflow-x-auto pb-2 scrollbar-none w-full">
+          <div className="inline-flex p-1 bg-[#FAF7F2] border border-[#DFCFC0] rounded-full shrink-0">
             <button
               onClick={() => setActiveTab('hazards')}
-              className={`px-4 sm:px-6 py-2 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center space-x-2 ${
+              className={`px-3.5 sm:px-6 py-2 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center space-x-1.5 sm:space-x-2 whitespace-nowrap ${
                 activeTab === 'hazards'
                   ? 'bg-[#8B3214] text-white shadow-sm'
                   : 'text-[#5C483B] hover:text-[#1F1610]'
               }`}
             >
-              <ShieldAlert className="w-3.5 h-3.5" />
+              <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
               <span>{isKn ? 'ರಾಸಾಯನಿಕ ಮಸಾಲೆಗಳ ಅಪಾಯಗಳು' : 'Chemical Spice Hazards'}</span>
             </button>
 
             <button
               onClick={() => setActiveTab('benefits')}
-              className={`px-4 sm:px-6 py-2 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center space-x-2 ${
+              className={`px-3.5 sm:px-6 py-2 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center space-x-1.5 sm:space-x-2 whitespace-nowrap ${
                 activeTab === 'benefits'
                   ? 'bg-[#2B5329] text-white shadow-sm'
                   : 'text-[#5C483B] hover:text-[#1F1610]'
               }`}
             >
-              <HeartPulse className="w-3.5 h-3.5" />
+              <HeartPulse className="w-3.5 h-3.5 shrink-0" />
               <span>{isKn ? 'ನೈಸರ್ಗಿಕ ಆರೋಗ್ಯ ಪ್ರಯೋಜನಗಳು' : 'Pure Spice Health Benefits'}</span>
             </button>
 
             <button
               onClick={() => setActiveTab('comparison')}
-              className={`px-4 sm:px-6 py-2 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center space-x-2 ${
+              className={`px-3.5 sm:px-6 py-2 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center space-x-1.5 sm:space-x-2 whitespace-nowrap ${
                 activeTab === 'comparison'
                   ? 'bg-[#1F1610] text-white shadow-sm'
                   : 'text-[#5C483B] hover:text-[#1F1610]'
               }`}
             >
-              <Award className="w-3.5 h-3.5" />
+              <Award className="w-3.5 h-3.5 shrink-0" />
               <span>{isKn ? 'ನೈಜ ಹೋಲಿಕೆ ಪಟ್ಟಿ' : 'Truth Comparison'}</span>
             </button>
           </div>

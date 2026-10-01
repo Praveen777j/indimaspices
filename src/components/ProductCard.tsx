@@ -24,27 +24,27 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
   const renderBadge = () => {
     if (badges.includes('bestseller')) {
       return (
-        <span className="bg-[#FAF7F2] border border-[#DFCFC0] text-[#8B3214] text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-2xs backdrop-blur-md">
+        <span className="bg-[#FAF7F2] border border-[#DFCFC0] text-[#8B3214] text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-2xs backdrop-blur-md truncate">
           {isKn ? 'ಹೆಚ್ಚು ಮಾರಾಟವಾದದ್ದು' : 'Bestseller'}
         </span>
       );
     }
     if (badges.includes('homemade')) {
       return (
-        <span className="bg-[#EAF2EB] border border-[#CDE0D0] text-[#2B5329] text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-2xs backdrop-blur-md">
+        <span className="bg-[#EAF2EB] border border-[#CDE0D0] text-[#2B5329] text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-2xs backdrop-blur-md truncate">
           {isKn ? 'ಮನೆಯ ಮಸಾಲೆ' : 'Homemade'}
         </span>
       );
     }
     if (badges.includes('natural')) {
       return (
-        <span className="bg-[#EAF2EB] border border-[#CDE0D0] text-[#2B5329] text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-2xs backdrop-blur-md">
-          {isKn ? '100% ನೈಸರ್ಗಿಕ' : '100% Natural'}
+        <span className="bg-[#EAF2EB] border border-[#CDE0D0] text-[#2B5329] text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-2xs backdrop-blur-md truncate">
+          {isKn ? '100% ನೈಸರ್ಗಿಕ' : '100% Pure'}
         </span>
       );
     }
     return (
-      <span className="bg-[#EAF2EB] border border-[#CDE0D0] text-[#2B5329] text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-2xs backdrop-blur-md">
+      <span className="bg-[#EAF2EB] border border-[#CDE0D0] text-[#2B5329] text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-2xs backdrop-blur-md truncate">
         {isKn ? 'ಕಲ್ಲಿನ ಪುಡಿ' : 'Stone-Ground'}
       </span>
     );
@@ -57,7 +57,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
   return (
     <div
       id={`product-card-${product.id}`}
-      className="group relative bg-[#FFFDF9] rounded-3xl border border-[#E8DFD3] hover:border-[#8B3214] transition-all duration-300 hover:shadow-md flex flex-col overflow-hidden"
+      className="group relative bg-[#FFFDF9] rounded-2xl sm:rounded-3xl border border-[#E8DFD3] hover:border-[#8B3214] transition-all duration-300 hover:shadow-md flex flex-col overflow-hidden w-full"
     >
       {/* Product Image Container */}
       <div
@@ -78,15 +78,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
         />
 
         {/* Top Badges */}
-        <div className="absolute top-2.5 left-2.5 flex flex-col gap-1 z-10">
+        <div className="absolute top-2 left-2 flex flex-col gap-1 z-10 max-w-[70%]">
           {renderBadge()}
           {product.discount_percentage > 0 && (
-            <span className="bg-[#2B5329] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-2xs">
+            <span className="bg-[#2B5329] text-white text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full shadow-2xs w-fit">
               {product.discount_percentage}% OFF
             </span>
           )}
           {product.video && product.video.trim().length > 0 && (
-            <span className="bg-[#1F1610]/85 text-amber-200 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-2xs flex items-center space-x-1 backdrop-blur-xs">
+            <span className="bg-[#1F1610]/85 text-amber-200 text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full shadow-2xs flex items-center space-x-1 backdrop-blur-xs w-fit">
               <Play className="w-2.5 h-2.5 fill-amber-200" />
               <span>Video</span>
             </span>
@@ -95,7 +95,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
 
         {/* Multi-Image indicator */}
         {Array.isArray(product.images) && product.images.length > 1 && (
-          <div className="absolute bottom-2.5 left-2.5 px-2 py-0.5 rounded-full bg-black/60 text-white text-[10px] font-bold flex items-center space-x-1 backdrop-blur-xs">
+          <div className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded-full bg-black/60 text-white text-[9px] sm:text-[10px] font-bold flex items-center space-x-1 backdrop-blur-xs">
             <Camera className="w-3 h-3 text-amber-300" />
             <span>{product.images.length}</span>
           </div>
@@ -108,18 +108,18 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
             toggleWishlist(product);
           }}
           title={t('wishlist')}
-          className="absolute top-2.5 right-2.5 p-2 rounded-full bg-white/90 hover:bg-[#FAF7F2] border border-[#DFCFC0] text-[#5C483B] hover:text-[#8B3214] transition-all shadow-2xs z-10 cursor-pointer backdrop-blur-md"
+          className="absolute top-2 right-2 p-1.5 sm:p-2 rounded-full bg-white/90 hover:bg-[#FAF7F2] border border-[#DFCFC0] text-[#5C483B] hover:text-[#8B3214] transition-all shadow-2xs z-10 cursor-pointer backdrop-blur-md min-w-[32px] min-h-[32px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center"
         >
           <Heart className={`w-3.5 h-3.5 ${isWished ? 'fill-[#8B3214] text-[#8B3214]' : ''}`} />
         </button>
 
-        {/* Quick View Button on Hover */}
+        {/* Quick View Button on Hover (hidden on touch/small devices, shown on desktop hover) */}
         <button
           onClick={e => {
             e.stopPropagation();
             onOpenDetails(product);
           }}
-          className="absolute bottom-2.5 right-2.5 px-3 py-1.5 bg-white/95 hover:bg-[#FAF7F2] text-[#1F1610] text-xs font-bold rounded-full border border-[#DFCFC0] shadow-sm flex items-center space-x-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-10 cursor-pointer"
+          className="hidden sm:flex absolute bottom-2.5 right-2.5 px-3 py-1.5 bg-white/95 hover:bg-[#FAF7F2] text-[#1F1610] text-xs font-bold rounded-full border border-[#DFCFC0] shadow-sm items-center space-x-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-10 cursor-pointer"
         >
           <Eye className="w-3.5 h-3.5 text-[#8B3214]" />
           <span>{isKn ? 'ವಿವರ' : 'Details'}</span>
@@ -128,7 +128,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
         {/* Out of Stock Overlay */}
         {isOutOfStock && (
           <div className="absolute inset-0 bg-[#1F1610]/70 backdrop-blur-[2px] flex items-center justify-center z-20">
-            <span className="bg-[#8B3214] text-white font-bold text-xs uppercase px-3 py-1 rounded-full tracking-wider">
+            <span className="bg-[#8B3214] text-white font-bold text-[10px] sm:text-xs uppercase px-2.5 py-1 rounded-full tracking-wider">
               {t('outOfStock')}
             </span>
           </div>
@@ -136,17 +136,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
       </div>
 
       {/* Card Body */}
-      <div className="p-3 sm:p-4 lg:p-5 flex-1 flex flex-col justify-between space-y-2.5 sm:space-y-3">
+      <div className="p-2.5 sm:p-4 lg:p-5 flex-1 flex flex-col justify-between space-y-2 sm:space-y-3">
         <div>
           {/* Weight & Rating */}
-          <div className="flex items-center justify-between text-xs text-[#5C483B] mb-1.5 gap-1">
-            <span className="font-semibold px-2 py-0.5 bg-[#FAF7F2] border border-[#DFCFC0] rounded-full text-[#5C483B] text-[10px] truncate">
+          <div className="flex items-center justify-between text-xs text-[#5C483B] mb-1 gap-1">
+            <span className="font-semibold px-2 py-0.5 bg-[#FAF7F2] border border-[#DFCFC0] rounded-full text-[#5C483B] text-[9px] sm:text-[10px] truncate max-w-[60%]">
               {product.weight}
             </span>
-            <div className="flex items-center space-x-1 text-[#C27803] font-bold text-[11px] sm:text-xs shrink-0">
-              <Star className="w-3 sm:w-3.5 h-3 sm:h-3.5 fill-[#C27803] text-[#C27803]" />
-              <span>{product.rating}</span>
-              <span className="text-[#8C7667] font-normal text-[10px] sm:text-xs">({product.review_count})</span>
+            <div className="flex items-center space-x-1 text-[#C27803] font-bold text-[10px] sm:text-xs shrink-0">
+              <Star className="w-3 h-3 fill-[#C27803] text-[#C27803]" />
+              <span className="tabular-nums">{product.rating}</span>
+              <span className="text-[#8C7667] font-normal text-[9px] sm:text-xs">({product.review_count})</span>
             </div>
           </div>
 
@@ -165,7 +165,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
 
           {/* Low Stock Indicator */}
           {isLowStock && (
-            <p className="text-[10px] text-[#8B3214] font-bold mt-1.5 flex items-center gap-1">
+            <p className="text-[9px] sm:text-[10px] text-[#8B3214] font-bold mt-1 flex items-center gap-1">
               <span>⚠️</span>
               <span className="truncate">{t('onlyLeft', { count: product.stock })}</span>
             </p>
@@ -173,14 +173,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
         </div>
 
         {/* Pricing & Add Controls */}
-        <div className="pt-2 sm:pt-3 border-t border-[#F0E6D8] flex items-center justify-between gap-1.5 sm:gap-2">
-          <div className="min-w-0">
-            <div className="flex items-baseline space-x-1 sm:space-x-1.5">
-              <span className="text-sm sm:text-base lg:text-lg font-bold text-[#8B3214] whitespace-nowrap">
+        <div className="pt-2 sm:pt-3 border-t border-[#F0E6D8] flex items-center justify-between gap-1.5">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-baseline flex-wrap gap-x-1.5 gap-y-0.5">
+              <span className="text-xs sm:text-sm lg:text-base font-bold text-[#8B3214] tabular-nums whitespace-nowrap">
                 ₹{product.price}
               </span>
               {product.mrp > product.price && (
-                <span className="text-[10px] sm:text-xs text-[#9C8778] line-through whitespace-nowrap">
+                <span className="text-[9px] sm:text-xs text-[#9C8778] line-through tabular-nums whitespace-nowrap">
                   ₹{product.mrp}
                 </span>
               )}
@@ -192,7 +192,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
             {isOutOfStock ? (
               <button
                 disabled
-                className="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-[#FAF7F2] text-[#9C8778] text-[10px] sm:text-xs font-bold uppercase cursor-not-allowed border border-[#DFCFC0]"
+                className="px-2 py-1 sm:px-3 sm:py-1.5 rounded-full bg-[#FAF7F2] text-[#9C8778] text-[9px] sm:text-xs font-bold uppercase cursor-not-allowed border border-[#DFCFC0]"
               >
                 {t('outOfStock')}
               </button>
@@ -200,13 +200,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
               <button
                 onClick={() => addItem(product, 1)}
                 id={`add-btn-${product.id}`}
-                className="px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full border border-[#8B3214] bg-[#FAF7F2] text-[#8B3214] hover:bg-[#8B3214] hover:text-white font-bold text-[11px] sm:text-xs uppercase tracking-wider transition-all duration-200 shadow-2xs cursor-pointer active:scale-95 flex items-center space-x-1 min-h-[30px] sm:min-h-[34px]"
+                className="px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full border border-[#8B3214] bg-[#FAF7F2] text-[#8B3214] hover:bg-[#8B3214] hover:text-white font-bold text-[10px] sm:text-xs uppercase tracking-wider transition-all duration-200 shadow-2xs cursor-pointer active:scale-95 flex items-center space-x-1 min-h-[32px] sm:min-h-[36px]"
               >
                 <span>{t('add')}</span>
                 <Plus className="w-3 h-3" />
               </button>
             ) : (
-              <div className="flex items-center bg-[#8B3214] text-white rounded-full shadow-sm overflow-hidden border border-[#6E240D] min-h-[30px] sm:min-h-[34px]">
+              <div className="flex items-center bg-[#8B3214] text-white rounded-full shadow-sm overflow-hidden border border-[#6E240D] min-h-[32px] sm:min-h-[36px]">
                 <button
                   onClick={() => updateQuantity(product.id, -1)}
                   className="px-2 sm:px-2.5 py-1 sm:py-1.5 hover:bg-[#6E240D] transition-colors cursor-pointer"
@@ -214,7 +214,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
                 >
                   <Minus className="w-3 h-3" />
                 </button>
-                <span className="px-1.5 sm:px-2 py-0.5 text-xs font-bold select-none min-w-[18px] text-center">
+                <span className="px-1.5 sm:px-2 py-0.5 text-xs font-bold select-none min-w-[16px] sm:min-w-[20px] text-center tabular-nums">
                   {qtyInCart}
                 </span>
                 <button

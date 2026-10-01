@@ -7,8 +7,8 @@ export const HeritageStorySection: React.FC = () => {
   const isKn = language === 'kn';
 
   return (
-    <section id="heritage-story-section" className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-      <div className="bg-[#FFFDF9] border border-[#E8DFD3] rounded-3xl p-6 sm:p-10 lg:p-12 shadow-sm">
+    <section id="heritage-story-section" className="py-8 sm:py-16 px-3.5 sm:px-6 lg:px-8 max-w-7xl 2xl:max-w-[1500px] mx-auto w-full">
+      <div className="bg-[#FFFDF9] border border-[#E8DFD3] rounded-3xl p-4 sm:p-8 lg:p-12 shadow-sm">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
           {/* Left Visual Column */}
           <div className="lg:col-span-5 relative">

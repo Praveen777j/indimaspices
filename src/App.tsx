@@ -272,16 +272,16 @@ const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToA
         />
 
         {/* Products Grid Section */}
-        <section id="products-section" className="py-12 sm:py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <section id="products-section" className="py-8 sm:py-16 max-w-7xl 2xl:max-w-[1500px] mx-auto px-3.5 sm:px-6 lg:px-8 w-full">
           {/* Header & Filters Bento Pod */}
-          <div className="bg-[#FFFDF9] border border-[#DFC7A2] rounded-3xl p-6 sm:p-8 shadow-sm mb-8 flex flex-col md:flex-row md:items-end justify-between gap-6 relative overflow-hidden group">
+          <div className="bg-[#FFFDF9] border border-[#DFC7A2] rounded-3xl p-4 sm:p-8 shadow-sm mb-6 sm:mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6 relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/5 blur-[90px] rounded-full pointer-events-none" />
             <div className="relative z-10">
-              <div className="inline-flex items-center space-x-2 px-3 py-1 bg-[#FAF3E0] border border-[#DFC7A2] rounded-full text-xs font-bold text-[#7A1F1D] mb-3 uppercase tracking-wider">
+              <div className="inline-flex items-center space-x-2 px-3 py-1 bg-[#FAF3E0] border border-[#DFC7A2] rounded-full text-xs font-bold text-[#7A1F1D] mb-2 sm:mb-3 uppercase tracking-wider">
                 <Sparkles className="w-3.5 h-3.5 text-[#993300]" />
                 <span>{t('allSpicesCategory')}</span>
               </div>
-              <h2 className="font-serif text-2xl sm:text-4xl font-bold text-[#2C1810] tracking-tight">
+              <h2 className="font-serif text-xl sm:text-3xl lg:text-4xl font-bold text-[#2C1810] tracking-tight">
                 {selectedCategoryId
                   ? (categories || []).find(c => c.id === selectedCategoryId)?.[isKn ? 'name_kn' : 'name_en']
                   : t('allSpices')}
@@ -293,9 +293,9 @@ const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToA
               </p>
             </div>
 
-            {/* Live Search & Sort Controls */}
-            <div className="relative z-10 flex flex-wrap items-center gap-3">
-              <div className="relative min-w-[220px]">
+            {/* Live Search & Sort Controls (Fluid on mobile, tight on desktop) */}
+            <div className="relative z-10 flex flex-col xs:flex-row items-stretch xs:items-center gap-2.5 sm:gap-3 w-full md:w-auto">
+              <div className="relative flex-1 sm:min-w-[220px]">
                 <Search className="w-4 h-4 text-[#8C6D53] absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
@@ -306,8 +306,11 @@ const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToA
                 />
               </div>
 
-              <div className="flex items-center space-x-2 bg-[#FAF6EE] border border-[#DFC7A2] hover:border-[#993300] rounded-2xl px-3.5 py-2 text-xs text-[#2C1810]">
-                <SlidersHorizontal className="w-3.5 h-3.5 text-[#8C6D53]" />
+              <div className="flex items-center justify-between space-x-2 bg-[#FAF6EE] border border-[#DFC7A2] hover:border-[#993300] rounded-2xl px-3.5 py-2 text-xs text-[#2C1810] shrink-0">
+                <div className="flex items-center space-x-1.5">
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-[#8C6D53]" />
+                  <span className="text-[11px] text-[#8C6D53] font-medium hidden xs:inline">Sort:</span>
+                </div>
                 <select
                   value={sortBy}
                   onChange={e => setSortBy(e.target.value as any)}
@@ -322,9 +325,9 @@ const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToA
             </div>
           </div>
 
-          {/* Products Bento Grid */}
+          {/* Products Bento Grid (Fluid from 2 cols on mobile to 5 cols on large desktop) */}
           {sortedProducts.length === 0 ? (
-            <div className="py-20 text-center bg-[#FFFDF9] rounded-3xl border border-[#DFC7A2] space-y-4">
+            <div className="py-16 sm:py-20 text-center bg-[#FFFDF9] rounded-3xl border border-[#DFC7A2] space-y-4 px-4">
               <p className="text-sm font-semibold text-[#5C4535]">
                 {isKn ? 'ಯಾವುದೇ ಮಸಾಲೆಗಳು ಕಂಡುಬಂದಿಲ್ಲ' : 'No spices found matching your criteria.'}
               </p>
@@ -339,7 +342,7 @@ const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToA
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-5 lg:gap-6">
               {(sortedProducts || []).map(product => (
                 <ProductCard
                   key={product.id}
@@ -389,15 +392,22 @@ const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToA
         onNavigateToSection={scrollToSection}
       />
 
-      {/* Floating WhatsApp Quick Ordering Button */}
-      <FloatingWhatsApp settings={fallbackSettings} />
+      {/* Floating WhatsApp Quick Ordering Button (Coordinated with mobile cart) */}
+      <FloatingWhatsApp
+        settings={fallbackSettings}
+        hasFloatingCart={totalItems > 0 && !isCheckoutOpen}
+      />
 
-      {/* Floating Indima AI Quick Assistant Button */}
-      <div className="fixed bottom-20 right-4 sm:bottom-24 sm:right-6 z-35">
+      {/* Floating Indima AI Quick Assistant Button (Coordinated with mobile cart) */}
+      <div
+        className={`fixed ${
+          totalItems > 0 && !isCheckoutOpen ? 'bottom-32 sm:bottom-24' : 'bottom-20 sm:bottom-24'
+        } right-4 sm:right-6 z-35 transition-all duration-200`}
+      >
         <button
           onClick={() => setIsAiAssistantOpen(true)}
           id="floating-indima-ai-btn"
-          className="flex items-center space-x-2 px-3.5 py-2.5 sm:px-4 sm:py-3 bg-linear-to-r from-amber-500 via-[#8B3214] to-[#6E240D] text-white rounded-full shadow-xl hover:shadow-2xl border border-amber-300/40 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer group"
+          className="flex items-center space-x-2 px-3 py-2 sm:px-4 sm:py-3 bg-linear-to-r from-amber-500 via-[#8B3214] to-[#6E240D] text-white rounded-full shadow-xl hover:shadow-2xl border border-amber-300/40 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer group"
           aria-label="Ask Indima AI"
         >
           <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-amber-200 shrink-0">

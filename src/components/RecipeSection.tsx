@@ -44,8 +44,8 @@ export const RecipeSection: React.FC<RecipeSectionProps> = ({
     : [];
 
   return (
-    <section id="recipes-section" className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-      <div className="bg-[#FFFDF9] border border-[#E8DFD3] rounded-3xl p-6 sm:p-10 lg:p-12 shadow-sm">
+    <section id="recipes-section" className="py-8 sm:py-16 px-3.5 sm:px-6 lg:px-8 max-w-7xl 2xl:max-w-[1500px] mx-auto w-full">
+      <div className="bg-[#FFFDF9] border border-[#E8DFD3] rounded-3xl p-4 sm:p-8 lg:p-12 shadow-sm">
         {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto mb-8 space-y-2">
           <div className="inline-flex items-center space-x-1.5 px-3.5 py-1 bg-[#FAF7F2] border border-[#DFCFC0] rounded-full text-xs font-bold text-[#8B3214] shadow-2xs">
