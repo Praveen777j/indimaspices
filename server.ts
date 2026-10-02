@@ -3723,6 +3723,15 @@ async function startServer() {
   app.use((req: Request, res: Response, next: NextFunction) => {
     const rawPath = (req.path || '').toLowerCase();
 
+    // In development mode only, allow Vite internal dev dependencies and cache
+    // (e.g. /node_modules/.vite/deps/*) to reach Vite's development middleware.
+    // In production, this development exception is completely disabled.
+    if (process.env.NODE_ENV !== 'production') {
+      if (rawPath.startsWith('/node_modules/.vite/') || rawPath.includes('/node_modules/.vite/')) {
+        return next();
+      }
+    }
+
     // 1. Block dotfiles and hidden paths (e.g. /.env, /.git, /.github, etc.)
     if (rawPath.startsWith('/.') || rawPath.includes('/.')) {
       return res.status(404).send('Not found');
