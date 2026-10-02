@@ -21,6 +21,7 @@ import {
   Lead,
   OrderNotification
 } from '../src/types';
+import { syncOrderStatus, getAuthoritativeOrderStatus } from '../src/utils/orderStatus';
 
 interface DatabaseSchema {
   products: Product[];
@@ -1570,25 +1571,21 @@ class DataStore {
     adminUser = 'Admin',
     trackingDetails?: Partial<OrderTrackingInfo>
   ): Promise<Order | null> {
-    const order = this.getOrderById(orderId);
+    let order = this.getOrderById(orderId);
+    if (!order) {
+      order = await this.findOrFetchOrder(orderId);
+    }
     if (!order) return null;
 
     if (orderStatus) {
-      order.order_status = orderStatus;
-      order.status = orderStatus.toLowerCase().includes('deliv')
-        ? 'delivered'
-        : orderStatus.toLowerCase().includes('ship')
-        ? 'shipped'
-        : orderStatus.toLowerCase().includes('pack')
-        ? 'packed'
-        : orderStatus.toLowerCase().includes('process')
-        ? 'confirmed'
-        : order.status;
+      syncOrderStatus(order, orderStatus);
 
       // If status is cancelled, restore stock safely
       if (orderStatus.toLowerCase().includes('cancel')) {
         await this.restoreOrderStock(order, `Status updated to ${orderStatus} by ${adminUser}`);
       }
+    } else {
+      syncOrderStatus(order);
     }
     if (paymentStatus) {
       order.payment_status = paymentStatus;
@@ -1596,35 +1593,40 @@ class DataStore {
         await this.restoreOrderStock(order, `Payment marked as ${paymentStatus}`);
       }
     }
-    if (trackingNumber !== undefined) order.tracking_number = trackingNumber;
-    if (expectedDelivery !== undefined) order.expected_delivery = expectedDelivery;
-
-    // Initialize or update tracking structure
-    if (!order.tracking) {
-      order.tracking = {};
+    if (trackingNumber !== undefined) {
+      order.tracking_number = trackingNumber;
+      if (!order.tracking) order.tracking = {};
+      order.tracking.tracking_number = trackingNumber;
     }
-    if (orderStatus) order.tracking.status = orderStatus;
-    if (trackingNumber !== undefined) order.tracking.tracking_number = trackingNumber;
-    if (expectedDelivery !== undefined) order.tracking.expected_delivery = expectedDelivery;
+    if (expectedDelivery !== undefined) {
+      order.expected_delivery = expectedDelivery;
+      if (!order.tracking) order.tracking = {};
+      order.tracking.expected_delivery = expectedDelivery;
+    }
 
     if (trackingDetails) {
       if (trackingDetails.carrier !== undefined) {
         order.carrier = trackingDetails.carrier;
+        if (!order.tracking) order.tracking = {};
         order.tracking.carrier = trackingDetails.carrier;
       }
       if (typeof trackingDetails.latitude === 'number' && typeof trackingDetails.longitude === 'number') {
+        if (!order.tracking) order.tracking = {};
         order.tracking.latitude = trackingDetails.latitude;
         order.tracking.longitude = trackingDetails.longitude;
         order.tracking.location_updated_at = new Date().toISOString();
         order.tracking.location_updated_by = adminUser;
       }
       if (trackingDetails.location_name !== undefined) {
+        if (!order.tracking) order.tracking = {};
         order.tracking.location_name = trackingDetails.location_name;
       }
       if (trackingDetails.live_tracking_available !== undefined) {
+        if (!order.tracking) order.tracking = {};
         order.tracking.live_tracking_available = trackingDetails.live_tracking_available;
       }
     } else if (order.carrier) {
+      if (!order.tracking) order.tracking = {};
       order.tracking.carrier = order.carrier;
     }
 
@@ -1633,10 +1635,13 @@ class DataStore {
     await this.logAudit(
       adminUser,
       'ORDER_STATUS_CHANGED',
-      orderId,
+      order.id,
       `Status updated: ${orderStatus || ''} ${paymentStatus ? `Payment: ${paymentStatus}` : ''}`
     );
-    await this.setFirestoreDoc('orders', orderId, order);
+    await this.setFirestoreDoc('orders', order.id, order);
+    if (order.internal_order_id && order.internal_order_id !== order.id) {
+      await this.setFirestoreDoc('orders', order.internal_order_id, order).catch(() => {});
+    }
     this.save();
     return order;
   }

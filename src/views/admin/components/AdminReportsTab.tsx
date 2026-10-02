@@ -12,6 +12,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { Order, Product, Customer } from '../../../types';
+import { getAuthoritativeOrderStatus } from '../../../utils/orderStatus';
 
 interface AdminReportsTabProps {
   orders: Order[];
@@ -33,7 +34,10 @@ export const AdminReportsTab: React.FC<AdminReportsTabProps> = ({
     .filter(o => o?.payment_status === 'Successful')
     .reduce((sum, o) => sum + (o?.total_amount || 0), 0);
 
-  const deliveredOrdersCount = safeOrders.filter(o => o?.status === 'delivered' || o?.order_status === 'Delivered').length;
+  const deliveredOrdersCount = safeOrders.filter(o => {
+    const s = getAuthoritativeOrderStatus(o).toLowerCase();
+    return s.includes('deliver') && !s.includes('out');
+  }).length;
   const avgOrderValue = safeOrders.length > 0 ? Math.round(totalRevenue / (safeOrders.filter(o => o?.payment_status === 'Successful').length || 1)) : 0;
 
   // Calculate Product Sales Breakdown
@@ -61,12 +65,18 @@ export const AdminReportsTab: React.FC<AdminReportsTabProps> = ({
 
   // Status Distribution
   const statusCounts = {
-    placed: safeOrders.filter(o => o?.status === 'placed' || o?.order_status === 'Order Placed').length,
-    confirmed: safeOrders.filter(o => o?.status === 'confirmed' || o?.order_status === 'Processing').length,
-    packed: safeOrders.filter(o => o?.status === 'packed' || o?.order_status === 'Packed').length,
-    shipped: safeOrders.filter(o => o?.status === 'shipped' || o?.order_status === 'Shipped').length,
+    placed: safeOrders.filter(o => getAuthoritativeOrderStatus(o).toLowerCase().includes('place')).length,
+    confirmed: safeOrders.filter(o => {
+      const s = getAuthoritativeOrderStatus(o).toLowerCase();
+      return s.includes('confirm') || s.includes('process');
+    }).length,
+    packed: safeOrders.filter(o => getAuthoritativeOrderStatus(o).toLowerCase().includes('pack')).length,
+    shipped: safeOrders.filter(o => {
+      const s = getAuthoritativeOrderStatus(o).toLowerCase();
+      return s.includes('ship') || s.includes('transit') || s.includes('out');
+    }).length,
     delivered: deliveredOrdersCount,
-    cancelled: safeOrders.filter(o => o?.status === 'cancelled').length
+    cancelled: safeOrders.filter(o => getAuthoritativeOrderStatus(o).toLowerCase().includes('cancel')).length
   };
 
   const handleExportCSV = () => {
@@ -78,7 +88,7 @@ export const AdminReportsTab: React.FC<AdminReportsTabProps> = ({
       o.customer_phone || '',
       o.total_amount || 0,
       o.payment_status || '',
-      o.status || o.order_status || ''
+      getAuthoritativeOrderStatus(o)
     ]);
 
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');

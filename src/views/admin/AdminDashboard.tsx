@@ -61,6 +61,7 @@ import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestor
 import { db, handleFirestoreError, OperationType } from '../../lib/firebase';
 import { playOrderAlertChime } from '../../utils/audioAlert';
 import { SUPPORTED_CARRIERS, getCarrierDisplayName, getVerifiedTrackingUrl } from '../../utils/carrierTracking';
+import { getAuthoritativeOrderStatus } from '../../utils/orderStatus';
 import {
   downloadReceiptFile,
   printReceiptDirectly,
@@ -561,7 +562,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
     // Optimistically update order in state immediately
     setOrders(prev => prev.map(o => o.id === orderId ? {
       ...o,
-      status: targetStatus.toLowerCase().includes('deliv') ? 'delivered' : targetStatus.toLowerCase().includes('ship') ? 'shipped' : targetStatus.toLowerCase().includes('pack') ? 'packed' : targetStatus.toLowerCase().includes('process') ? 'confirmed' : o.status,
+      status: targetStatus,
       order_status: targetStatus,
       tracking_number: newTrackingNumber || o.tracking_number,
       carrier: newCarrier || o.carrier,
@@ -575,7 +576,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
     showSuccess(`Order status updated to ${targetStatus}`);
 
     try {
-      await api.updateOrderStatus(token, orderId, {
+      const res = await api.updateOrderStatus(token, orderId, {
         status: targetStatus,
         tracking_number: newTrackingNumber || undefined,
         carrier: newCarrier || undefined,
@@ -583,6 +584,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
         payment_status: paymentStatus,
         location_name: newLocationName || undefined
       });
+      if (res && res.success && res.order) {
+        setOrders(prev => prev.map(o => o.id === orderId ? res.order : o));
+        setEditingOrder(prev => (prev && prev.id === orderId ? res.order : prev));
+      }
     } catch (e: any) {
       console.error(e);
       showError(e.message || 'Failed to update order status');
@@ -1531,7 +1536,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
                       <div className="text-right">
                         <p className="font-bold text-[#993300]">₹{ord.total_amount}</p>
                         <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-sm bg-[#993300]/10 text-[#993300]">
-                          {ord.status || ord.order_status || 'placed'}
+                          {getAuthoritativeOrderStatus(ord)}
                         </span>
                       </div>
                     </div>
@@ -1953,7 +1958,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
                             </td>
                             <td className="p-3">
                               <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-sm bg-[#993300] text-white">
-                                {ord.order_status || ord.status}
+                                {getAuthoritativeOrderStatus(ord)}
                               </span>
                               {(ord.tracking_number || ord.tracking?.tracking_number) && (
                                 <div className="mt-1 flex items-center space-x-1">
@@ -1992,7 +1997,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
                             <td className="p-3 text-right space-x-1 whitespace-nowrap">
                               <a
                                 href={`https://wa.me/${(settings?.admin_whatsapp_number || settings?.whatsapp_number || '919845012345').replace(/\D/g, '')}?text=${encodeURIComponent(
-                                  `🌿 *PAID ORDER ALERT — INDIMA SPICE CO.* 🌿\n\n*Order ID:* ${ord.id}\n*Customer:* ${ord.customer_name} (+91 ${ord.customer_phone})\n*Amount:* ₹${ord.total_amount} (${ord.payment_status || 'Paid'})\n*Status:* ${ord.order_status || ord.status}\n*Items:* ${ord.items?.map((i) => `${i.name_en} (${i.quantity})`).join(', ')}\n*Address:* ${ord.address_snapshot?.city || ''}, ${ord.address_snapshot?.state || ''} - ${ord.address_snapshot?.pincode || ''}`
+                                  `🌿 *PAID ORDER ALERT — INDIMA SPICE CO.* 🌿\n\n*Order ID:* ${ord.id}\n*Customer:* ${ord.customer_name} (+91 ${ord.customer_phone})\n*Amount:* ₹${ord.total_amount} (${ord.payment_status || 'Paid'})\n*Status:* ${getAuthoritativeOrderStatus(ord)}\n*Items:* ${ord.items?.map((i) => `${i.name_en} (${i.quantity})`).join(', ')}\n*Address:* ${ord.address_snapshot?.city || ''}, ${ord.address_snapshot?.state || ''} - ${ord.address_snapshot?.pincode || ''}`
                                 )}`}
                                 target="_blank"
                                 rel="noreferrer"
@@ -2005,7 +2010,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
                               <button
                                 onClick={() => {
                                   setEditingOrder(ord);
-                                  setNewOrderStatus(ord.order_status || ord.status);
+                                  setNewOrderStatus(getAuthoritativeOrderStatus(ord) as OrderStatus);
                                   setNewTrackingNumber(ord.tracking_number || ord.tracking?.tracking_number || '');
                                   setNewCarrier(ord.carrier || ord.tracking?.carrier || 'Delhivery');
                                   setNewExpectedDelivery(ord.expected_delivery || ord.tracking?.expected_delivery || '');
@@ -3010,7 +3015,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
                 </button>
                 <a
                   href={`https://wa.me/${(settings?.admin_whatsapp_number || settings?.whatsapp_number || '919845012345').replace(/\D/g, '')}?text=${encodeURIComponent(
-                    `🌿 *PAID ORDER ALERT — INDIMA SPICE CO.* 🌿\n\n*Order ID:* ${editingOrder.id}\n*Customer:* ${editingOrder.customer_name} (+91 ${editingOrder.customer_phone})\n*Amount Paid:* ₹${editingOrder.total_amount} ✅ (${editingOrder.payment_status || 'Paid'})\n*Status:* ${editingOrder.order_status || editingOrder.status}\n*Items:* ${editingOrder.items?.map((i) => `${i.name_en} (${i.quantity})`).join(', ')}\n*Address:* ${editingOrder.address_snapshot?.houseFlat || ''}, ${editingOrder.address_snapshot?.street || ''}, ${editingOrder.address_snapshot?.city || ''}, ${editingOrder.address_snapshot?.state || ''} - ${editingOrder.address_snapshot?.pincode || ''}`
+                    `🌿 *PAID ORDER ALERT — INDIMA SPICE CO.* 🌿\n\n*Order ID:* ${editingOrder.id}\n*Customer:* ${editingOrder.customer_name} (+91 ${editingOrder.customer_phone})\n*Amount Paid:* ₹${editingOrder.total_amount} ✅ (${editingOrder.payment_status || 'Paid'})\n*Status:* ${getAuthoritativeOrderStatus(editingOrder)}\n*Items:* ${editingOrder.items?.map((i) => `${i.name_en} (${i.quantity})`).join(', ')}\n*Address:* ${editingOrder.address_snapshot?.houseFlat || ''}, ${editingOrder.address_snapshot?.street || ''}, ${editingOrder.address_snapshot?.city || ''}, ${editingOrder.address_snapshot?.state || ''} - ${editingOrder.address_snapshot?.pincode || ''}`
                   )}`}
                   target="_blank"
                   rel="noreferrer"

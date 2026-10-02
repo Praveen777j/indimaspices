@@ -3,6 +3,8 @@ import { Package, Truck, ArrowRight, X, Clock, CheckCircle2, AlertCircle } from 
 import { Order } from '../types';
 import { api } from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
+import { safeStorage } from '../utils/safeStorage';
+import { getAuthoritativeOrderStatus, isOrderActive } from '../utils/orderStatus';
 
 interface WelcomeBackOrderCardProps {
   onTrackOrder: (orderId: string) => void;
@@ -23,7 +25,7 @@ export const WelcomeBackOrderCard: React.FC<WelcomeBackOrderCardProps> = ({ onTr
       try {
         if (typeof window === 'undefined') return;
 
-        const rawStored = localStorage.getItem('indima_order_tokens');
+        const rawStored = safeStorage.getItem('indima_order_tokens');
         if (!rawStored) {
           if (isMounted) setLoading(false);
           return;
@@ -70,10 +72,13 @@ export const WelcomeBackOrderCard: React.FC<WelcomeBackOrderCardProps> = ({ onTr
         const results = await Promise.all(fetchPromises);
         const validOrders = results.filter((o): o is Order => Boolean(o));
 
+        // Filter out completed, delivered, and cancelled orders so ONLY active orders appear
+        const activeOrders = validOrders.filter(isOrderActive);
+
         // Deduplicate by order id
         const deduplicated: Order[] = [];
         const seenIds = new Set<string>();
-        for (const ord of validOrders) {
+        for (const ord of activeOrders) {
           const key = ord.id || ord.internal_order_id;
           if (key && !seenIds.has(key)) {
             seenIds.add(key);
@@ -107,7 +112,10 @@ export const WelcomeBackOrderCard: React.FC<WelcomeBackOrderCardProps> = ({ onTr
     };
   }, []);
 
-  if (dismissed || loading || orders.length === 0) {
+  // Compute strictly active orders (excludes Delivered, Cancelled, and Payment Failed)
+  const activeOrders = orders.filter(isOrderActive);
+
+  if (dismissed || loading || activeOrders.length === 0) {
     return null;
   }
 
@@ -158,11 +166,11 @@ export const WelcomeBackOrderCard: React.FC<WelcomeBackOrderCardProps> = ({ onTr
     );
   };
 
-  // Case 1: Single previous order
-  if (orders.length === 1) {
-    const order = orders[0];
+  // Case 1: Single previous active order
+  if (activeOrders.length === 1) {
+    const order = activeOrders[0];
     const displayId = order.internal_order_id || order.id;
-    const rawStatus = order.tracking?.status || order.order_status || order.status || 'placed';
+    const rawStatus = getAuthoritativeOrderStatus(order);
     const expectedDelivery = order.tracking?.expected_delivery || order.expected_delivery;
     const formattedDate = order.created_at || (order as any).order_date
       ? new Date(order.created_at || (order as any).order_date).toLocaleDateString('en-IN', {
@@ -245,7 +253,7 @@ export const WelcomeBackOrderCard: React.FC<WelcomeBackOrderCardProps> = ({ onTr
     );
   }
 
-  // Case 2: Multiple previous orders
+  // Case 2: Multiple previous active orders
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
       <div className="relative bg-[#FFFDF9] border border-[#DFC7A2] rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-sm overflow-hidden">
@@ -277,11 +285,11 @@ export const WelcomeBackOrderCard: React.FC<WelcomeBackOrderCardProps> = ({ onTr
           </p>
         </div>
 
-        {/* List of Previous Orders */}
+        {/* List of Previous Active Orders */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {orders.map(order => {
+          {activeOrders.map(order => {
             const displayId = order.internal_order_id || order.id;
-            const rawStatus = order.tracking?.status || order.order_status || order.status || 'placed';
+            const rawStatus = getAuthoritativeOrderStatus(order);
             const expectedDelivery = order.tracking?.expected_delivery || order.expected_delivery;
             const formattedDate = order.created_at || (order as any).order_date
               ? new Date(order.created_at || (order as any).order_date).toLocaleDateString('en-IN', {
@@ -334,4 +342,5 @@ export const WelcomeBackOrderCard: React.FC<WelcomeBackOrderCardProps> = ({ onTr
       </div>
     </section>
   );
+
 };

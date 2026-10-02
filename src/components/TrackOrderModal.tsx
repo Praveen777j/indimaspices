@@ -21,6 +21,8 @@ import { Order, OrderStatus } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { api } from '../services/api';
 import { getVerifiedTrackingUrl, getCarrierDisplayName } from '../utils/carrierTracking';
+import { safeStorage } from '../utils/safeStorage';
+import { getAuthoritativeOrderStatus } from '../utils/orderStatus';
 
 interface TrackOrderModalProps {
   isOpen: boolean;
@@ -57,7 +59,7 @@ export const TrackOrderModal: React.FC<TrackOrderModalProps> = ({
       setOrderId(initialOrderId);
       // Look for saved token in localStorage
       try {
-        const stored = JSON.parse(localStorage.getItem('indima_order_tokens') || '{}');
+        const stored = JSON.parse(safeStorage.getItem('indima_order_tokens') || '{}');
         if (stored[initialOrderId]) {
           savedToken = stored[initialOrderId];
           setManualToken(savedToken);
@@ -152,7 +154,7 @@ export const TrackOrderModal: React.FC<TrackOrderModalProps> = ({
       let token = manualToken;
       if (!token) {
         try {
-          const stored = JSON.parse(localStorage.getItem('indima_order_tokens') || '{}');
+          const stored = JSON.parse(safeStorage.getItem('indima_order_tokens') || '{}');
           token = stored[selectedOrder.id] || stored[(selectedOrder as any).internal_order_id] || '';
         } catch (_) {}
       }
@@ -245,7 +247,7 @@ export const TrackOrderModal: React.FC<TrackOrderModalProps> = ({
   };
 
   const currentStatusRaw = selectedOrder
-    ? (selectedOrder.tracking?.status || selectedOrder.order_status || selectedOrder.status || 'placed')
+    ? getAuthoritativeOrderStatus(selectedOrder)
     : '';
 
   const currentStepIdx = getStepIndex(currentStatusRaw, selectedOrder?.payment_status);

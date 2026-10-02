@@ -12,6 +12,7 @@ import {
   Lead,
   OrderNotification
 } from '../types';
+import { syncOrderStatus } from '../utils/orderStatus';
 
 async function safeFetchJson<T>(url: string, options?: RequestInit, fallback?: T): Promise<T> {
   try {
@@ -707,5 +708,10 @@ export const api = {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` }
     }, { success: false, error: 'Failed to send WhatsApp alert' });
-  }
+  },
+
+  syncOrderStatus: (order: any, targetStatus?: any) => syncOrderStatus(order, targetStatus)
 };
+
+export { syncOrderStatus, getAuthoritativeOrderStatus, isOrderActive } from '../utils/orderStatus';
+

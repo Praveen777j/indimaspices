@@ -23,6 +23,7 @@ import {
 import { validateMediaContent } from './server/mediaValidator';
 import { lookupPincode } from './src/data/indiaLocations';
 import { Order, Address, OrderItem, OrderNotification, BusinessSettings } from './src/types';
+import { syncOrderStatus, getAuthoritativeOrderStatus } from './src/utils/orderStatus';
 import {
   validateSecurityConfiguration,
   getSessionSecret,
@@ -1083,11 +1084,13 @@ app.get('/api/orders/track', orderTrackLimiter, async (req: Request, res: Respon
       order = await db.findOrFetchOrder(searchOrderId);
     }
     if (order && verifyOrderAccessToken(order, providedToken)) {
+      const authoritativeStatus = getAuthoritativeOrderStatus(order);
+      syncOrderStatus(order, authoritativeStatus);
       const sanitizedOrder = {
         id: order.id,
         internal_order_id: order.internal_order_id,
-        status: order.status,
-        order_status: order.order_status || order.status,
+        status: authoritativeStatus,
+        order_status: authoritativeStatus,
         payment_status: order.payment_status,
         payment_method: order.payment_method,
         items: (order.items || []).map(item => ({
@@ -1111,7 +1114,7 @@ app.get('/api/orders/track', orderTrackLimiter, async (req: Request, res: Respon
         tracking: order.tracking ? {
           carrier: order.tracking.carrier || order.carrier,
           tracking_number: order.tracking.tracking_number || order.tracking_number,
-          status: order.tracking.status || order.order_status || order.status,
+          status: authoritativeStatus,
           expected_delivery: order.tracking.expected_delivery || order.expected_delivery,
           latitude: order.tracking.latitude,
           longitude: order.tracking.longitude,
@@ -1122,10 +1125,11 @@ app.get('/api/orders/track', orderTrackLimiter, async (req: Request, res: Respon
           carrier: order.carrier,
           tracking_number: order.tracking_number,
           expected_delivery: order.expected_delivery,
-          status: order.order_status || order.status
+          status: authoritativeStatus
         } : undefined),
         created_at: order.created_at,
         order_date: order.order_date,
+        updated_at: order.updated_at,
         address_snapshot: order.address_snapshot ? {
           fullName: order.address_snapshot.fullName,
           city: order.address_snapshot.city,
@@ -1150,19 +1154,23 @@ app.get('/api/orders/track', orderTrackLimiter, async (req: Request, res: Respon
 });
 
 // 10b. Get Single Order by ID (Protected by Admin Auth or Server-Issued Order Access Token)
-app.get('/api/orders/:id', orderTrackLimiter, (req: Request, res: Response) => {
+app.get('/api/orders/:id', orderTrackLimiter, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const authHeader = req.headers.authorization;
     const hasAdminSession = Boolean(authHeader && authHeader.startsWith('Bearer ') && validateAdminToken(authHeader.split(' ')[1]));
 
-    const order = db.getOrderById(id);
+    let order = db.getOrderById(id);
+    if (!order) {
+      order = await db.findOrFetchOrder(id);
+    }
     if (!order) {
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    // Admin session: Return full order
+    // Admin session: Return full order with synchronized status
     if (hasAdminSession) {
+      syncOrderStatus(order);
       return res.json({ success: true, order });
     }
 
@@ -1183,11 +1191,13 @@ app.get('/api/orders/:id', orderTrackLimiter, (req: Request, res: Response) => {
     }
 
     // Verified customer access: Return explicitly sanitized order data with strict data minimization
+    const authoritativeStatus = getAuthoritativeOrderStatus(order);
+    syncOrderStatus(order, authoritativeStatus);
     const sanitizedOrder = {
       id: order.id,
       internal_order_id: order.internal_order_id,
-      status: order.status,
-      order_status: order.order_status || order.status,
+      status: authoritativeStatus,
+      order_status: authoritativeStatus,
       payment_status: order.payment_status,
       payment_method: order.payment_method,
       items: (order.items || []).map(item => ({
@@ -1211,7 +1221,7 @@ app.get('/api/orders/:id', orderTrackLimiter, (req: Request, res: Response) => {
       tracking: order.tracking ? {
         carrier: order.tracking.carrier || order.carrier,
         tracking_number: order.tracking.tracking_number || order.tracking_number,
-        status: order.tracking.status || order.order_status || order.status,
+        status: authoritativeStatus,
         expected_delivery: order.tracking.expected_delivery || order.expected_delivery,
         latitude: order.tracking.latitude,
         longitude: order.tracking.longitude,
@@ -1222,10 +1232,11 @@ app.get('/api/orders/:id', orderTrackLimiter, (req: Request, res: Response) => {
         carrier: order.carrier,
         tracking_number: order.tracking_number,
         expected_delivery: order.expected_delivery,
-        status: order.order_status || order.status
+        status: authoritativeStatus
       } : undefined),
       created_at: order.created_at,
       order_date: order.order_date,
+      updated_at: order.updated_at,
       address_snapshot: order.address_snapshot ? {
         fullName: order.address_snapshot.fullName,
         city: order.address_snapshot.city,
@@ -2744,6 +2755,22 @@ app.put('/api/admin/orders/:id/status', adminAuthMiddleware, async (req: Request
     }
 
     const session = (req as any).adminSession;
+
+    // Fetch existing order and synchronize status fields before persisting to Firestore
+    let order = db.getOrderById(id);
+    if (!order) {
+      order = await db.findOrFetchOrder(id);
+    }
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    if (status) {
+      syncOrderStatus(order, status.trim());
+    } else {
+      syncOrderStatus(order);
+    }
+
     const updated = await db.updateOrderStatus(
       id,
       status ? status.trim() : undefined,
@@ -2763,11 +2790,15 @@ app.put('/api/admin/orders/:id/status', adminAuthMiddleware, async (req: Request
     if (!updated) {
       return res.status(404).json({ error: 'Order not found' });
     }
+
+    // Ensure the updated order object returned to the frontend is consistent and contains the synchronized status
+    syncOrderStatus(updated);
     res.json({ success: true, order: updated });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 // Admin Dedicated Location Update
 app.put('/api/admin/orders/:id/location', adminAuthMiddleware, async (req: Request, res: Response) => {
