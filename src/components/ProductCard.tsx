@@ -53,6 +53,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
   const isOutOfStock = (product.stock || 0) <= 0;
   const isLowStock = (product.stock || 0) > 0 && product.stock <= (product.low_stock_threshold || 10);
   const productImage = (Array.isArray(product.images) && product.images[0]) ? product.images[0] : '/indima-logo.svg';
+  const productName = (isKn && product.name_kn ? product.name_kn : (product.name_en || (product as any).name)) || product.name_en || (product as any).name || product.name_kn || 'Spice Blend';
 
   return (
     <div
@@ -66,8 +67,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
       >
         <img
           src={productImage}
-          alt={isKn ? product.name_kn : product.name_en}
+          alt={`Indima Spice Co. ${productName}`}
+          title={`Indima Spice Co. ${productName}`}
           loading="lazy"
+          width={400}
+          height={300}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           onError={(e) => {
             const target = e.target as HTMLImageElement;

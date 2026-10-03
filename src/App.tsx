@@ -33,6 +33,14 @@ import { AdminDashboard } from './views/admin/AdminDashboard';
 import { api } from './services/api';
 import { Product, Category, Banner, Recipe, Offer, Review, BusinessSettings, Order } from './types';
 import { useDynamicSeo } from './utils/useDynamicSeo';
+import {
+  getProductSlug,
+  getCategorySlug,
+  getRecipeSlug,
+  findProductBySlugOrId,
+  findCategoryBySlugOrId,
+  findRecipeBySlugOrId
+} from './utils/slug';
 import { Sparkles, SlidersHorizontal, Search, RefreshCw, ShoppingBag, ArrowRight } from 'lucide-react';
 
 const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToAdmin }) => {
@@ -57,6 +65,7 @@ const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToA
 
   // Modals
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const [isTrackOrderOpen, setIsTrackOrderOpen] = useState(false);
@@ -72,29 +81,40 @@ const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToA
   useDynamicSeo({
     product: selectedProduct,
     category: activeCategory,
+    recipe: selectedRecipe,
     settings,
     locale: language
   });
 
-  // Sync URL search params when viewing specific product or category for social sharing & bookmarking
+  // Sync URL when viewing specific product, category, or recipe for social sharing, bookmarking & SEO
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const url = new URL(window.location.href);
 
     if (selectedProduct) {
-      url.searchParams.set('product', selectedProduct.id);
+      const slug = getProductSlug(selectedProduct);
+      const targetUrl = `/products/${slug}`;
+      if (window.location.pathname !== targetUrl) {
+        window.history.replaceState({}, '', targetUrl);
+      }
+    } else if (selectedCategoryId && activeCategory) {
+      const slug = getCategorySlug(activeCategory);
+      const targetUrl = `/categories/${slug}`;
+      if (window.location.pathname !== targetUrl) {
+        window.history.replaceState({}, '', targetUrl);
+      }
+    } else if (selectedRecipe) {
+      const slug = getRecipeSlug(selectedRecipe);
+      const targetUrl = `/recipes/${slug}`;
+      if (window.location.pathname !== targetUrl) {
+        window.history.replaceState({}, '', targetUrl);
+      }
     } else {
-      url.searchParams.delete('product');
+      const pathname = window.location.pathname;
+      if (pathname.startsWith('/products/') || pathname.startsWith('/categories/') || pathname.startsWith('/recipes/')) {
+        window.history.replaceState({}, '', '/');
+      }
     }
-
-    if (selectedCategoryId) {
-      url.searchParams.set('category', selectedCategoryId);
-    } else {
-      url.searchParams.delete('category');
-    }
-
-    window.history.replaceState({}, '', url.toString());
-  }, [selectedProduct, selectedCategoryId]);
+  }, [selectedProduct, selectedCategoryId, activeCategory, selectedRecipe]);
 
   // Initial Data Fetch & Deep Link Resolution
   const fetchData = async () => {
@@ -112,32 +132,60 @@ const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToA
 
       const loadedProds = prods || [];
       const loadedCats = cats || [];
+      const loadedRecs = recs || [];
 
       setProducts(loadedProds);
       setCategories(loadedCats);
       setBanners(bans || []);
-      setRecipes(recs || []);
+      setRecipes(loadedRecs);
       setOffers(offs || []);
       setReviews(revs || []);
       setSettings(sets || null);
 
-      // Deep link resolution from URL query params (e.g. ?product=prod_123 or ?category=cat_456)
+      // Deep link resolution from URL pathname (/products/:slug, /categories/:slug, /recipes/:slug) or query params
       if (typeof window !== 'undefined') {
+        const pathname = window.location.pathname;
         const urlParams = new URLSearchParams(window.location.search);
-        const prodParam = urlParams.get('product');
-        const catParam = urlParams.get('category');
 
-        if (prodParam) {
-          const matchedProd = loadedProds.find(p => p.id === prodParam || p.sku === prodParam);
+        let prodSlugOrId = urlParams.get('product');
+        let catSlugOrId = urlParams.get('category');
+        let recSlugOrId = urlParams.get('recipe');
+
+        if (pathname.startsWith('/products/')) {
+          prodSlugOrId = decodeURIComponent(pathname.replace('/products/', '').split('/')[0].trim());
+        } else if (pathname.startsWith('/product/')) {
+          prodSlugOrId = decodeURIComponent(pathname.replace('/product/', '').split('/')[0].trim());
+        } else if (pathname.startsWith('/categories/')) {
+          catSlugOrId = decodeURIComponent(pathname.replace('/categories/', '').split('/')[0].trim());
+        } else if (pathname.startsWith('/category/')) {
+          catSlugOrId = decodeURIComponent(pathname.replace('/category/', '').split('/')[0].trim());
+        } else if (pathname.startsWith('/recipes/')) {
+          recSlugOrId = decodeURIComponent(pathname.replace('/recipes/', '').split('/')[0].trim());
+        } else if (pathname.startsWith('/recipe/')) {
+          recSlugOrId = decodeURIComponent(pathname.replace('/recipe/', '').split('/')[0].trim());
+        } else if (pathname === '/recipes') {
+          setTimeout(() => scrollToSection('recipes-section'), 150);
+        }
+
+        if (prodSlugOrId) {
+          const matchedProd = findProductBySlugOrId(prodSlugOrId, loadedProds);
           if (matchedProd) {
             setSelectedProduct(matchedProd);
           }
         }
 
-        if (catParam) {
-          const matchedCat = loadedCats.find(c => c.id === catParam);
+        if (catSlugOrId) {
+          const matchedCat = findCategoryBySlugOrId(catSlugOrId, loadedCats);
           if (matchedCat) {
             setSelectedCategoryId(matchedCat.id);
+          }
+        }
+
+        if (recSlugOrId) {
+          const matchedRec = findRecipeBySlugOrId(recSlugOrId, loadedRecs);
+          if (matchedRec) {
+            setSelectedRecipe(matchedRec);
+            setTimeout(() => scrollToSection('recipes-section'), 200);
           }
         }
       }
@@ -368,6 +416,8 @@ const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToA
           recipes={recipes}
           products={products}
           onOpenProduct={setSelectedProduct}
+          selectedRecipe={selectedRecipe}
+          onSelectRecipe={setSelectedRecipe}
         />
 
         {/* Health & Ayurvedic Wisdom */}

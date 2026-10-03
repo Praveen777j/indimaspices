@@ -22,8 +22,18 @@ import {
 } from './server/cloudinary';
 import { validateMediaContent } from './server/mediaValidator';
 import { lookupPincode } from './src/data/indiaLocations';
-import { Order, Address, OrderItem, OrderNotification, BusinessSettings } from './src/types';
+import { Product, Category, Recipe, Order, Address, OrderItem, OrderNotification, BusinessSettings } from './src/types';
 import { syncOrderStatus, getAuthoritativeOrderStatus } from './src/utils/orderStatus';
+import { buildSitemapXml } from './src/utils/sitemapGenerator';
+import {
+  createSlug,
+  getProductSlug,
+  getCategorySlug,
+  getRecipeSlug,
+  findProductBySlugOrId,
+  findCategoryBySlugOrId,
+  findRecipeBySlugOrId
+} from './src/utils/slug';
 import {
   validateSecurityConfiguration,
   getSessionSecret,
@@ -3503,50 +3513,177 @@ app.get('/api/backup/download', adminAuthMiddleware, (req: Request, res: Respons
 // DYNAMIC SITEMAP & TECHNICAL SEO
 // ----------------------------------------------------
 
-app.get('/sitemap.xml', (req: Request, res: Response) => {
+// ----------------------------------------------------
+// DYNAMIC SITEMAP, ROBOTS.TXT & TECHNICAL SEO
+// ----------------------------------------------------
+
+const CANONICAL_ORIGIN = 'https://indima-spices-co.onrender.com';
+
+const DEFAULT_SEO_TITLE = 'Indima Spice Co. | Authentic Homemade Spices & Masalas';
+const DEFAULT_SEO_DESC =
+  'Indima Spice Co. brings authentic homemade Indian spices and masalas crafted with traditional flavours, quality ingredients and the rich heritage of Karnataka.';
+
+function render404Html(message: string): string {
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Page Not Found | Indima Spice Co.</title>
+    <meta name="description" content="The requested page or spice product could not be found on Indima Spice Co." />
+    <meta name="robots" content="noindex, follow" />
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <style>
+      body { font-family: system-ui, -apple-system, sans-serif; background: #FAF6EE; color: #2C1810; margin: 0; padding: 40px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80vh; text-align: center; }
+      .card { background: #FFFDF9; border: 1px solid #DFC7A2; border-radius: 24px; padding: 40px 30px; max-width: 500px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+      h1 { font-family: serif; font-size: 26px; margin: 0 0 12px; color: #993300; }
+      p { color: #665; line-height: 1.6; margin: 0 0 24px; font-size: 15px; }
+      a { display: inline-block; background: #993300; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 12px; font-weight: bold; font-size: 14px; }
+      a:hover { background: #7A1F1D; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>${message}</h1>
+      <p>The product or page you are looking for may have been moved, renamed, or is currently unavailable in our store.</p>
+      <a href="/">Return to Spice Collection</a>
+    </div>
+  </body>
+</html>`;
+}
+
+app.get('/robots.txt', (_req: Request, res: Response) => {
+  const content = `# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+Allow: /products/
+Allow: /categories/
+Allow: /recipes/
+Allow: /recipes
+Allow: /about
+Allow: /contact
+Allow: /assets/
+Allow: /uploads/
+
+# Disallow private, administrative, and user-session routes
+Disallow: /admin
+Disallow: /admin/
+Disallow: /api/
+Disallow: /checkout
+Disallow: /checkout/
+Disallow: /cart
+Disallow: /cart/
+Disallow: /account
+Disallow: /account/
+Disallow: /order-tracking
+Disallow: /order-tracking/
+Disallow: /tracking
+Disallow: /tracking/
+Disallow: /track
+Disallow: /track/
+Disallow: /wishlist
+Disallow: /wishlist/
+
+# Sitemap location
+Sitemap: ${CANONICAL_ORIGIN}/sitemap.xml
+`;
+  res.header('Content-Type', 'text/plain; charset=utf-8');
+  res.send(content);
+});
+
+/**
+ * Fetches all active products, categories, and recipes directly from Firestore collections.
+ * Falls back to authoritative local store if Firestore is empty or unavailable.
+ */
+async function fetchSitemapEntitiesFromFirestore(): Promise<{
+  products: Product[];
+  categories: Category[];
+  recipes: Recipe[];
+}> {
+  let products: Product[] = [];
+  let categories: Category[] = [];
+  let recipes: Recipe[] = [];
+
   try {
-    const rawHost = req.get('host');
-    const host = rawHost && isTrustedHost(rawHost) ? rawHost : 'indimaspice.com';
-    const protocol = req.protocol === 'https' || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
-    const baseUrl = `${protocol}://${host}`;
+    const firestore = await db.getFirestoreInstance();
+    if (firestore) {
+      const [prodSnap, catSnap, recSnap] = await Promise.all([
+        firestore.collection('products').get(),
+        firestore.collection('categories').get(),
+        firestore.collection('recipes').get()
+      ]);
 
-    const products = db.getProducts().filter(p => p.active !== false);
-    const categories = db.getCategories();
-    const today = new Date().toISOString().split('T')[0];
+      if (!prodSnap.empty) {
+        prodSnap.forEach(docSnap => {
+          const item = docSnap.data() as Product;
+          if (item && item.active !== false) {
+            products.push({ ...item, id: docSnap.id || item.id });
+          }
+        });
+      }
 
-    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-    xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n`;
+      if (!catSnap.empty) {
+        catSnap.forEach(docSnap => {
+          const item = docSnap.data() as Category;
+          if (item && item.enabled !== false) {
+            categories.push({ ...item, id: docSnap.id || item.id });
+          }
+        });
+      }
 
-    // 1. Homepage & Sections
-    xml += `  <url>\n    <loc>${baseUrl}/</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>1.0</priority>\n    <image:image>\n      <image:loc>${baseUrl}/indima-brand-logo.jpg</image:loc>\n      <image:title>Indima Spice Co. Authentic Stone-Ground Spices</image:title>\n      <image:caption>Traditional Karnataka pure spice powders and masalas.</image:caption>\n    </image:image>\n  </url>\n`;
-
-    // 2. Main Sections
-    const sections = ['#products', '#recipes', '#heritage', '#wisdom', '#reviews', '#contact'];
-    for (const sec of sections) {
-      xml += `  <url>\n    <loc>${baseUrl}/${sec}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
+      if (!recSnap.empty) {
+        recSnap.forEach(docSnap => {
+          const item = docSnap.data() as Recipe;
+          if (item && item.active !== false) {
+            recipes.push({ ...item, id: docSnap.id || item.id });
+          }
+        });
+      }
     }
-
-    // 3. Categories
-    for (const cat of categories) {
-      xml += `  <url>\n    <loc>${baseUrl}/?category=${encodeURIComponent(cat.id)}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.9</priority>\n  </url>\n`;
-    }
-
-    // 4. Products with high SEO priority and image metadata
-    for (const prod of products) {
-      const prodImage = (prod.images && prod.images.length > 0 ? prod.images[0] : (prod as any).image) || '/indima-brand-logo.jpg';
-      const absoluteImage = prodImage.startsWith('http') ? prodImage : `${baseUrl}${prodImage.startsWith('/') ? '' : '/'}${prodImage}`;
-      const safeTitle = (prod.name_en || 'Pure Spice').replace(/[<>&'"]/g, '');
-      const safeDesc = (prod.description_en || 'Pure stone ground spices').replace(/[<>&'"]/g, '');
-
-      xml += `  <url>\n    <loc>${baseUrl}/?product=${encodeURIComponent(prod.id)}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>0.95</priority>\n    <image:image>\n      <image:loc>${absoluteImage}</image:loc>\n      <image:title>${safeTitle}</image:title>\n      <image:caption>${safeDesc}</image:caption>\n    </image:image>\n  </url>\n`;
-    }
-
-    xml += `</urlset>`;
-
-    res.header('Content-Type', 'application/xml');
-    res.send(xml);
   } catch (err: any) {
-    res.status(500).send('Error generating sitemap');
+    console.warn('[Sitemap Route] Notice querying Firestore Admin directly:', err?.message || err);
+  }
+
+  // Resilient synchronization: Overlay live Firestore documents with authoritative catalog by ID
+  const productMap = new Map<string, Product>();
+  db.getProducts().filter(p => p.active !== false).forEach(p => productMap.set(p.id, p));
+  products.forEach(p => productMap.set(p.id, p));
+  const finalProducts = Array.from(productMap.values()).filter(p => p.active !== false);
+
+  const categoryMap = new Map<string, Category>();
+  db.getCategories().filter(c => c.enabled !== false).forEach(c => categoryMap.set(c.id, c));
+  categories.forEach(c => categoryMap.set(c.id, c));
+  const finalCategories = Array.from(categoryMap.values()).filter(c => c.enabled !== false);
+
+  const recipeMap = new Map<string, Recipe>();
+  db.getRecipes().filter(r => r.active !== false).forEach(r => recipeMap.set(r.id, r));
+  recipes.forEach(r => recipeMap.set(r.id, r));
+  const finalRecipes = Array.from(recipeMap.values()).filter(r => r.active !== false);
+
+  return {
+    products: finalProducts,
+    categories: finalCategories,
+    recipes: finalRecipes
+  };
+}
+
+app.get(['/sitemap.xml', '/api/sitemap.xml'], async (_req: Request, res: Response) => {
+  try {
+    const { products, categories, recipes } = await fetchSitemapEntitiesFromFirestore();
+
+    const xml = buildSitemapXml({
+      products,
+      categories,
+      recipes,
+      baseUrl: CANONICAL_ORIGIN
+    });
+
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=3600');
+    res.status(200).send(xml);
+  } catch (err: any) {
+    console.error('[Sitemap Error]:', err?.message || err);
+    res.status(500).setHeader('Content-Type', 'text/plain; charset=utf-8').send('Error generating sitemap');
   }
 });
 
@@ -3578,37 +3715,55 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 // DYNAMIC SEO & SOCIAL SHARING PREVIEW META INJECTOR
 // ----------------------------------------------------
 
-function injectDynamicHtmlMeta(html: string, req: Request): string {
+function injectDynamicHtmlMeta(html: string, req: Request): { html: string; status: number } {
   try {
-    const rawHost = req.get('host');
-    const host = rawHost && isTrustedHost(rawHost) ? rawHost : 'indimaspice.com';
-    const protocol = req.protocol === 'https' || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
-    const baseUrl = `${protocol}://${host}`;
-
-    // Extract query or path parameters
-    const productId = (req.query.product as string) || (req.path.startsWith('/product/') ? req.path.replace('/product/', '').trim() : null);
-    const categoryId = (req.query.category as string) || (req.path.startsWith('/category/') ? req.path.replace('/category/', '').trim() : null);
+    const rawPath = req.path || '/';
     const isKn = req.query.lang === 'kn';
 
-    if (productId) {
-      const products = db.getProducts();
-      const product = products.find(p => p.id === productId || p.sku === productId);
-      if (product) {
-        const name = isKn && product.name_kn ? product.name_kn : product.name_en;
-        const desc = ((isKn && product.description_kn ? product.description_kn : product.description_en) || '').replace(/"/g, '&quot;');
-        const title = `${name} (₹${product.price} / ${product.weight}) | Indima Spice Co.`;
-        const description = `Buy authentic ${name} online. ${desc.length > 150 ? desc.substring(0, 147) + '...' : desc} Stone-ground, 100% pure Karnataka spices with zero preservatives. Fast delivery across India.`;
-        let image = product.images?.[0] || '/indima-brand-logo.jpg';
-        if (image.startsWith('/')) image = `${baseUrl}${image}`;
-        const canonicalUrl = `${baseUrl}/?product=${encodeURIComponent(product.id)}`;
+    // 1. PRODUCT ROUTING: /products/:slug, /product/:slug, or ?product=:id
+    let productSlugOrId: string | null = null;
+    if (rawPath.startsWith('/products/')) {
+      productSlugOrId = decodeURIComponent(rawPath.replace('/products/', '').split('/')[0].trim());
+    } else if (rawPath.startsWith('/product/')) {
+      productSlugOrId = decodeURIComponent(rawPath.replace('/product/', '').split('/')[0].trim());
+    } else if (req.query.product && typeof req.query.product === 'string') {
+      productSlugOrId = req.query.product.trim();
+    }
 
-        const productJsonLd = {
+    if (productSlugOrId) {
+      const products = db.getProducts().filter(p => p.active !== false);
+      const product = findProductBySlugOrId(productSlugOrId, products);
+
+      // If invalid product slug was explicitly requested in the path, return HTTP 404
+      if (!product && (rawPath.startsWith('/products/') || rawPath.startsWith('/product/'))) {
+        return {
+          html: render404Html('Product Not Found'),
+          status: 404
+        };
+      }
+
+      if (product) {
+        const slug = getProductSlug(product);
+        const name = isKn && product.name_kn ? product.name_kn : product.name_en;
+        const rawDesc = ((isKn && product.description_kn ? product.description_kn : product.description_en) || '').replace(/"/g, '&quot;');
+        const cleanDesc = rawDesc.replace(/\s+/g, ' ').trim();
+        const shortDesc = cleanDesc.length > 150 ? cleanDesc.substring(0, 147) + '...' : cleanDesc;
+
+        const title = `${name} (₹${product.price} / ${product.weight}) | Indima Spice Co.`;
+        const description = `Buy authentic ${name} online. ${shortDesc} Traditional homemade Karnataka spices, 100% pure with zero preservatives. Fast pan-India shipping.`;
+
+        let image = product.images?.[0] || '/indima-brand-logo.jpg';
+        if (image.startsWith('/')) image = `${CANONICAL_ORIGIN}${image}`;
+        const canonicalUrl = `${CANONICAL_ORIGIN}/products/${slug}`;
+
+        // Schema.org Product JSON-LD (using REAL data only, no invented ratings)
+        const productJsonLd: any = {
           "@context": "https://schema.org",
           "@type": "Product",
-          "@id": canonicalUrl,
+          "@id": `${canonicalUrl}#product`,
           "name": product.name_en,
-          "alternateName": product.name_kn,
-          "description": product.description_en,
+          "alternateName": product.name_kn || undefined,
+          "description": product.description_en || cleanDesc,
           "image": [image],
           "sku": product.sku || product.id,
           "brand": {
@@ -3622,26 +3777,63 @@ function injectDynamicHtmlMeta(html: string, req: Request): string {
             "price": product.price,
             "priceValidUntil": "2027-12-31",
             "itemCondition": "https://schema.org/NewCondition",
-            "availability": product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+            "availability": (product.stock && product.stock > 0) ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
             "seller": {
               "@type": "Organization",
-              "name": "Indima Spice Co."
+              "name": "Indima Spice Co.",
+              "url": CANONICAL_ORIGIN
             }
-          },
-          "aggregateRating": {
+          }
+        };
+
+        if (product.category_id) {
+          productJsonLd.category = product.category_id;
+        }
+        if (product.weight) {
+          productJsonLd.weight = product.weight;
+        }
+
+        if (typeof product.rating === 'number' && product.rating > 0 && typeof product.review_count === 'number' && product.review_count > 0) {
+          productJsonLd.aggregateRating = {
             "@type": "AggregateRating",
-            "ratingValue": product.rating || 4.9,
-            "reviewCount": Math.max(product.review_count || 1, 15),
+            "ratingValue": product.rating,
+            "reviewCount": product.review_count,
             "bestRating": "5",
             "worstRating": "1"
-          }
+          };
+        }
+
+        // Schema.org BreadcrumbList JSON-LD
+        const breadcrumbJsonLd = {
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Home",
+              "item": `${CANONICAL_ORIGIN}/`
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Spices & Masalas",
+              "item": `${CANONICAL_ORIGIN}/#products`
+            },
+            {
+              "@type": "ListItem",
+              "position": 3,
+              "name": product.name_en,
+              "item": canonicalUrl
+            }
+          ]
         };
 
         let modifiedHtml = html;
         modifiedHtml = modifiedHtml.replace(/<title>.*?<\/title>/i, `<title>${title}</title>`);
         modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']description["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="description" content="${description}" />`);
         modifiedHtml = modifiedHtml.replace(/<link\s+rel=["']canonical["']\s+href=["'].*?["']\s*\/?>/i, `<link rel="canonical" href="${canonicalUrl}" />`);
-        
+
         modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:title["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:title" content="${title}" />`);
         modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:description["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:description" content="${description}" />`);
         modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:image["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:image" content="${image}" />`);
@@ -3652,20 +3844,65 @@ function injectDynamicHtmlMeta(html: string, req: Request): string {
         modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']twitter:description["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="twitter:description" content="${description}" />`);
         modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']twitter:image["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="twitter:image" content="${image}" />`);
 
-        modifiedHtml = modifiedHtml.replace('</head>', `  <script type="application/ld+json" id="ssr-product-jsonld">${JSON.stringify(productJsonLd)}</script>\n  </head>`);
-        return modifiedHtml;
+        modifiedHtml = modifiedHtml.replace(
+          '</head>',
+          `  <script type="application/ld+json" id="ssr-product-jsonld">${JSON.stringify(productJsonLd)}</script>\n  <script type="application/ld+json" id="ssr-breadcrumb-jsonld">${JSON.stringify(breadcrumbJsonLd)}</script>\n  </head>`
+        );
+
+        return { html: modifiedHtml, status: 200 };
       }
-    } else if (categoryId) {
+    }
+
+    // 2. CATEGORY ROUTING: /categories/:slug, /category/:slug, or ?category=:id
+    let categorySlugOrId: string | null = null;
+    if (rawPath.startsWith('/categories/')) {
+      categorySlugOrId = decodeURIComponent(rawPath.replace('/categories/', '').split('/')[0].trim());
+    } else if (rawPath.startsWith('/category/')) {
+      categorySlugOrId = decodeURIComponent(rawPath.replace('/category/', '').split('/')[0].trim());
+    } else if (req.query.category && typeof req.query.category === 'string') {
+      categorySlugOrId = req.query.category.trim();
+    }
+
+    if (categorySlugOrId) {
       const categories = db.getCategories();
-      const cat = categories.find(c => c.id === categoryId);
+      const cat = findCategoryBySlugOrId(categorySlugOrId, categories);
+
+      // If invalid category slug was explicitly requested in the path, return HTTP 404
+      if (!cat && (rawPath.startsWith('/categories/') || rawPath.startsWith('/category/'))) {
+        return {
+          html: render404Html('Category Not Found'),
+          status: 404
+        };
+      }
+
       if (cat) {
+        const slug = getCategorySlug(cat);
         const name = isKn && cat.name_kn ? cat.name_kn : cat.name_en;
         const desc = ((isKn && cat.description_kn ? cat.description_kn : cat.description_en) || '').replace(/"/g, '&quot;');
-        const title = `${name} Spice Range | Authentic Stone-Ground Spices | Indima Spice Co.`;
-        const description = `Explore authentic ${name} collection from Indima Spice Co. ${desc} Handcrafted in Karnataka with zero preservatives.`;
+        const title = `${name} Spice Range | Authentic Homemade Spices | Indima Spice Co.`;
+        const description = `Explore authentic homemade ${name} collection from Indima Spice Co. ${desc} Handcrafted in Karnataka with traditional flavours.`;
         let image = cat.image || '/indima-brand-logo.jpg';
-        if (image.startsWith('/')) image = `${baseUrl}${image}`;
-        const canonicalUrl = `${baseUrl}/?category=${encodeURIComponent(cat.id)}`;
+        if (image.startsWith('/')) image = `${CANONICAL_ORIGIN}${image}`;
+        const canonicalUrl = `${CANONICAL_ORIGIN}/categories/${slug}`;
+
+        const breadcrumbJsonLd = {
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Home",
+              "item": `${CANONICAL_ORIGIN}/`
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": cat.name_en,
+              "item": canonicalUrl
+            }
+          ]
+        };
 
         let modifiedHtml = html;
         modifiedHtml = modifiedHtml.replace(/<title>.*?<\/title>/i, `<title>${title}</title>`);
@@ -3678,14 +3915,220 @@ function injectDynamicHtmlMeta(html: string, req: Request): string {
         modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']twitter:title["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="twitter:title" content="${title}" />`);
         modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']twitter:description["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="twitter:description" content="${description}" />`);
         modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']twitter:image["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="twitter:image" content="${image}" />`);
-        return modifiedHtml;
+
+        modifiedHtml = modifiedHtml.replace(
+          '</head>',
+          `  <script type="application/ld+json" id="ssr-breadcrumb-jsonld">${JSON.stringify(breadcrumbJsonLd)}</script>\n  </head>`
+        );
+
+        return { html: modifiedHtml, status: 200 };
       }
+    }
+
+    // 3. RECIPE SPECIFIC ROUTING: /recipes/:slug, /recipe/:slug, or ?recipe=:id
+    let recipeSlugOrId: string | null = null;
+    if (rawPath.startsWith('/recipes/') && rawPath !== '/recipes') {
+      recipeSlugOrId = decodeURIComponent(rawPath.replace('/recipes/', '').split('/')[0].trim());
+    } else if (rawPath.startsWith('/recipe/')) {
+      recipeSlugOrId = decodeURIComponent(rawPath.replace('/recipe/', '').split('/')[0].trim());
+    } else if (req.query.recipe && typeof req.query.recipe === 'string') {
+      recipeSlugOrId = req.query.recipe.trim();
+    }
+
+    if (recipeSlugOrId) {
+      const recipes = db.getRecipes().filter(r => r.active !== false);
+      const rec = findRecipeBySlugOrId(recipeSlugOrId, recipes);
+
+      // If invalid recipe slug was explicitly requested in the path, return HTTP 404
+      if (!rec && (rawPath.startsWith('/recipes/') || rawPath.startsWith('/recipe/'))) {
+        return {
+          html: render404Html('Recipe Not Found'),
+          status: 404
+        };
+      }
+
+      if (rec) {
+        const slug = getRecipeSlug(rec);
+        const titleName = isKn && rec.title_kn ? rec.title_kn : rec.title_en;
+        const rawDesc = (((isKn && rec.description_kn ? rec.description_kn : rec.description_en) || '') as string).replace(/"/g, '&quot;');
+        const cleanDesc = rawDesc.replace(/\s+/g, ' ').trim();
+        const shortDesc = cleanDesc.length > 150 ? cleanDesc.substring(0, 147) + '...' : cleanDesc;
+
+        const title = `${titleName} Recipe | Karnataka Heritage | Indima Spice Co.`;
+        const description = `Cook authentic ${titleName} at home with pure Indima spices. ${shortDesc} Traditional recipe. Prep time: ${rec.prep_time || '25 mins'}.`;
+
+        let image = rec.image || '/indima-brand-logo.jpg';
+        if (image.startsWith('/')) image = `${CANONICAL_ORIGIN}${image}`;
+        const canonicalUrl = `${CANONICAL_ORIGIN}/recipes/${slug}`;
+
+        const rawIngredients = isKn
+          ? (rec.ingredients_kn && rec.ingredients_kn.length > 0 ? rec.ingredients_kn : rec.ingredients_en)
+          : (rec.ingredients_en && rec.ingredients_en.length > 0 ? rec.ingredients_en : rec.ingredients_kn);
+        const ingredients = Array.isArray(rawIngredients) ? rawIngredients : [];
+
+        const rawInstructions = isKn
+          ? (rec.instructions_kn && rec.instructions_kn.length > 0 ? rec.instructions_kn : rec.instructions_en)
+          : (rec.instructions_en && rec.instructions_en.length > 0 ? rec.instructions_en : rec.instructions_kn);
+        const instructions = Array.isArray(rawInstructions) ? rawInstructions : [];
+
+        const parseDurationIso = (timeStr?: string) => {
+          if (!timeStr) return undefined;
+          const match = timeStr.match(/(\d+)/);
+          if (match) return `PT${match[1]}M`;
+          return undefined;
+        };
+
+        const recipeJsonLd: any = {
+          "@context": "https://schema.org",
+          "@type": "Recipe",
+          "@id": `${canonicalUrl}#recipe`,
+          "name": rec.title_en,
+          "headline": titleName,
+          "description": rec.description_en || cleanDesc,
+          "image": [image],
+          "author": {
+            "@type": "Organization",
+            "name": "Indima Spice Co.",
+            "url": CANONICAL_ORIGIN
+          },
+          "publisher": {
+            "@type": "Organization",
+            "name": "Indima Spice Co.",
+            "url": CANONICAL_ORIGIN,
+            "logo": {
+              "@type": "ImageObject",
+              "url": `${CANONICAL_ORIGIN}/indima-brand-logo.jpg`
+            }
+          },
+          "recipeCategory": "Traditional Karnataka Cuisine",
+          "recipeCuisine": "South Indian",
+          "prepTime": parseDurationIso(rec.prep_time) || "PT20M",
+          "cookTime": parseDurationIso(rec.cook_time) || "PT25M",
+          "recipeYield": rec.servings || "4 servings",
+          "recipeIngredient": ingredients.length > 0 ? ingredients : ["100% Pure Indima Spices"],
+          "recipeInstructions": instructions.length > 0
+            ? instructions.map((step, idx) => ({
+                "@type": "HowToStep",
+                "position": idx + 1,
+                "text": step
+              }))
+            : [{ "@type": "HowToStep", "position": 1, "text": "Follow traditional stone-ground preparation instructions." }]
+        };
+
+        if (rec.video_url || rec.video) {
+          recipeJsonLd.video = {
+            "@type": "VideoObject",
+            "name": `${rec.title_en} Video Guide`,
+            "description": `How to cook ${rec.title_en} using authentic Indima spices`,
+            "thumbnailUrl": image,
+            "contentUrl": rec.video_url || rec.video,
+            "uploadDate": rec.created_at || "2026-01-01"
+          };
+        }
+
+        const breadcrumbJsonLd = {
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Home",
+              "item": `${CANONICAL_ORIGIN}/`
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Recipes",
+              "item": `${CANONICAL_ORIGIN}/recipes`
+            },
+            {
+              "@type": "ListItem",
+              "position": 3,
+              "name": rec.title_en,
+              "item": canonicalUrl
+            }
+          ]
+        };
+
+        let modifiedHtml = html;
+        modifiedHtml = modifiedHtml.replace(/<title>.*?<\/title>/i, `<title>${title}</title>`);
+        modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']description["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="description" content="${description}" />`);
+        modifiedHtml = modifiedHtml.replace(/<link\s+rel=["']canonical["']\s+href=["'].*?["']\s*\/?>/i, `<link rel="canonical" href="${canonicalUrl}" />`);
+        modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:title["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:title" content="${title}" />`);
+        modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:description["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:description" content="${description}" />`);
+        modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:image["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:image" content="${image}" />`);
+        modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:url["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:url" content="${canonicalUrl}" />`);
+        modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:type["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:type" content="article" />`);
+        modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']twitter:title["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="twitter:title" content="${title}" />`);
+        modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']twitter:description["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="twitter:description" content="${description}" />`);
+        modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']twitter:image["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="twitter:image" content="${image}" />`);
+
+        modifiedHtml = modifiedHtml.replace(
+          '</head>',
+          `  <script type="application/ld+json" id="ssr-recipe-jsonld">${JSON.stringify(recipeJsonLd)}</script>\n  <script type="application/ld+json" id="ssr-breadcrumb-jsonld">${JSON.stringify(breadcrumbJsonLd)}</script>\n  </head>`
+        );
+
+        return { html: modifiedHtml, status: 200 };
+      }
+    }
+
+    // 3. RECIPES PAGE
+    if (rawPath === '/recipes') {
+      const title = 'Authentic Traditional Karnataka Spice Recipes | Indima Spice Co.';
+      const description =
+        'Explore authentic traditional Karnataka recipes with Indima Spice Co. Stone-ground spices for Mysore Bisi Bele Bath, Udupi Sambar, Maniyara Rasam, and more.';
+      const canonicalUrl = `${CANONICAL_ORIGIN}/recipes`;
+
+      let modifiedHtml = html;
+      modifiedHtml = modifiedHtml.replace(/<title>.*?<\/title>/i, `<title>${title}</title>`);
+      modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']description["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="description" content="${description}" />`);
+      modifiedHtml = modifiedHtml.replace(/<link\s+rel=["']canonical["']\s+href=["'].*?["']\s*\/?>/i, `<link rel="canonical" href="${canonicalUrl}" />`);
+      modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:title["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:title" content="${title}" />`);
+      modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:description["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:description" content="${description}" />`);
+      modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:url["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:url" content="${canonicalUrl}" />`);
+      return { html: modifiedHtml, status: 200 };
+    }
+
+    // 4. ABOUT PAGE
+    if (rawPath === '/about') {
+      const title = 'Our Heritage & Tradition | 100% Pure Stone-Ground Spices | Indima Spice Co.';
+      const description =
+        'Learn about the heritage of Indima Spice Co. Bringing traditional Karnataka culinary culture to homes with 100% natural, stone-ground authentic spices.';
+      const canonicalUrl = `${CANONICAL_ORIGIN}/about`;
+
+      let modifiedHtml = html;
+      modifiedHtml = modifiedHtml.replace(/<title>.*?<\/title>/i, `<title>${title}</title>`);
+      modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']description["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="description" content="${description}" />`);
+      modifiedHtml = modifiedHtml.replace(/<link\s+rel=["']canonical["']\s+href=["'].*?["']\s*\/?>/i, `<link rel="canonical" href="${canonicalUrl}" />`);
+      modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:title["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:title" content="${title}" />`);
+      modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:description["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:description" content="${description}" />`);
+      modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:url["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:url" content="${canonicalUrl}" />`);
+      return { html: modifiedHtml, status: 200 };
+    }
+
+    // 5. CONTACT PAGE
+    if (rawPath === '/contact') {
+      const title = 'Contact Us | Customer Care & Support | Indima Spice Co.';
+      const description =
+        'Get in touch with Indima Spice Co. in Basavanagudi, Bengaluru. Contact us for authentic spice inquiries, wholesale orders, and pan-India shipping support.';
+      const canonicalUrl = `${CANONICAL_ORIGIN}/contact`;
+
+      let modifiedHtml = html;
+      modifiedHtml = modifiedHtml.replace(/<title>.*?<\/title>/i, `<title>${title}</title>`);
+      modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']description["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="description" content="${description}" />`);
+      modifiedHtml = modifiedHtml.replace(/<link\s+rel=["']canonical["']\s+href=["'].*?["']\s*\/?>/i, `<link rel="canonical" href="${canonicalUrl}" />`);
+      modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:title["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:title" content="${title}" />`);
+      modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:description["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:description" content="${description}" />`);
+      modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:url["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:url" content="${canonicalUrl}" />`);
+      return { html: modifiedHtml, status: 200 };
     }
   } catch (err: any) {
     console.warn('[SEO Meta Injector] Notice:', err?.message);
   }
-  return html;
+  return { html, status: 200 };
 }
+
 
 // ----------------------------------------------------
 // VITE OR STATIC SERVING
@@ -3816,7 +4259,7 @@ async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
-      appType: 'spa'
+      appType: 'custom'
     });
     app.use(vite.middlewares);
     app.get('*', async (req: Request, res: Response, next: NextFunction) => {
@@ -3824,8 +4267,8 @@ async function startServer() {
         const indexPath = path.resolve(process.cwd(), 'index.html');
         let template = fs.readFileSync(indexPath, 'utf-8');
         template = await vite.transformIndexHtml(req.originalUrl, template);
-        const html = injectDynamicHtmlMeta(template, req);
-        res.status(200).set({ 'Content-Type': 'text/html' }).send(html);
+        const { html, status } = injectDynamicHtmlMeta(template, req);
+        res.status(status || 200).set({ 'Content-Type': 'text/html' }).send(html);
       } catch (e: any) {
         vite.ssrFixStacktrace(e);
         next(e);
@@ -3838,8 +4281,8 @@ async function startServer() {
     app.get('*', (req: Request, res: Response) => {
       if (fs.existsSync(indexHtmlPath)) {
         const template = fs.readFileSync(indexHtmlPath, 'utf-8');
-        const html = injectDynamicHtmlMeta(template, req);
-        res.status(200).set({ 'Content-Type': 'text/html' }).send(html);
+        const { html, status } = injectDynamicHtmlMeta(template, req);
+        res.status(status || 200).set({ 'Content-Type': 'text/html' }).send(html);
       } else {
         res.sendFile(indexHtmlPath);
       }

@@ -47,6 +47,8 @@ export interface Category {
   image: string;
   enabled: boolean;
   order: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface CartItem {
@@ -251,6 +253,7 @@ export interface Recipe {
   instructions_kn: string[];
   active?: boolean;
   created_at?: string;
+  updated_at?: string;
 }
 
 export interface Banner {

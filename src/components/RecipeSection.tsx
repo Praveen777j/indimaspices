@@ -8,23 +8,27 @@ interface RecipeSectionProps {
   recipes?: Recipe[];
   products?: Product[];
   onOpenProduct: (product: Product) => void;
+  selectedRecipe?: Recipe | null;
+  onSelectRecipe?: (recipe: Recipe) => void;
 }
 
 export const RecipeSection: React.FC<RecipeSectionProps> = ({
   recipes = [],
   products = [],
-  onOpenProduct
+  onOpenProduct,
+  selectedRecipe,
+  onSelectRecipe
 }) => {
   const { language, t } = useLanguage();
   const { addItem } = useCart();
   const isKn = language === 'kn';
 
   const validRecipes = recipes || [];
-  const [activeRecipe, setActiveRecipe] = useState<Recipe | null>(validRecipes[0] || null);
+  const [internalActiveRecipe, setInternalActiveRecipe] = useState<Recipe | null>(null);
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
 
   if (!validRecipes || validRecipes.length === 0) return null;
-  const current = activeRecipe || validRecipes[0];
+  const current = selectedRecipe || internalActiveRecipe || validRecipes[0];
   if (!current) return null;
 
   const rawIngredients = isKn
@@ -70,7 +74,8 @@ export const RecipeSection: React.FC<RecipeSectionProps> = ({
               <button
                 key={rec.id}
                 onClick={() => {
-                  setActiveRecipe(rec);
+                  setInternalActiveRecipe(rec);
+                  if (onSelectRecipe) onSelectRecipe(rec);
                   setIsPlayingVideo(false);
                 }}
                 className={`px-4 py-2 rounded-full text-xs sm:text-sm font-bold whitespace-nowrap transition-all shrink-0 cursor-pointer ${

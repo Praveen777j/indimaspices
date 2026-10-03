@@ -179,7 +179,11 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                 <img
                   key={bgImage}
                   src={bgImage}
-                  alt="Pure Stone-Ground Spices"
+                  alt={isKn ? "ಅಪ್ಪಟ ಕಲ್ಲಿನಲ್ಲಿ ಬೀಸಿದ ಮಸಾಲೆಗಳು - Indima Spice Co." : "Indima Spice Co. Pure Stone-Ground Spices"}
+                  title={isKn ? "ಅಪ್ಪಟ ಕಲ್ಲಿನಲ್ಲಿ ಬೀಸಿದ ಮಸಾಲೆಗಳು" : "Indima Spice Co. Pure Stone-Ground Spices"}
+                  loading="lazy"
+                  width={600}
+                  height={600}
                   onError={e => {
                     if ((e.currentTarget as HTMLImageElement).src !== fallbackImg) {
                       (e.currentTarget as HTMLImageElement).src = fallbackImg;

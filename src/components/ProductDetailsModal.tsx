@@ -132,7 +132,8 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                 ) : (
                   <img
                     src={images[activeImageIdx] || '/indima-logo.svg'}
-                    alt={isKn ? product.name_kn : product.name_en}
+                    alt={`Indima Spice Co. ${isKn ? product.name_kn : product.name_en}`}
+                    title={`Indima Spice Co. ${isKn ? product.name_kn : product.name_en}`}
                     className="w-full h-full object-cover"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
@@ -183,7 +184,7 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                     >
                       <img
                         src={img || '/indima-logo.svg'}
-                        alt={`Thumbnail ${idx + 1}`}
+                        alt={`Indima Spice Co. ${isKn ? product.name_kn : product.name_en} - View ${idx + 1}`}
                         className="w-full h-full object-cover"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
