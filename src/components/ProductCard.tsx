@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React from 'react';
 import { Heart, Plus, Minus, Star, Eye, Play, Camera, Leaf, Sparkles } from 'lucide-react';
 import { Product } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -14,27 +14,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
   const { language, t } = useLanguage();
   const { addItem, updateQuantity, getItemQuantity } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
-
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
-  const cardRef = useRef<HTMLDivElement | null>(null);
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Only apply 3D tilt on fine pointer devices (desktop)
-    if (window.matchMedia('(pointer: coarse)').matches) return;
-    if (!cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-    const tiltX = -((y - centerY) / centerY) * 6;
-    const tiltY = ((x - centerX) / centerX) * 6;
-    setTilt({ x: tiltX, y: tiltY });
-  };
-
-  const handleMouseLeave = () => {
-    setTilt({ x: 0, y: 0 });
-  };
 
   const isKn = language === 'kn';
   const qtyInCart = getItemQuantity(product.id);
@@ -66,7 +45,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
     }
     return (
       <span className="bg-[#EAF2EB] border border-[#CDE0D0] text-[#2B5329] text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-2xs backdrop-blur-md truncate">
-        {isKn ? 'ಸಾಂಪ್ರದಾಯಿಕ' : 'Authentic'}
+        {isKn ? 'ಕಲ್ಲಿನ ಪುಡಿ' : 'Stone-Ground'}
       </span>
     );
   };
@@ -78,15 +57,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
 
   return (
     <div
-      ref={cardRef}
       id={`product-card-${product.id}`}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      style={{
-        transform: `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
-        transition: 'transform 0.15s ease-out, box-shadow 0.3s ease, border-color 0.3s ease'
-      }}
-      className="group relative bg-[#FFFDF9] rounded-2xl sm:rounded-3xl border border-[#DFC7A2]/80 hover:border-[#8B3214] transition-all duration-300 hover:shadow-xl hover:shadow-[#8B3214]/10 flex flex-col overflow-hidden w-full"
+      className="group relative bg-[#FFFDF9] rounded-2xl sm:rounded-3xl border border-[#E8DFD3] hover:border-[#8B3214] transition-all duration-300 hover:shadow-md flex flex-col overflow-hidden w-full"
     >
       {/* Product Image Container */}
       <div
@@ -100,7 +72,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
           loading="lazy"
           width={400}
           height={300}
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-108"
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           onError={(e) => {
             const target = e.target as HTMLImageElement;
             if (!target.src.includes('indima-logo.svg')) {
@@ -108,7 +80,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
             }
           }}
         />
-
 
         {/* Top Badges */}
         <div className="absolute top-2 left-2 flex flex-col gap-1 z-10 max-w-[70%]">

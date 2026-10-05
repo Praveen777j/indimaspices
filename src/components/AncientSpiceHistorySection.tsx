@@ -75,24 +75,24 @@ export const AncientSpiceHistorySection: React.FC = () => {
     {
       sanskrit: 'Haridra (हरिद्रा)',
       kannada: 'ಅರಿಶಿನ',
-      common: 'Pure Traditional Turmeric',
+      common: 'Lakadong High-Curcumin Turmeric',
       element: 'Prithvi & Agni',
       tridosha: 'Vata-Kapha Pacifying, Purifies Pitta',
       ancient_benefit_en:
-        'Traditional Indian texts celebrate turmeric as an essential kitchen spice for daily culinary wellbeing and wholesome comfort.',
+        'Ancient texts declare it "Krimighna" (destroyer of pathogens) and "Varnya" (enhancer of cellular glow). Contains 8.5%+ natural Curcumin that shields immunity, purifies blood, and reverses inflammatory stress.',
       ancient_benefit_kn:
-        'ಸಾಂಪ್ರದಾಯಿಕ ಭಾರತೀಯ ಪರಂಪರೆಯಲ್ಲಿ ಅರಿಶಿನವನ್ನು ಆರೋಗ್ಯ ಮತ್ತು ದಿನನಿತ್ಯದ ಅಡುಗೆಗೆ ಪವಿತ್ರ ಸತ್ವವೆಂದು ಗೌರವಿಸಲಾಗುತ್ತದೆ.'
+        'ಪ್ರಾಚೀನ ಆಯುರ್ವೇದದಲ್ಲಿ ಇದನ್ನು ಕ್ರಿಮಿಘ್ನ ಹಾಗೂ ರಕ್ತಶೋಧಕ ಎಂದು ಕರೆಯಲಾಗಿದೆ. ಉನ್ನತ ಕುರ್ಕುಮಿನ್ ಅಂಶವು ದೇಹದ ರೋಗನಿರೋಧಕ ಶಕ್ತಿಯನ್ನು ಬಲಪಡಿಸಿ, ರಕ್ತವನ್ನು ಶುದ್ಧೀಕರಿಸುತ್ತದೆ.'
     },
     {
       sanskrit: 'Maricha (मरीच)',
       kannada: 'ಕರಿಮೆಣಸು',
-      common: 'Traditional Whole Black Pepper',
+      common: 'Tellicherry Malabar Black Pepper',
       element: 'Agni & Vayu',
       tridosha: 'Kapha-Vata Pacifying, Deepana',
       ancient_benefit_en:
-        'Revered as a warm traditional spice that aids natural digestion and brings comforting aromatic heat to everyday meals.',
+        'Revered as "Deepana-Pachana" supreme. Loaded with piperine which enhances biological absorption of all micronutrients by up to 2000%, clears respiratory mucus, and expels deep tissue toxins (Ama).',
       ancient_benefit_kn:
-        'ಸಾಂಪ್ರದಾಯಿಕ ಜೀರ್ಣಕ್ರಿಯೆಗೆ ಹಿತಕರವಾದ ಮತ್ತು ಸುವಾಸನೆಯುಳ್ಳ ಪುರಾತನ ಮಸಾಲೆ.'
+        'ಮಸಾಲೆಗಳ ರಾಜ. ಪೈಪರೀನ್ ಅಂಶವು ಇತರ ಪೋಷಕಾಂಶಗಳ ಹೀರಿಕೊಳ್ಳುವಿಕೆಯನ್ನು ೨೦ ಪಟ್ಟು ಹೆಚ್ಚಿಸುತ್ತದೆ. ಶ್ವಾಸಕೋಶದ ಕಫ ನಿವಾರಿಸಿ ಜೀರ್ಣಶಕ್ತಿಯನ್ನು ಹೆಚ್ಚಿಸುತ್ತದೆ.'
     },
     {
       sanskrit: 'Ela (एला)',

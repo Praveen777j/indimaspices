@@ -61,12 +61,12 @@ export const HealthWisdomSection: React.FC = () => {
 
   const naturalBenefits = [
     {
-      spice_en: 'Traditional Turmeric',
-      spice_kn: 'ನೈಸರ್ಗಿಕ ಅರಿಶಿನ',
+      spice_en: 'Stone-Ground Turmeric (Curcumin 5%+)',
+      spice_kn: 'ಕಲ್ಲಿನಲ್ಲಿ ಬೀಸಿದ ನೈಸರ್ಗಿಕ ಅರಿಶಿನ',
       benefit_en:
-        'Prepared gently to retain natural warmth and culinary goodness. Acts as a comforting antioxidant for daily wellbeing.',
+        'Cold-milled slowly to retain natural volatile curcumin. Acts as a potent cellular antioxidant, purifies blood, soothes inflammation, and strengthens daily immunity.',
       benefit_kn:
-        'ಮಂದವಾಗಿ ಪುಡಿಮಾಡುವುದರಿಂದ ಸಹಜ ಪರಿಮಳ ಉಳಿಯುತ್ತದೆ. ದಿನನಿತ್ಯದ ಆರೋಗ್ಯ ಮತ್ತು ಅಡುಗೆಗೆ ಅತ್ಯುತ್ತಮ.'
+        'ಕಡಿಮೆ ಉಷ್ಣತೆಯಲ್ಲಿ ಪುಡಿಮಾಡುವುದರಿಂದ 5%+ ಕುರ್ಕುಮಿನ್ ಅಂಶ ಉಳಿಯುತ್ತದೆ. ಶಕ್ತಿಯುತ ರೋಗನಿರೋಧಕ, ರಕ್ತಶೋಧಕ ಹಾಗೂ ಆಂತರಿಕ ಉರಿಯೂತ ನಿವಾರಕವಾಗಿ ಕೆಲಸ ಮಾಡುತ್ತದೆ.'
     },
     {
       spice_en: 'Malabar Black Pepper (Piperine Rich)',
@@ -100,8 +100,8 @@ export const HealthWisdomSection: React.FC = () => {
       feature_kn: 'ಪುಡಿ ಮಾಡುವ ವಿಧಾನ',
       commercial_en: 'High-speed industrial metal mills (>80°C)',
       commercial_kn: 'ಹೈ-ಸ್ಪೀಡ್ ಕಾರ್ಖಾನೆ ಯಂತ್ರಗಳು (ವಿಪರೀತ ಬಿಸಿ)',
-      indima_en: 'Traditional Small Batch Preparation in Bengaluru',
-      indima_kn: 'ಬೆಂಗಳೂರಿನಲ್ಲಿ ಸಣ್ಣ ಬ್ಯಾಚ್‌ಗಳಲ್ಲಿ ಸಾಂಪ್ರದಾಯಿಕ ತಯಾರಿಕೆ'
+      indima_en: 'Traditional Cold Granite Stone-Ground in Bengaluru',
+      indima_kn: 'ಬೆಂಗಳೂರಿನಲ್ಲಿ ತಣ್ಣನೆಯ ಕಲ್ಲಿನ ಸಾಂಪ್ರದಾಯಿಕ ಬೀಸುವಿಕೆ'
     },
     {
       feature_en: 'Essential Volatile Oils',
@@ -262,7 +262,7 @@ export const HealthWisdomSection: React.FC = () => {
 
                 <div className="pt-2 border-t border-[#CDE0D0]/60 flex items-center space-x-1.5 text-[11px] font-bold text-[#2B5329]">
                   <Sparkles className="w-3.5 h-3.5 text-[#2B5329] shrink-0" />
-                  <span>{isKn ? 'ಸಾಂಪ್ರದಾಯಿಕ ಮನೆ ರುಚಿ' : 'Traditional Culinary Goodness'}</span>
+                  <span>{isKn ? '100% ಕಲ್ಲಿನಲ್ಲಿ ಬೀಸಿದ ಶುದ್ಧತೆ' : '100% Stone-Ground Potency'}</span>
                 </div>
               </div>
             ))}
@@ -282,7 +282,7 @@ export const HealthWisdomSection: React.FC = () => {
                     {isKn ? 'ಸಾಮಾನ್ಯ ಕಾರ್ಖಾನೆ ಮಸಾಲೆಗಳು' : 'Commercial Factory Brands'}
                   </th>
                   <th className="p-4 font-bold text-[#2B5329] bg-[#F4F9F5] w-1/3">
-                    {isKn ? 'ಇಂದಿಮಾ ಮನೆಯ ಸಾಂಪ್ರದಾಯಿಕ ಮಸಾಲೆಗಳು' : 'Indima Traditional Spices'}
+                    {isKn ? 'ಇಂದಿಮಾ ಮನೆಯ ಕಲ್ಲಿನ ಮಸಾಲೆಗಳು' : 'Indima Homemade Pure Spices'}
                   </th>
                 </tr>
               </thead>
@@ -317,12 +317,12 @@ export const HealthWisdomSection: React.FC = () => {
             <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
             <span className="font-semibold text-[#1F1610]">
               {isKn
-                ? 'ಪ್ರತಿ ಬ್ಯಾಚ್ ಅನ್ನು ಬೆಂಗಳೂರಿನಲ್ಲಿ ನಮ್ಮ ಸಾಂಪ್ರದಾಯಿಕ ಅಡುಗೆ ವಿಧಾನದಲ್ಲಿ ಕಾಳಜಿಯಿಂದ ತಯಾರಿಸಲಾಗುತ್ತದೆ.'
-                : 'Every batch is prepared with care in Bengaluru using selected whole spices.'}
+                ? 'ಪ್ರತಿ ಬ್ಯಾಚ್ ಅನ್ನು ಬಸವನಗುಡಿ ಹಾಗೂ ಬೆಂಗಳೂರಿನ ನಮ್ಮ ಸಾಂಪ್ರದಾಯಿಕ ಅಡುಗೆಮನೆಯಲ್ಲಿ ಶುದ್ಧವಾಗಿ ತಯಾರಿಸಲಾಗುತ್ತದೆ.'
+                : 'Every batch is stone-ground weekly in our Bengaluru kitchen using 100% whole spices.'}
             </span>
           </div>
           <span className="text-[11px] font-bold text-[#8B3214] bg-[#FAF7F2] px-3 py-1 rounded-full border border-[#DFCFC0]">
-            Crafted with Care • Indima Heritage
+            FSSAI Food Grade • 0% Chemicals
           </span>
         </div>
       </div>

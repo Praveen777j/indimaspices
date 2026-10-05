@@ -70,10 +70,10 @@ export const Footer: React.FC<FooterProps> = ({
             </div>
             <div>
               <p className="font-bold text-white text-sm">
-                {isKn ? 'ಪ್ರಾಮಾಣಿಕ ಸಾಂಪ್ರದಾಯಿಕ ತಯಾರಿಕೆ' : 'Crafted with Care & Honesty'}
+                {isKn ? '100% ರಾಸಾಯನಿಕ-ಮುಕ್ತ ಭರವಸೆ' : '0% Chemicals & Preservatives'}
               </p>
               <p className="text-neutral-400 font-normal">
-                {isKn ? 'ಗುಣಮಟ್ಟದ ಕಾಳು ಮಸಾಲೆಗಳಿಂದ ತಯಾರಿಕೆ' : 'Carefully selected whole ingredients'}
+                {isKn ? 'ಯಾವುದೇ ಕೃತಕ ಬಣ್ಣ ಅಥವಾ ಕಲಬೆರಕೆ ಇಲ್ಲ' : 'No synthetic dyes, husk or fillers'}
               </p>
             </div>
           </div>
@@ -84,10 +84,10 @@ export const Footer: React.FC<FooterProps> = ({
             </div>
             <div>
               <p className="font-bold text-white text-sm">
-                {isKn ? 'ಕರ್ನಾಟಕದ ಮನೆ ರುಚಿ' : 'Traditional Karnataka Flavours'}
+                {isKn ? 'ಕಲ್ಲಿನ ಬೀಸುವ ನೈಸರ್ಗಿಕ ಶುದ್ಧತೆ' : 'Cold Stone-Ground Retention'}
               </p>
               <p className="text-neutral-400 font-normal">
-                {isKn ? 'ದಿನನಿತ್ಯದ ಕುಟುಂಬದ ಊಟಕ್ಕೆ ಸೂಕ್ತ' : 'Wholesome aroma for family meals'}
+                {isKn ? 'ಅಡುಗೆಗೆ ಅರ್ಧ ಚಮಚವೇ ಸಾಕು' : 'Volatile essential oils 100% preserved'}
               </p>
             </div>
           </div>
