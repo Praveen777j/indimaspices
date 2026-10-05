@@ -14,24 +14,34 @@ import {
   Pause,
   ChevronRight,
   ChevronLeft,
-  Compass
+  Compass,
+  Thermometer,
+  Utensils,
+  Filter,
+  Wind,
+  HeartHandshake
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { SpiceParticlesCanvas } from './SpiceParticlesCanvas';
 import {
   rawSpicesImg,
+  spiceCleanImg,
   stoneGrindImg,
   spiceBlendImg,
-  spicePackImg
+  spicePackImg,
+  spiceKitchenImg
 } from '../assets/images';
 
-interface Stage {
+export interface JourneyStage {
   id: string;
   stepNumber: string;
+  badge: string;
   title_en: string;
   title_kn: string;
   subtitle_en: string;
   subtitle_kn: string;
+  headline_en: string;
+  headline_kn: string;
   description_en: string;
   description_kn: string;
   keyHighlight_en: string;
@@ -41,178 +51,220 @@ interface Stage {
   metricValue: string;
   icon: React.ComponentType<{ className?: string }>;
   image: string;
-  ambientColor: string;
-  accentBadge: string;
+  accentColor: string;
+  gradientBg: string;
+  purityBadge_en: string;
+  purityBadge_kn: string;
 }
 
-const STAGES: Stage[] = [
+const JOURNEY_STAGES: JourneyStage[] = [
   {
-    id: 'sourcing',
+    id: 'whole_spices',
     stepNumber: '01',
-    title_en: 'Raw Sourcing & Origin',
-    title_kn: 'ಮೂಲ ತೋಟಗಳಿಂದ ನೇರ ಸಂಗ್ರಹ',
-    subtitle_en: 'Single-Origin Karnataka Farm Harvests',
-    subtitle_kn: 'ಬ್ಯಾಡಗಿ & ಪಶ್ಚಿಮ ಘಟ್ಟಗಳ ಅತ್ಯುನ್ನತ ಗುಣಮಟ್ಟದ ಕಾಳು ಮಸಾಲೆಗಳು',
+    badge: 'RAW ORIGIN',
+    title_en: 'Whole Spices',
+    title_kn: 'ನೈಸರ್ಗಿಕ ಕಾಳು ಮಸಾಲೆಗಳು',
+    subtitle_en: 'Every flavour begins somewhere',
+    subtitle_kn: 'ಪ್ರತಿಯೊಂದು ಸ್ವಾದಕ್ಕೂ ಒಂದು ಪವಿತ್ರ ಮೂಲವಿದೆ',
+    headline_en: 'FROM WHOLE SPICE',
+    headline_kn: 'ಕಾಳು ಮಸಾಲೆಗಳ ಪವಿತ್ರ ಮೂಲ',
     description_en:
-      'We harvest stemless deep-red Byadgi chillies, fragrant round coriander seeds, rich golden Salem turmeric fingers, and bold Malabar peppercorns directly from certified generational growers.',
+      'We harvest plump stemless Byadgi chillies with naturally high oleoresin, fragrant round coriander seeds, rich golden Salem turmeric fingers, and bold Malabar peppercorns directly from generational Karnataka farm plots.',
     description_kn:
-      'ಹಾವೇರಿ ಜಿಲ್ಲೆಯ ನೈಸರ್ಗಿಕ ಬ್ಯಾಡಗಿ ಮೆಣಸಿನಕಾಯಿ, ಸುವಾಸನಾಭರಿತ ಧನಿಯಾ ಕಾಳುಗಳು, ಸುವರ್ಣ ಅರಿಶಿನ ಕೊಂಬುಗಳು ಮತ್ತು ಪಶ್ಚಿಮ ಘಟ್ಟಗಳ ಕಾಳುಮೆಣಸನ್ನು ನೈಜ ಕೃಷಿಕರಿಂದ ಸಂಗ್ರಹಿಸುತ್ತೇವೆ.',
-    keyHighlight_en: 'Natural colour & rich oil density',
-    keyHighlight_kn: 'ನೈಸರ್ಗಿಕ ಗಾಢ ಬಣ್ಣ ಮತ್ತು ತೈಲ ಸಾಂದ್ರತೆ',
-    metricLabel_en: 'Byadgi APMC Harvest',
-    metricLabel_kn: 'ಪ್ರಮಾಣೀಕೃತ ಕಾಳುಗಳು',
-    metricValue: '100% Origin',
+      'ಹಾವೇರಿಯ ಹೊಲಗಳಿಂದ ಬ್ಯಾಡಗಿ ಮೆಣಸಿನಕಾಯಿ, ಸುವಾಸನಾಭರಿತ ಧನಿಯಾ ಕಾಳುಗಳು, ಸುವರ್ಣ ಅರಿಶಿನ ಕೊಂಬುಗಳು ಮತ್ತು ಪಶ್ಚಿಮ ಘಟ್ಟಗಳ ಕಾಳುಮೆಣಸನ್ನು ನೈಜ ಕೃಷಿಕರಿಂದ ನೇರವಾಗಿ ಸಂಗ್ರಹಿಸುತ್ತೇವೆ.',
+    keyHighlight_en: 'Single-origin Karnataka crops with dense essential oils',
+    keyHighlight_kn: 'ನೈಸರ್ಗಿಕ ಗಾಢ ಬಣ್ಣ ಮತ್ತು ಗರಿಷ್ಠ ತೈಲ ಸಾಂದ್ರತೆ',
+    metricLabel_en: 'Origin Sourcing',
+    metricLabel_kn: 'ಮೂಲ ಸಂಗ್ರಹ',
+    metricValue: '100% Single Origin',
     icon: Compass,
     image: rawSpicesImg,
-    ambientColor: 'rgba(212, 155, 40, 0.15)',
-    accentBadge: 'FARM DIRECT'
+    accentColor: '#C0392B',
+    gradientBg: 'from-amber-950/80 via-red-950/70 to-stone-900/90',
+    purityBadge_en: 'WHOLE HARVEST',
+    purityBadge_kn: 'ನೈಜ ಕಾಳುಗಳು'
   },
   {
-    id: 'sorting',
+    id: 'selection_cleaning',
     stepNumber: '02',
-    title_en: 'Artisanal Hand-Sorting',
-    title_kn: 'ಕೈಯಿಂದ ಆರಿಸುವ ಪರಿಶುದ್ಧತೆ',
-    subtitle_en: 'Triple Cleaning with Zero Husk or Stems',
-    subtitle_kn: 'ಧೂಳು, ತೊಟ್ಟು ಮತ್ತು ಕಸ ಮುಕ್ತವಾದ ಶುದ್ಧೀಕರಣ',
+    badge: 'SELECTION',
+    title_en: 'Selection & Cleaning',
+    title_kn: 'ಆಯ್ಕೆ ಮತ್ತು ಪರಿಶುದ್ಧತೆ',
+    subtitle_en: 'Carefully prepared before processing',
+    subtitle_kn: 'ಸಂಸ್ಕರಣೆಗೆ ಮುನ್ನ ಕೈಯಿಂದ ಕೇರಿ ಶುದ್ಧೀಕರಣ',
+    headline_en: 'ARTISANAL WINNOWING',
+    headline_kn: 'ಕೈಯಿಂದ ಆರಿಸುವ ಪರಿಶುದ್ಧತೆ',
     description_en:
-      'Every batch undergoes rigorous manual winnowing and hand-sorting. Stems, seeds with defects, dust, and field debris are eliminated so only wholesome, clean spice kernels proceed forward.',
+      'Carefully prepared before processing. In traditional bamboo trays, artisans manually winnow, de-stem, and sort every batch to eliminate dust, hollow pods, and field debris, ensuring only wholesome spice kernels move forward.',
     description_kn:
-      'ಪ್ರತಿಯೊಂದು ಬ್ಯಾಚ್ ಅನ್ನು ಸಾಂಪ್ರದಾಯಿಕ ಮೊರದಲ್ಲಿ ಕೇರಿ, ಕೈಯಿಂದ ಆರಿಸಿ ತೊಟ್ಟು ಮತ್ತು ಧೂಳನ್ನು ಸಂಪೂರ್ಣವಾಗಿ ತೆಗೆದು ಶುದ್ಧವಾದ ಮಸಾಲೆ ಕಾಳುಗಳನ್ನು ಮಾತ್ರ ಪ್ರತ್ಯೇಕಿಸಲಾಗುತ್ತದೆ.',
-    keyHighlight_en: 'Zero husk, sand or foreign particles',
-    keyHighlight_kn: 'ಯಾವುದೇ ಕಸ, ಧೂಳು ಅಥವಾ ಹೊಟ್ಟು ಇಲ್ಲ',
+      'ಸಂಸ್ಕರಣೆಗೆ ಮುನ್ನ ಅತ್ಯಂತ ಎಚ್ಚರಿಕೆಯಿಂದ ಸಿದ್ಧಪಡಿಸಲಾಗುತ್ತದೆ. ಸಾಂಪ್ರದಾಯಿಕ ಮೊರದಲ್ಲಿ ಕೇರಿ, ತೊಟ್ಟು ಮತ್ತು ಧೂಳನ್ನು ತೆಗೆದು ಕೇವಲ ಪರಿಪೂರ್ಣ ಮಸಾಲೆ ಕಾಳುಗಳನ್ನು ಮಾತ್ರ ಸಂಸ್ಕರಣೆಗೆ ಆರಿಸಲಾಗುತ್ತದೆ.',
+    keyHighlight_en: 'Zero stems, dust, or hollow chaff — triple-cleaned',
+    keyHighlight_kn: 'ಯಾವುದೇ ತೊಟ್ಟು, ಹೊಟ್ಟು ಅಥವಾ ಧೂಳಿಲ್ಲದ ಪರಿಶುದ್ಧತೆ',
     metricLabel_en: 'Purity Factor',
     metricLabel_kn: 'ಶುದ್ಧತಾ ಪ್ರಮಾಣ',
-    metricValue: '99.9% Clean',
-    icon: ShieldCheck,
-    image: rawSpicesImg,
-    ambientColor: 'rgba(38, 78, 54, 0.15)',
-    accentBadge: 'HAND INSPECTED'
+    metricValue: '99.9% Cleaned',
+    icon: Filter,
+    image: spiceCleanImg,
+    accentColor: '#264E36',
+    gradientBg: 'from-emerald-950/80 via-stone-900/70 to-amber-950/90',
+    purityBadge_en: 'HAND SORTED',
+    purityBadge_kn: 'ಕೈಯಿಂದ ಆರಿಸಿದ್ದು'
   },
   {
-    id: 'drying',
+    id: 'preparation_drying',
     stepNumber: '03',
-    title_en: 'Sun-Drying & Embers Roasting',
-    title_kn: 'ಬಿಸಿಲಿನಲ್ಲಿ ಒಣಗಿಸುವಿಕೆ & ಮಂದ ಉರಿ',
-    subtitle_en: 'Slow Wood-Fire Heating to Awaken Aromas',
+    badge: 'PREPARATION',
+    title_en: 'Sun-Curing & Slow Roast',
+    title_kn: 'ಬಿಸಿಲಿನಲ್ಲಿ ಒಣಗಿಸಿ ಮಂದ ಉರಿಯಲ್ಲಿ ಹುರಿಯುವುದು',
+    subtitle_en: 'Awakening aromatic volatiles naturally',
     subtitle_kn: 'ನೈಸರ್ಗಿಕ ಸುವಾಸನಾ ತೈಲಗಳನ್ನು ಜಾಗೃತಗೊಳಿಸುವ ವಿಧಾನ',
+    headline_en: 'SOLAR & FIRE CURED',
+    headline_kn: 'ಬಿಸಿಲು ಮತ್ತು ಮಂದ ಉರಿ',
     description_en:
-      'Spices are solar-cured on hygienic raised cotton mats under gentle South Indian sun, then slow-roasted in seasoned cast-iron pans over low wood embers to release essential aromatic volatiles without scorching.',
+      'Sun-cured on hygienic raised mats under warm South Indian skies, then gently toasted in seasoned cast-iron kadai over low wood embers. This precise low heat awakens natural oils without blistering or scorching the delicate skins.',
     description_kn:
-      'ಬಿಸಿಲಿನಲ್ಲಿ ನೈಸರ್ಗಿಕವಾಗಿ ಒಣಗಿಸಿದ ಕಾಳುಗಳನ್ನು ಹದವಾದ ಮಂದ ಉರಿಯಲ್ಲಿ ಹುರಿಯಲಾಗುತ್ತದೆ. ಇದರಿಂದ ಮಸಾಲೆಯೊಳಗಿನ ಸುಗಂಧ ತೈಲಗಳು ಎಚ್ಚರಗೊಂಡು ಹಳೆಯ ಕಾಲದ ಅಡುಗೆಯ ನೈಜ ಸುವಾಸನೆ ಮೂಡುತ್ತದೆ.',
-    keyHighlight_en: 'Preserves delicate volatile terpenes',
-    keyHighlight_kn: 'ಸುಗಂಧ ತೈಲಗಳು ಕರಗದಂತೆ ಕಾಪಾಡುತ್ತದೆ',
-    metricLabel_en: 'Solar & Fire Cured',
-    metricLabel_kn: 'ನೈಸರ್ಗಿಕ ತಾಪಮಾನ',
-    metricValue: 'Slow Roast',
+      'ಬಿಸಿಲಿನಲ್ಲಿ ನೈಸರ್ಗಿಕವಾಗಿ ಒಣಗಿಸಿ, ಸಾಂಪ್ರದಾಯಿಕ ಕಬ್ಬಿಣದ ಬಾಣಲೆಯಲ್ಲಿ ಮಂದ ಉರಿಯಲ್ಲಿ ಹುರಿಯಲಾಗುತ್ತದೆ. ಇದರಿಂದ ಕಾಳುಗಳು ಸುಡದೆ ಸುಗಂಧ ತೈಲಗಳು ಪೂರ್ಣ ಪ್ರಮಾಣದಲ್ಲಿ ಜಾಗೃತಗೊಳ್ಳುತ್ತವೆ.',
+    keyHighlight_en: 'Gentle dry-roasting preserves fragrant aromatic terpenes',
+    keyHighlight_kn: 'ಸುಗಂಧ ತೈಲಗಳು ಕರಗದಂತೆ ಕಾಪಾಡುವ ನಿಧಾನ ವಿಧಾನ',
+    metricLabel_en: 'Thermal Control',
+    metricLabel_kn: 'ಶಾಖ ನಿಯಂತ್ರಣ',
+    metricValue: 'Low Wood Embers',
     icon: Sun,
     image: rawSpicesImg,
-    ambientColor: 'rgba(230, 126, 34, 0.15)',
-    accentBadge: 'SOLAR CURED'
+    accentColor: '#D49B28',
+    gradientBg: 'from-amber-950/85 via-orange-950/70 to-stone-900/90',
+    purityBadge_en: 'SLOW ROASTED',
+    purityBadge_kn: 'ಮಂದ ಉರಿ ಹುರಿಯುವಿಕೆ'
   },
   {
-    id: 'grinding',
+    id: 'stone_grinding',
     stepNumber: '04',
+    badge: 'GRINDING',
     title_en: 'Cold Stone-Milling',
     title_kn: 'ಸಾಂಪ್ರದಾಯಿಕ ಕಲ್ಲಿನ ಬೀಸುವಿಕೆ',
-    subtitle_en: 'Low-RPM Natural Granite Ammikallu Mill',
-    subtitle_kn: 'ತಣ್ಣನೆಯ ಕಲ್ಲಿನಲ್ಲಿ ಬೀಸಿ ಪೋಷಕಾಂಶ ರಕ್ಷಣೆ',
+    subtitle_en: 'Low-RPM Granite Mill below 38°C',
+    subtitle_kn: 'ತಣ್ಣನೆಯ ಕಲ್ಲಿನಲ್ಲಿ ನಿಧಾನವಾಗಿ ಬೀಸಿದ ಪುಡಿ',
+    headline_en: 'AUTHENTIC STONE GRIND',
+    headline_kn: 'ಅಪ್ಪಟ ಕಲ್ಲಿನ ಬೀಸುವಿಕೆ',
     description_en:
-      'Unlike high-speed industrial pulverizers that heat up to 90°C and burn away delicate nutrients and flavors, our slow granite stone-mill operates at cool temperatures, yielding coarse, textured, intensely aromatic masala.',
+      'High-speed industrial blenders heat up beyond 85°C, vaporizing precious aroma and essential nutrients. Our low-RPM natural granite mills grind gently below 38°C, yielding coarse, textured masala with bursting flavours.',
     description_kn:
-      'ವೇಗದ ಕಾರ್ಖಾನೆ ಮೆಷಿನ್‌ಗಳಂತೆ ಬಿಸಿಯಾಗದೆ, ನೈಸರ್ಗಿಕ ಗ್ರಾನೈಟ್ ಕಲ್ಲಿನಲ್ಲಿ ನಿಧಾನವಾಗಿ ಬೀಸಲಾಗುತ್ತದೆ. ಹೀಗಾಗಿ ಮಸಾಲೆಯ ಬಣ್ಣ, ನೈಸರ್ಗಿಕ ತೈಲ ಮತ್ತು ರುಚಿ ಹಾಗೆಯೇ ಉಳಿಯುತ್ತದೆ.',
-    keyHighlight_en: 'Cold-pressed below 38°C to retain aroma',
-    keyHighlight_kn: 'ಕಡಿಮೆ ಶಾಖದಲ್ಲಿ ಬೀಸಿದ ಅಪ್ಪಟ ಪುಡಿ',
-    metricLabel_en: 'Milling Temperature',
-    metricLabel_kn: 'ಕಡಿಮೆ ಶಾಖ',
-    metricValue: '< 38°C Cold',
+      'ಕಾರ್ಖಾನೆಗಳ ವೇಗದ ಮೆಷಿನ್‌ಗಳು ಬಿಸಿಯಾಗಿ ಮಸಾಲೆಯ ರುಚಿ ಹಾಳುಮಾಡುತ್ತವೆ. ಆದರೆ ನಮ್ಮ ಸಾಂಪ್ರದಾಯಿಕ ಗ್ರಾನೈಟ್ ಕಲ್ಲು ತಣ್ಣನೆಯ ಉಷ್ಣತೆಯಲ್ಲಿ (೩೮°C ಗಿಂತ ಕಡಿಮೆ) ನಿಧಾನವಾಗಿ ಬೀಸಿ ನೈಸರ್ಗಿಕ ಸುವಾಸನೆಯನ್ನು ಕಾಪಾಡುತ್ತದೆ.',
+    keyHighlight_en: 'Aroma-safe cold-milled texture without thermal destruction',
+    keyHighlight_kn: 'ಕಡಿಮೆ ಶಾಖದಲ್ಲಿ ಬೀಸಿ ಸುವಾಸನೆ ಮತ್ತು ಪೋಷಕಾಂಶ ರಕ್ಷಣೆ',
+    metricLabel_en: 'Milling Temp',
+    metricLabel_kn: 'ಬೀಸುವ ಉಷ್ಣತೆ',
+    metricValue: '< 38°C Cold Stone',
     icon: Flame,
     image: stoneGrindImg,
-    ambientColor: 'rgba(153, 51, 0, 0.18)',
-    accentBadge: 'COLD STONE'
+    accentColor: '#993300',
+    gradientBg: 'from-stone-950/90 via-red-950/70 to-amber-950/90',
+    purityBadge_en: 'COLD MILLED',
+    purityBadge_kn: 'ಕಲ್ಲಿನ ಪುಡಿ'
   },
   {
-    id: 'blending',
+    id: 'spice_blending',
     stepNumber: '05',
+    badge: 'BLENDING',
     title_en: 'Heritage Recipe Blending',
     title_kn: 'ಪಾರಂಪರಿಕ ಸೂತ್ರಗಳ ಹದವಾದ ಮಿಶ್ರಣ',
     subtitle_en: 'Generational Karnataka Kitchen Formulations',
-    subtitle_kn: 'ಮೈಸೂರು, ಉಡುಪಿ ಮತ್ತು ಧಾರವಾಡ ಶೈಲಿಯ ನೈಜ ಪಾಕಪದ್ಧತಿ',
+    subtitle_kn: 'ಮೈಸೂರು, ಉಡುಪಿ ಮತ್ತು ಬೆಂಗಳೂರು ಮನೆ ಪಾಕಪದ್ಧತಿ',
+    headline_en: 'ARTISANAL FORMULATION',
+    headline_kn: 'ಪಾರಂಪರಿಕ ಸುವಾಸನಾ ಸೂತ್ರ',
     description_en:
-      'Ground whole spices are harmonized in micro-batches with roasted copra (dry coconut), Malnad cloves, Marathi Moggu, and stone flower according to sacred regional Karnataka culinary traditions.',
+      'Stone-ground spices are harmonized in micro-batches with roasted copra, Malnad cloves, Marathi Moggu, and stone flower according to sacred regional Karnataka culinary proportions passed down through generations.',
     description_kn:
-      'ಬಿಸಿಬೇಳೆಬಾತ್, ಸಾಂಬಾರ್, ರಸಂ ಮತ್ತು ಶೇಂಗಾ ಚಟ್ನಿ ಪುಡಿಗಳಿಗೆ ಬೇಕಾದ ಪ್ರತಿಯೊಂದು ಸಾಂಬಾರ ಪದಾರ್ಥಗಳನ್ನು ಶತಮಾನಗಳ ಹಳೆಯ ಕರ್ನಾಟಕದ ಪಾಕವಿಧಾನದಂತೆ ಅಳತೆ ಮಾಡಿ ಬೆರೆಸಲಾಗುತ್ತದೆ.',
-    keyHighlight_en: 'Authentic South Indian culinary balance',
-    keyHighlight_kn: 'ಸಮತೋಲಿತ ಸಾಂಪ್ರದಾಯಿಕ ರುಚಿ',
-    metricLabel_en: 'Formula Origin',
-    metricLabel_kn: 'ಮನೆಯ ಪಾಕವಿಧಾನ',
-    metricValue: 'Authentic Heritage',
+      'ಬಿಸಿಬೇಳೆಬಾತ್, ಸಾಂಬಾರ್, ರಸಂ ಮತ್ತು ಚಟ್ನಿ ಪುಡಿಗಳಿಗೆ ಬೇಕಾದ ಪ್ರತಿಯೊಂದು ಸಾಂಬಾರ ಪದಾರ್ಥಗಳನ್ನು ಶತಮಾನಗಳ ಹಳೆಯ ಕರ್ನಾಟಕದ ಅಜ್ಜಿ ಮನೆಯ ಪಾಕವಿಧಾನದಂತೆ ಅಳತೆ ಮಾಡಿ ಬೆರೆಸಲಾಗುತ್ತದೆ.',
+    keyHighlight_en: 'Masterfully balanced heat, color, sweetness, and earthy warmth',
+    keyHighlight_kn: 'ಸಮತೋಲಿತ ಸಾಂಪ್ರದಾಯಿಕ ದಕ್ಷಿಣ ಭಾರತದ ರುಚಿ',
+    metricLabel_en: 'Recipe Heritage',
+    metricLabel_kn: 'ಪಾಕ ಪರಂಪರೆ',
+    metricValue: 'Generational Secret',
     icon: Layers,
     image: spiceBlendImg,
-    ambientColor: 'rgba(197, 160, 89, 0.18)',
-    accentBadge: 'SECRET BLEND'
+    accentColor: '#C5A059',
+    gradientBg: 'from-amber-950/85 via-stone-900/75 to-red-950/90',
+    purityBadge_en: 'HERITAGE BLEND',
+    purityBadge_kn: 'ಪಾರಂಪರಿಕ ಮಿಶ್ರಣ'
   },
   {
-    id: 'quality',
+    id: 'quality_testing',
     stepNumber: '06',
+    badge: 'QUALITY',
     title_en: 'Uncompromised Purity Check',
     title_kn: 'ಪರಿಶುದ್ಧತೆಯ ಗುಣಮಟ್ಟ ಪರೀಕ್ಷೆ',
-    subtitle_en: 'Zero Chemicals, Artificial Dyes or Fillers',
-    subtitle_kn: 'ಕೃತಕ ಬಣ್ಣ, ಕೃತಕ ಸುವಾಸನೆ ಅಥವಾ ಕಲಬೆರಕೆ ಇಲ್ಲ',
+    subtitle_en: 'Zero chemicals, artificial dyes, or fillers',
+    subtitle_kn: 'ಕೃತಕ ಬಣ್ಣ, ಸುಡಾನ್ ಡೈ ಅಥವಾ ಕಲಬೆರಕೆ ಇಲ್ಲ',
+    headline_en: '100% PURE TESTED',
+    headline_kn: 'ಶುದ್ಧತೆಯ ಖಾತರಿ',
     description_en:
-      'Every single batch is verified for moisture levels, particle texture, and colour purity. We never add synthetic Sudan dyes, chalk powder, spent chillies, or artificial taste boosters.',
+      'Every batch undergoes thorough moisture verification, volatile oil quantification, and purity screening. We strictly reject synthetic Sudan red dyes, spent chillies, starch fillers, MSG, and chemical anti-caking agents.',
     description_kn:
-      'ಪ್ರತಿಯೊಂದು ಬ್ಯಾಚ್‌ನ ತೇವಾಂಶ ಮತ್ತು ನೈಸರ್ಗಿಕ ಸುಗಂಧವನ್ನು ಪರೀಕ್ಷಿಸಲಾಗುತ್ತದೆ. ಯಾವುದೇ ಕೃತಕ ಬಣ್ಣ, ಮರದ ಪುಡಿ ಅಥವಾ ರಾಸಾಯನಿಕ ಸಂರಕ್ಷಕಗಳನ್ನು ಬಳಸುವುದಿಲ್ಲ.',
-    keyHighlight_en: 'Use 50% less quantity due to supreme potency',
-    keyHighlight_kn: 'ಅರ್ಧ ಚಮಚದಲ್ಲೇ ಅತಿ ಹೆಚ್ಚು ಗಾಢ ರುಚಿ',
-    metricLabel_en: 'Filler Free',
-    metricLabel_kn: 'ನೈಜತೆ',
-    metricValue: '0% Fillers',
+      'ಪ್ರತಿಯೊಂದು ಬ್ಯಾಚ್‌ನ ತೇವಾಂಶ ಮತ್ತು ನೈಸರ್ಗಿಕ ಸುಗಂಧವನ್ನು ಪರೀಕ್ಷಿಸಲಾಗುತ್ತದೆ. ಯಾವುದೇ ಕೃತಕ ಬಣ್ಣ, ಸೀಮೆಸುಣ್ಣ, ಮರದ ಪುಡಿ ಅಥವಾ ರಾಸಾಯನಿಕ ಸಂರಕ್ಷಕಗಳನ್ನು ಎಂದಿಗೂ ಬಳಸುವುದಿಲ್ಲ.',
+    keyHighlight_en: 'Unadulterated spice potency: requires 50% less pinch per dish',
+    keyHighlight_kn: 'ಅರ್ಧ ಚಮಚದಲ್ಲೇ ಅತಿ ಹೆಚ್ಚು ಗಾಢವಾದ ನೈಜ ರುಚಿ',
+    metricLabel_en: 'Adulteration',
+    metricLabel_kn: 'ಕಲಬೆರಕೆ',
+    metricValue: '0% Fillers / Dyes',
     icon: Award,
     image: spiceBlendImg,
-    ambientColor: 'rgba(43, 83, 41, 0.15)',
-    accentBadge: 'PURITY TESTED'
+    accentColor: '#264E36',
+    gradientBg: 'from-emerald-950/85 via-stone-900/75 to-amber-950/90',
+    purityBadge_en: 'CERTIFIED PURE',
+    purityBadge_kn: 'ಪ್ರಮಾಣೀಕೃತ ಶುದ್ಧ'
   },
   {
-    id: 'packaging',
+    id: 'aroma_packaging',
     stepNumber: '07',
+    badge: 'PACKAGING',
     title_en: 'Aroma-Lock Eco Packaging',
     title_kn: 'ಸುವಾಸನೆ ಲಾಕ್ ಮಾಡುವ ಪ್ಯಾಕಿಂಗ್',
-    subtitle_en: 'Multi-Layer Moisture & Oxygen Barrier',
-    subtitle_kn: 'ತೇವಾಂಶ ಮತ್ತು ಗಾಳಿಯಾಡದಂತೆ ನೈಸರ್ಗಿಕ ಸಂರಕ್ಷಣೆ',
+    subtitle_en: 'Multi-layer oxygen and moisture barrier',
+    subtitle_kn: 'ತೇವಾಂಶ ಮತ್ತು ಬೆಳಕು ತಾಗದಂತೆ ನೈಸರ್ಗಿಕ ಸಂರಕ್ಷಣೆ',
+    headline_en: 'AROMA SEALED FOR YOU',
+    headline_kn: 'ಸುವಾಸನೆಯ ಶಾಶ್ವತ ಲಾಕ್',
     description_en:
-      'Sealed in recyclable, food-grade aroma-barrier pouches within hours of milling to trap the volatile aroma and vibrant oils until you open the pack in your kitchen.',
+      'Sealed in recyclable, food-grade multi-layer moisture and UV-barrier pouches within hours of milling to lock in delicate aromatic volatile oils until you cut open the seal in your kitchen.',
     description_kn:
-      'ಕಲ್ಲಿನಲ್ಲಿ ಬೀಸಿದ ಕೆಲವೇ ಗಂಟೆಗಳಲ್ಲಿ ಗಾಳಿ ಮತ್ತು ಬೆಳಕು ತಾಗದಂತಹ ವಿಶೇಷ ಸುವಾಸನೆ-ಲಾಕ್ ಕವರ್‌ಗಳಲ್ಲಿ ಪ್ಯಾಕ್ ಮಾಡಲಾಗುತ್ತದೆ. ನೀವು ತೆರೆದಾಗ ತಕ್ಷಣ ಅಜ್ಜಿಯ ಮನೆಯ ಪರಿಮಳ ಹೊರಸೂಸುತ್ತದೆ.',
-    keyHighlight_en: 'Guarantees freshness for up to 12 months',
-    keyHighlight_kn: '೧೨ ತಿಂಗಳವರೆಗೆ ತಾಜಾತನ ಉಳಿಯುತ್ತದೆ',
-    metricLabel_en: 'Shelf Life',
+      'ಕಲ್ಲಿನಲ್ಲಿ ಬೀಸಿದ ಕೆಲವೇ ಗಂಟೆಗಳಲ್ಲಿ ಗಾಳಿ, ಬೆಳಕು ಮತ್ತು ತೇವಾಂಶ ತಾಗದಂತಹ ವಿಶೇಷ ಸುವಾಸನೆ-ಲಾಕ್ ಕವರ್‌ಗಳಲ್ಲಿ ಪ್ಯಾಕ್ ಮಾಡಲಾಗುತ್ತದೆ. ನೀವು ತೆರೆದಾಗ ತಕ್ಷಣ ಅಜ್ಜಿಯ ಮನೆಯ ಪರಿಮಳ ಹೊರಸೂಸುತ್ತದೆ.',
+    keyHighlight_en: 'Guarantees fresh-milled aroma and flavor for up to 12 months',
+    keyHighlight_kn: '೧೨ ತಿಂಗಳವರೆಗೆ ಗರಿಷ್ಠ ತಾಜಾತನ ಮತ್ತು ಪರಿಮಳ ಉಳಿಯುತ್ತದೆ',
+    metricLabel_en: 'Shelf Freshness',
     metricLabel_kn: 'ತಾಜಾತನ ಅವಧಿ',
     metricValue: '12 Months Fresh',
     icon: Package,
     image: spicePackImg,
-    ambientColor: 'rgba(139, 50, 20, 0.15)',
-    accentBadge: 'AROMA SEALED'
+    accentColor: '#8B3214',
+    gradientBg: 'from-stone-950/90 via-red-950/80 to-amber-950/90',
+    purityBadge_en: 'VACUUM SHIELDED',
+    purityBadge_kn: 'ಸುವಾಸನೆ ಲಾಕ್'
   },
   {
-    id: 'kitchen',
+    id: 'to_your_kitchen',
     stepNumber: '08',
-    title_en: 'To Your Family Kitchen',
+    badge: 'YOUR KITCHEN',
+    title_en: 'To Your Kitchen',
     title_kn: 'ನಿಮ್ಮ ಮನೆಯ ಅಡುಗೆ ಕೋಣೆಗೆ',
-    subtitle_en: 'Wholesome Everyday Bengaluru Nourishment',
+    subtitle_en: 'Wholesome everyday South Indian nourishment',
     subtitle_kn: 'ಪ್ರತಿದಿನದ ಸಾತ್ವಿಕ, ಆರೋಗ್ಯಕರ ಮತ್ತು ರುಚಿಕರ ಊಟ',
+    headline_en: 'DELIGHT AT YOUR DINING TABLE',
+    headline_kn: 'ನಿಮ್ಮ ಮನೆಯ ಊಟದ ತಟ್ಟೆಯಲ್ಲಿ ಸಂತಸ',
     description_en:
-      'From the stone pestle to your simmering brass pot: pure wholesome comfort that delights your family and brings authentic Karnataka flavors to your dining table.',
+      'From the stone mortar to your simmering brass pot: as the hot tadka crackles with pure ghee, whole aroma fills your home. Wholesome Karnataka taste that nourishes your family and brings authentic heritage to every meal.',
     description_kn:
-      'ನಮ್ಮ ಕಲ್ಲಿನ ಬೀಸುವ ಕಲ್ಲಿನಿಂದ ನಿಮ್ಮ ಅಡುಗೆ ಮನೆಗೆ: ಶುದ್ಧ, ಸಾತ್ವಿಕ ಮತ್ತು ತಾಯಿಯ ಕೈರುಚಿಯ ಮಸಾಲೆಗಳಿಂದ ನಿಮ್ಮ ಮನೆಮಂದಿಯ ಮುಖದಲ್ಲಿ ಸಂತಸ ತರುವ ಅದ್ಭುತ ರುಚಿ.',
-    keyHighlight_en: 'Pan-India doorstep delivery directly from mill',
-    keyHighlight_kn: 'ಭಾರತದಾದ್ಯಂತ ಮನೆ ಬಾಗಿಲಿಗೆ ತಾಜಾ ವಿತರಣೆ',
+      'ನಮ್ಮ ಕಲ್ಲಿನ ಬೀಸುವ ಕಲ್ಲಿನಿಂದ ನಿಮ್ಮ ಅಡುಗೆ ಮನೆಗೆ: ತುಪ್ಪದ ಒಗ್ಗರಣೆಯಲ್ಲಿ ಸಿಡಿಯುವ ಘಮಲು ಇಡೀ ಮನೆಯನ್ನು ತುಂಬುತ್ತದೆ. ಶುದ್ಧ, ಸಾತ್ವಿಕ ಮತ್ತು ತಾಯಿಯ ಕೈರುಚಿಯ ಮಸಾಲೆಗಳಿಂದ ನಿಮ್ಮ ಮನೆಮಂದಿಯ ಮುಖದಲ್ಲಿ ಸಂತಸ ತರುವ ಅದ್ಭುತ ರುಚಿ.',
+    keyHighlight_en: 'Doorstep direct dispatch from Bengaluru mill across India',
+    keyHighlight_kn: 'ಬೆಂಗಳೂರು ಮಿಲ್‌ನಿಂದ ನೇರವಾಗಿ ಮನೆ ಬಾಗಿಲಿಗೆ ತಾಜಾ ವಿತರಣೆ',
     metricLabel_en: 'Customer Loved',
     metricLabel_kn: 'ಮೆಚ್ಚಿನ ಬ್ರ್ಯಾಂಡ್',
-    metricValue: '5.0 ★ Rated',
-    icon: Sparkles,
-    image: spicePackImg,
-    ambientColor: 'rgba(212, 155, 40, 0.2)',
-    accentBadge: 'FRESH ARRIVAL'
+    metricValue: '5.0 ★ Rated (1.2k+)',
+    icon: Utensils,
+    image: spiceKitchenImg,
+    accentColor: '#D49B28',
+    gradientBg: 'from-amber-950/90 via-red-950/70 to-stone-900/90',
+    purityBadge_en: 'KITCHEN READY',
+    purityBadge_kn: 'ಅಡುಗೆಗೆ ಸಿದ್ಧ'
   }
 ];
 
@@ -223,29 +275,43 @@ export const SpiceJourneyExperience: React.FC = () => {
   const [activeStageIdx, setActiveStageIdx] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [cardTilt, setCardTilt] = useState({ x: 0, y: 0 });
-  const cardRef = useRef<HTMLDivElement | null>(null);
+  const [interactiveTemp, setInteractiveTemp] = useState(34);
+  const [interactivePurity, setInteractivePurity] = useState(100);
 
-  const activeStage = STAGES[activeStageIdx];
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const visualCardRef = useRef<HTMLDivElement | null>(null);
 
-  // Auto-play timer
+  const activeStage = JOURNEY_STAGES[activeStageIdx];
+
+  // Auto-play interval
   useEffect(() => {
     if (!isPlaying) return;
-    const interval = setInterval(() => {
-      setActiveStageIdx(prev => (prev + 1) % STAGES.length);
+    const timer = setInterval(() => {
+      setActiveStageIdx(prev => (prev + 1) % JOURNEY_STAGES.length);
     }, 4500);
-    return () => clearInterval(interval);
+    return () => clearInterval(timer);
   }, [isPlaying]);
 
-  // 3D Card tilt calculation based on cursor relative to card
+  // Gentle stone milling temp fluctuation for simulation
+  useEffect(() => {
+    if (activeStage.id === 'stone_grinding') {
+      const interval = setInterval(() => {
+        setInteractiveTemp(32 + Math.floor(Math.random() * 4));
+      }, 1500);
+      return () => clearInterval(interval);
+    }
+  }, [activeStage.id]);
+
+  // 3D Tilt calculation on mouse move
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
+    if (!visualCardRef.current) return;
+    const rect = visualCardRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
-    const tiltX = -((y - centerY) / centerY) * 7;
-    const tiltY = ((x - centerX) / centerX) * 7;
+    const tiltX = -((y - centerY) / centerY) * 8;
+    const tiltY = ((x - centerX) / centerX) * 8;
     setCardTilt({ x: tiltX, y: tiltY });
   };
 
@@ -254,11 +320,11 @@ export const SpiceJourneyExperience: React.FC = () => {
   };
 
   const nextStage = () => {
-    setActiveStageIdx(prev => (prev + 1) % STAGES.length);
+    setActiveStageIdx(prev => (prev + 1) % JOURNEY_STAGES.length);
   };
 
   const prevStage = () => {
-    setActiveStageIdx(prev => (prev - 1 + STAGES.length) % STAGES.length);
+    setActiveStageIdx(prev => (prev - 1 + JOURNEY_STAGES.length) % JOURNEY_STAGES.length);
   };
 
   const scrollToProducts = () => {
@@ -271,49 +337,76 @@ export const SpiceJourneyExperience: React.FC = () => {
   return (
     <section
       id="spice-journey-section"
-      className="py-12 sm:py-20 px-3.5 sm:px-6 lg:px-8 max-w-7xl 2xl:max-w-[1500px] mx-auto w-full relative overflow-hidden"
+      ref={containerRef}
+      className="py-12 sm:py-20 lg:py-24 px-3.5 sm:px-6 lg:px-8 max-w-7xl 2xl:max-w-[1500px] mx-auto w-full relative"
     >
       {/* Background ambient lighting */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[700px] h-[700px] bg-amber-500/5 blur-[140px] rounded-full pointer-events-none" />
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[700px] h-[700px] bg-amber-500/5 blur-[160px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-10 right-10 w-[500px] h-[500px] bg-red-600/5 blur-[140px] rounded-full pointer-events-none" />
 
-      {/* Header Container */}
-      <div className="text-center max-w-3xl mx-auto space-y-3 mb-8 sm:mb-12 relative z-10">
-        <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 bg-[#FFFDF9] border border-[#DFC7A2] rounded-full text-xs font-bold text-[#8B3214] shadow-xs">
+      {/* Section Header */}
+      <div className="text-center max-w-3xl mx-auto space-y-3.5 mb-8 sm:mb-14 relative z-10">
+        <div className="inline-flex items-center space-x-2 px-4 py-1.5 bg-[#FFFDF9] border border-[#DFC7A2] rounded-full text-xs font-bold text-[#8B3214] shadow-xs">
           <Sparkles className="w-3.5 h-3.5 text-[#993300] animate-pulse" />
-          <span className="uppercase tracking-wider">
-            {isKn ? 'ಕಾಳು ಮಸಾಲೆಯಿಂದ ನಿಮ್ಮ ಅಡುಗೆ ಮನೆಗೆ' : 'From the Spice to Your Kitchen'}
+          <span className="uppercase tracking-widest font-mono text-[11px]">
+            {isKn ? 'ಕಾಳು ಮಸಾಲೆಯಿಂದ ನಿಮ್ಮ ಅಡುಗೆ ಮನೆಗೆ' : 'FROM SPICE TO KITCHEN'}
           </span>
         </div>
-        <h2 className="font-serif text-2xl sm:text-4xl lg:text-5xl font-bold text-[#1F1610] tracking-tight leading-tight">
+
+        <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-[#1F1610] tracking-tight leading-tight">
           {isKn
-            ? 'ಅಪ್ಪಟ ಕಲ್ಲಿನಲ್ಲಿ ಬೀಸಿದ ಮಸಾಲೆಗಳ ೮ ಹಂತದ ಪರಂಪರೆ'
-            : 'The 8-Stage Journey of Pure Stone-Ground Spice'}
+            ? 'ಅಪ್ಪಟ ಕಲ್ಲಿನಲ್ಲಿ ಬೀಸಿದ ಮಸಾಲೆಗಳ ೮ ಹಂತದ ಪವಿತ್ರ ಪಯಣ'
+            : 'The Journey of a Spice: From Whole Spice to Your Kitchen'}
         </h2>
+
         <p className="text-xs sm:text-sm lg:text-base text-[#5C483B] leading-relaxed max-w-2xl mx-auto font-normal">
           {isKn
-            ? 'ಹಾವೇರಿಯ ಹೊಲಗಳಿಂದ ಹಿಡಿದು ನಿಮ್ಮ ಮನೆಯ ಅಡುಗೆ ಮನೆಯವರೆಗೆ, ಕಲಬೆರಕೆ ಇಲ್ಲದೆ ಸಾಂಪ್ರದಾಯಿಕ ಕಲ್ಲಿನ ಬೀಸುವ ವಿಧಾನದ ಅದ್ಭುತ ಕಥೆ.'
-            : 'Discover how raw whole Karnataka spices are hand-sorted, wood-fire cured, and granite stone-ground in micro-batches to preserve essential aroma & pure taste.'}
+            ? 'ಹಾವೇರಿಯ ತೋಟಗಳಿಂದ ನಿಮ್ಮ ಮನೆಯ ಸಾಂಬಾರ್ ಪಾತ್ರೆಯವರೆಗೆ, ಕಲಬೆರಕೆ ಇಲ್ಲದೆ ನೈಸರ್ಗಿಕ ಕಲ್ಲಿನ ಬೀಸುವ ವಿಧಾನದ ಅದ್ಭುತ ಕಥೆ.'
+            : 'Experience the living transformation of single-origin Karnataka spices as whole seeds are sorted, wood-fire roasted, cold stone-milled, and aroma-sealed for your home.'}
         </p>
+
+        {/* Global Progress Bar Across the 8 Stages */}
+        <div className="pt-2 max-w-md mx-auto">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-[#8B3214] mb-1.5">
+            <span>
+              {isKn ? 'ಹಂತ' : 'STAGE'} {activeStage.stepNumber} / 08
+            </span>
+            <span className="text-[#5C483B]">{activeStage.badge}</span>
+          </div>
+          <div className="w-full h-2 bg-[#E8DFD3] rounded-full overflow-hidden p-0.5">
+            <div
+              className="h-full bg-gradient-to-r from-[#8B3214] via-[#D49B28] to-[#8B3214] rounded-full transition-all duration-500 ease-out shadow-xs"
+              style={{ width: `${((activeStageIdx + 1) / JOURNEY_STAGES.length) * 100}%` }}
+            />
+          </div>
+        </div>
       </div>
 
       {/* Main Interactive Stage Experience Pod */}
-      <div className="bg-[#FFFDF9] border border-[#DFC7A2] rounded-3xl p-4 sm:p-8 lg:p-10 shadow-sm relative overflow-hidden">
-        {/* Particle Canvas Layer */}
-        <SpiceParticlesCanvas particleCount={30} opacity={0.65} />
+      <div className="bg-[#FFFDF9] border border-[#DFC7A2] rounded-3xl p-4 sm:p-8 lg:p-10 shadow-lg relative overflow-hidden">
+        {/* Living Particle & Whole Spice Canvas Layer */}
+        <SpiceParticlesCanvas
+          particleCount={32}
+          wholeSpiceCount={12}
+          showWholeSpices={true}
+          opacity={0.7}
+          activeStageId={activeStage.id}
+        />
 
-        {/* Stage Timeline Navigation Tabs (Desktop & Mobile Scrollable) */}
-        <div className="relative z-10 flex items-center justify-between gap-1.5 overflow-x-auto pb-3 mb-6 sm:mb-8 border-b border-[#E8DFD3]/80 scrollbar-none">
-          {STAGES.map((stg, idx) => {
+        {/* Interactive 8-Stage Timeline Navigation Bar */}
+        <div className="relative z-10 flex items-center gap-2 overflow-x-auto pb-3 mb-6 sm:mb-8 border-b border-[#E8DFD3]/80 scrollbar-none">
+          {JOURNEY_STAGES.map((stg, idx) => {
             const isActive = idx === activeStageIdx;
             const Icon = stg.icon;
             return (
               <button
                 key={stg.id}
+                type="button"
                 onClick={() => {
                   setActiveStageIdx(idx);
                   setIsPlaying(false);
                 }}
-                className={`group flex items-center space-x-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-2xl text-xs font-bold transition-all duration-300 shrink-0 cursor-pointer ${
+                className={`group flex items-center space-x-2 px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all duration-300 shrink-0 cursor-pointer ${
                   isActive
                     ? 'bg-[#8B3214] text-white shadow-md scale-102 ring-2 ring-[#8B3214]/20'
                     : 'bg-[#FAF7F2] text-[#5C483B] hover:text-[#1F1610] hover:bg-[#F5EFEB] border border-[#E8DFD3]'
@@ -327,27 +420,27 @@ export const SpiceJourneyExperience: React.FC = () => {
                   {stg.stepNumber}
                 </span>
                 <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-amber-300' : 'text-[#8B3214]'}`} />
-                <span className="whitespace-nowrap">{isKn ? stg.title_kn : stg.title_en}</span>
+                <span className="whitespace-nowrap font-medium">{isKn ? stg.title_kn : stg.title_en}</span>
               </button>
             );
           })}
         </div>
 
-        {/* 3D Stage Hero Composition */}
+        {/* 3D Stage Visual & Narrative Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-12 items-center relative z-10">
-          {/* Left Column: Interactive 3D Visual with Perspective Tilt */}
+          {/* Left Column: Interactive 3D Card with Perspective Tilt */}
           <div
             className="lg:col-span-6 relative perspective-[1200px]"
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
           >
             <div
-              ref={cardRef}
+              ref={visualCardRef}
               style={{
                 transform: `rotateX(${cardTilt.x}deg) rotateY(${cardTilt.y}deg)`,
                 transition: 'transform 0.15s ease-out'
               }}
-              className="relative aspect-16/10 sm:aspect-16/10 w-full rounded-3xl overflow-hidden shadow-xl border border-[#DFC7A2] bg-[#1F1610] group"
+              className="relative aspect-16/10 sm:aspect-16/10 w-full rounded-3xl overflow-hidden shadow-2xl border border-[#DFC7A2] bg-[#1F1610] group"
             >
               {/* Main Stage Photograph */}
               <img
@@ -358,12 +451,15 @@ export const SpiceJourneyExperience: React.FC = () => {
               />
 
               {/* Ambient Cinematic Gradient */}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#1F1610] via-[#1F1610]/40 to-transparent" />
+              <div
+                className={`absolute inset-0 bg-gradient-to-t ${activeStage.gradientBg} opacity-80 mix-blend-multiply`}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#1F1610] via-transparent to-black/30" />
 
               {/* Top Accent Badges */}
               <div className="absolute top-4 left-4 flex items-center space-x-2">
                 <span className="bg-[#8B3214] text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm border border-amber-300/30">
-                  {activeStage.accentBadge}
+                  {isKn ? activeStage.purityBadge_kn : activeStage.purityBadge_en}
                 </span>
                 <span className="bg-white/90 text-[#1F1610] text-[10px] font-bold px-2.5 py-1 rounded-full backdrop-blur-md border border-[#DFCFC0]">
                   STAGE {activeStage.stepNumber} / 08
@@ -371,7 +467,7 @@ export const SpiceJourneyExperience: React.FC = () => {
               </div>
 
               {/* Metric Overlay Badge */}
-              <div className="absolute bottom-4 right-4 bg-[#FFFDF9]/95 backdrop-blur-md border border-[#DFC7A2] rounded-2xl p-3 shadow-lg flex items-center space-x-3 max-w-[200px]">
+              <div className="absolute bottom-4 right-4 bg-[#FFFDF9]/95 backdrop-blur-md border border-[#DFC7A2] rounded-2xl p-3 shadow-lg flex items-center space-x-3 max-w-[210px]">
                 <div className="w-8 h-8 rounded-xl bg-[#8B3214]/10 text-[#8B3214] flex items-center justify-center font-bold">
                   <CheckCircle2 className="w-4 h-4 text-[#8B3214]" />
                 </div>
@@ -383,27 +479,47 @@ export const SpiceJourneyExperience: React.FC = () => {
                 </div>
               </div>
 
-              {/* Stage Step Indicator Indicator in Bottom-Left */}
-              <div className="absolute bottom-4 left-4 text-white max-w-[50%]">
-                <p className="text-[11px] font-mono text-amber-300 font-bold">INDIMA SPICE LAB</p>
-                <p className="text-xs font-bold text-white/90 truncate">
-                  {isKn ? activeStage.subtitle_kn : activeStage.subtitle_en}
+              {/* Stage Step Indicator in Bottom-Left */}
+              <div className="absolute bottom-4 left-4 text-white max-w-[55%] space-y-0.5">
+                <p className="text-[10px] font-mono text-amber-300 font-bold tracking-wider">
+                  {isKn ? 'ಇಂದಿಮಾ ಸಾಂಬಾರ್ ವಿಜ್ಞಾನ' : 'INDIMA HERITAGE CRAFT'}
+                </p>
+                <p className="text-xs sm:text-sm font-bold text-white/95 truncate">
+                  {isKn ? activeStage.headline_kn : activeStage.headline_en}
                 </p>
               </div>
+
+              {/* Real-time Stage Special Indicators */}
+              {activeStage.id === 'stone_grinding' && (
+                <div className="absolute top-4 right-4 bg-black/75 backdrop-blur-md border border-amber-400/40 rounded-xl px-2.5 py-1 flex items-center space-x-1.5 text-white">
+                  <Thermometer className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                  <span className="text-[10px] font-mono font-bold">{interactiveTemp}°C COOL</span>
+                </div>
+              )}
+
+              {activeStage.id === 'quality_testing' && (
+                <div className="absolute top-4 right-4 bg-emerald-950/80 backdrop-blur-md border border-emerald-400/40 rounded-xl px-2.5 py-1 flex items-center space-x-1.5 text-white">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="text-[10px] font-mono font-bold">0% ADULTERATION</span>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Right Column: Stage Narrative, Heritage Truths & Next/Prev Controls */}
+          {/* Right Column: Stage Narrative, Heritage Truths & Interactive Stepper */}
           <div className="lg:col-span-6 space-y-4 sm:space-y-6">
             <div className="space-y-2">
               <div className="flex items-center space-x-2 text-xs font-bold text-[#8B3214] uppercase tracking-wider">
-                <span className="w-2 h-2 rounded-full bg-[#8B3214] animate-ping" />
-                <span>
-                  {isKn ? `ಹಂತ ${activeStage.stepNumber} / ೮` : `Stage ${activeStage.stepNumber} of 08`}
+                <span className="w-2.5 h-2.5 rounded-full bg-[#8B3214] animate-ping" />
+                <span className="font-mono">
+                  {isKn ? `ಹಂತ ${activeStage.stepNumber} / ೦೮` : `Stage ${activeStage.stepNumber} of 08`}
                 </span>
+                <span className="text-[#DFC7A2]">•</span>
+                <span className="text-[#5C483B]">{activeStage.badge}</span>
               </div>
+
               <h3 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold text-[#1F1610] leading-tight">
-                {isKn ? activeStage.title_kn : activeStage.title_en}
+                {isKn ? activeStage.headline_kn : activeStage.headline_en}
               </h3>
               <p className="text-xs sm:text-sm font-semibold text-[#8B3214]">
                 {isKn ? activeStage.subtitle_kn : activeStage.subtitle_en}
