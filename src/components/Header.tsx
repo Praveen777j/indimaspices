@@ -439,6 +439,13 @@ export const Header: React.FC<HeaderProps> = ({
               <span>{isKn ? 'ಆರೋಗ್ಯ & ರಾಸಾಯನಿಕ-ಮುಕ್ತ ಶುದ್ಧತೆ' : 'Health Benefits & 0% Chemicals'}</span>
             </button>
             <button
+              onClick={() => onNavigateToSection('spice-journey-section')}
+              className="hover:text-[#8B3214] transition-colors cursor-pointer flex items-center space-x-1 text-[#8B3214] font-semibold"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-[#8B3214]" />
+              <span>{isKn ? 'ಮಸಾಲೆ ಯಾತ್ರೆ' : 'Spice Journey'}</span>
+            </button>
+            <button
               onClick={() => onNavigateToSection('recipes-section')}
               className="hover:text-[#8B3214] transition-colors cursor-pointer"
             >
@@ -561,6 +568,17 @@ export const Header: React.FC<HeaderProps> = ({
                     <span>{isKn ? 'ಆರೋಗ್ಯ & ರಾಸಾಯನಿಕ-ಮುಕ್ತ ಶುದ್ಧತೆ' : 'Health Benefits & 0% Chemicals'}</span>
                   </div>
                   <ChevronRight className="w-3.5 h-3.5 text-[#2B5329]" />
+                </button>
+
+                <button
+                  onClick={() => handleNavClick('spice-journey-section')}
+                  className="w-full flex items-center justify-between p-3 rounded-xl bg-[#FFFDF9] border border-[#DFC7A2] text-[#8B3214] hover:border-[#8B3214] font-bold text-xs cursor-pointer active:bg-[#FAF7F2]"
+                >
+                  <div className="flex items-center space-x-2.5">
+                    <Sparkles className="w-4 h-4 text-[#8B3214]" />
+                    <span>{isKn ? 'ಮಸಾಲೆ ಯಾತ್ರೆ (೮ ಹಂತಗಳು)' : 'Spice Journey (8 Stages)'}</span>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-[#8B3214]" />
                 </button>
 
                 <button

@@ -2344,7 +2344,7 @@ app.get('/api/admin/me', adminAuthMiddleware, (req: Request, res: Response) => {
 
 // Admin Media Upload (Single - Product, Category, Banner, Recipe, Settings)
 app.post('/api/upload', adminAuthMiddleware, (req: Request, res: Response) => {
-  upload.single('file')(req, res, async (err: any) => {
+  upload.single('file')(req as any, res as any, async (err: any) => {
     if (err) {
       console.error('[Upload Error]:', err);
       return res.status(400).json({ success: false, error: err.message || 'File upload failed' });
@@ -2415,7 +2415,7 @@ app.post('/api/upload', adminAuthMiddleware, (req: Request, res: Response) => {
 
 // Admin Multiple Media Upload (Batch Product Images)
 app.post('/api/upload-multiple', adminAuthMiddleware, (req: Request, res: Response) => {
-  upload.array('files', 20)(req, res, async (err: any) => {
+  upload.array('files', 20)(req as any, res as any, async (err: any) => {
     if (err) {
       console.error('[Multi-Upload Error]:', err);
       return res.status(400).json({ success: false, error: err.message || 'Multiple file upload failed' });
@@ -2445,7 +2445,7 @@ app.post('/api/upload-multiple', adminAuthMiddleware, (req: Request, res: Respon
 
 // Admin Hero / Banner Media Upload (Images & Videos)
 app.post('/api/admin/upload-hero-media', adminAuthMiddleware, (req: Request, res: Response) => {
-  upload.single('file')(req, res, async (err: any) => {
+  upload.single('file')(req as any, res as any, async (err: any) => {
     if (err) {
       return res.status(400).json({ success: false, error: err.message || 'Hero media upload failed' });
     }
@@ -2499,7 +2499,7 @@ app.post('/api/admin/upload-hero-media', adminAuthMiddleware, (req: Request, res
 
 // Review Proof Media Upload (Images & Videos - Rate Limited & MIME Verified & Magic-Byte Inspected)
 app.post('/api/reviews/upload-proof', reviewUploadLimiter, (req: Request, res: Response) => {
-  reviewProofUpload.single('file')(req, res, async (err: any) => {
+  reviewProofUpload.single('file')(req as any, res as any, async (err: any) => {
     if (err) {
       const errMsg = err.code === 'LIMIT_FILE_SIZE'
         ? 'Review proof file size exceeds maximum limit of 25MB'

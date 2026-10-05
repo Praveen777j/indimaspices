@@ -14,6 +14,7 @@ import { CheckoutModal } from './components/CheckoutModal';
 import { OrderConfirmationModal } from './components/OrderConfirmationModal';
 import { TrackOrderModal } from './components/TrackOrderModal';
 import { WelcomeBackOrderCard } from './components/WelcomeBackOrderCard';
+import { SpiceJourneyExperience } from './components/SpiceJourneyExperience';
 import { RecipeSection } from './components/RecipeSection';
 import { HeritageStorySection } from './components/HeritageStorySection';
 import { HealthWisdomSection } from './components/HealthWisdomSection';
@@ -300,6 +301,9 @@ const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToA
           onShopClick={() => scrollToSection('products-section')}
           onOffersClick={() => scrollToSection('offers-section')}
         />
+
+        {/* 8-Stage Interactive Spice Journey: From Spice to Kitchen */}
+        <SpiceJourneyExperience />
 
         {/* Personalized Returning Customer Welcome Back & Order Tracking (Token-authorized only) */}
         <WelcomeBackOrderCard
