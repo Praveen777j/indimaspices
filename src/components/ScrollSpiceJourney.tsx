@@ -35,26 +35,40 @@ export const ScrollSpiceJourney: React.FC<ScrollSpiceJourneyProps> = ({
   const pinRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // Scene DOM element references
-  const scene1Ref = useRef<HTMLDivElement | null>(null);
-  const scene2Ref = useRef<HTMLDivElement | null>(null);
-  const scene3Ref = useRef<HTMLDivElement | null>(null);
-  const scene4Ref = useRef<HTMLDivElement | null>(null);
-  const scene5Ref = useRef<HTMLDivElement | null>(null);
-  const scene6Ref = useRef<HTMLDivElement | null>(null);
-  const scene7Ref = useRef<HTMLDivElement | null>(null);
-  const scene8Ref = useRef<HTMLDivElement | null>(null);
+  // The Master Cinematic Camera Rig
+  const cameraRigRef = useRef<HTMLDivElement | null>(null);
 
-  // Mill stone reference for direct rotation
+  // The Travelling Hero Spice Actor (Byadgi Chilli)
+  const heroChilliRef = useRef<HTMLDivElement | null>(null);
+
+  // Scene Stages & Props
+  const winnowingTrayRef = useRef<HTMLDivElement | null>(null);
+  const roastingKadaiRef = useRef<HTMLDivElement | null>(null);
+  const grinderStageRef = useRef<HTMLDivElement | null>(null);
   const millStoneRef = useRef<SVGSVGElement | null>(null);
+  const chilliShardsRef = useRef<HTMLDivElement | null>(null);
+  const powderPlumeRef = useRef<HTMLDivElement | null>(null);
+  const blendingVortexRef = useRef<HTMLDivElement | null>(null);
+  const pouchStageRef = useRef<HTMLDivElement | null>(null);
+  const goldenSealSweepRef = useRef<HTMLDivElement | null>(null);
+  const productRevealRef = useRef<HTMLDivElement | null>(null);
 
-  // HUD progress state
+  // Text Chapter Overlays
+  const text1Ref = useRef<HTMLDivElement | null>(null);
+  const text2Ref = useRef<HTMLDivElement | null>(null);
+  const text3Ref = useRef<HTMLDivElement | null>(null);
+  const text4Ref = useRef<HTMLDivElement | null>(null);
+  const text5Ref = useRef<HTMLDivElement | null>(null);
+  const text6Ref = useRef<HTMLDivElement | null>(null);
+  const text7Ref = useRef<HTMLDivElement | null>(null);
+  const text8Ref = useRef<HTMLDivElement | null>(null);
+
+  // HUD state
   const [hudProgress, setHudProgress] = useState(0);
   const [activeChapter, setActiveChapter] = useState('WHOLE SPICE');
-  const [isLightScene, setIsLightScene] = useState(true);
   const [isAddedToCart, setIsAddedToCart] = useState(false);
 
-  // Progress ref for the canvas animation loop (avoids stale closures or effect re-runs)
+  // Progress ref for ambient canvas
   const progressRef = useRef(0);
 
   // Pick actual catalog product for the final reveal
@@ -88,24 +102,39 @@ export const ScrollSpiceJourney: React.FC<ScrollSpiceJourneyProps> = ({
       category_id: 'blends'
     };
 
-  // GSAP Master Timeline connecting all 8 real DOM scenes
+  // GSAP Master Timeline: Continuous Physical World Navigation
   useEffect(() => {
     const wrapper = wrapperRef.current;
     const pin = pinRef.current;
     if (!wrapper || !pin) return;
 
     const ctx = gsap.context(() => {
-      // 1. Establish robust initial DOM states: Scene 1 visible, Scenes 2-8 waiting
-      gsap.set(scene1Ref.current, { autoAlpha: 1, scale: 1, y: 0, zIndex: 10 });
-      gsap.set(scene2Ref.current, { autoAlpha: 0, scale: 0.96, y: 30, zIndex: 11 });
-      gsap.set(scene3Ref.current, { autoAlpha: 0, scale: 0.96, y: 30, zIndex: 12 });
-      gsap.set(scene4Ref.current, { autoAlpha: 0, scale: 0.96, y: 30, zIndex: 13 });
-      gsap.set(scene5Ref.current, { autoAlpha: 0, scale: 0.96, y: 30, zIndex: 14 });
-      gsap.set(scene6Ref.current, { autoAlpha: 0, scale: 0.96, y: 30, zIndex: 15 });
-      gsap.set(scene7Ref.current, { autoAlpha: 0, scale: 0.96, y: 30, zIndex: 16 });
-      gsap.set(scene8Ref.current, { autoAlpha: 0, scale: 0.96, y: 30, zIndex: 17 });
+      // 1. Establish initial actor & prop positions
+      gsap.set(cameraRigRef.current, { scale: 1, x: 0, y: 0 });
+      gsap.set(heroChilliRef.current, { x: 0, y: 0, scale: 1, rotation: -12, autoAlpha: 1 });
 
-      // 2. Build one master ScrollTrigger scrubbed timeline
+      // Props initial states
+      gsap.set(winnowingTrayRef.current, { autoAlpha: 0, y: 80, scale: 0.9 });
+      gsap.set(roastingKadaiRef.current, { autoAlpha: 0, y: 80, scale: 0.9 });
+      gsap.set(grinderStageRef.current, { autoAlpha: 0, scale: 0.7, y: 60 });
+      gsap.set(chilliShardsRef.current, { autoAlpha: 0, scale: 0.3 });
+      gsap.set(powderPlumeRef.current, { autoAlpha: 0, scale: 0.4 });
+      gsap.set(blendingVortexRef.current, { autoAlpha: 0, scale: 0.7 });
+      gsap.set(pouchStageRef.current, { autoAlpha: 0, scale: 0.8, y: 40 });
+      gsap.set(goldenSealSweepRef.current, { scaleX: 0 });
+      gsap.set(productRevealRef.current, { autoAlpha: 0, scale: 0.85, y: 30 });
+
+      // Typography initial states
+      gsap.set(text1Ref.current, { autoAlpha: 1, y: 0 });
+      gsap.set(text2Ref.current, { autoAlpha: 0, y: 25 });
+      gsap.set(text3Ref.current, { autoAlpha: 0, y: 25 });
+      gsap.set(text4Ref.current, { autoAlpha: 0, y: 25 });
+      gsap.set(text5Ref.current, { autoAlpha: 0, y: 25 });
+      gsap.set(text6Ref.current, { autoAlpha: 0, y: 25 });
+      gsap.set(text7Ref.current, { autoAlpha: 0, y: 25 });
+      gsap.set(text8Ref.current, { autoAlpha: 0, y: 25 });
+
+      // 2. Master Continuous Scrubbed Timeline
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: wrapper,
@@ -118,73 +147,222 @@ export const ScrollSpiceJourney: React.FC<ScrollSpiceJourneyProps> = ({
             progressRef.current = p;
             setHudProgress(Math.round(p * 100));
 
-            // Rotate grinding mill stone directly
+            // Directly rotate granite grinding stone
             if (millStoneRef.current) {
-              gsap.set(millStoneRef.current, { rotation: p * 720 });
+              gsap.set(millStoneRef.current, { rotation: p * 1080 });
             }
 
-            // Update chapter name and lighting
-            if (p < 0.14) {
-              setActiveChapter('WHOLE SPICE');
-              setIsLightScene(true);
-            } else if (p < 0.28) {
-              setActiveChapter('PREPARATION');
-              setIsLightScene(true);
-            } else if (p < 0.42) {
-              setActiveChapter('GENTLE ROAST');
-              setIsLightScene(false);
-            } else if (p < 0.56) {
-              setActiveChapter('STONE MILLING');
-              setIsLightScene(false);
-            } else if (p < 0.7) {
-              setActiveChapter('SPICE POWDER');
-              setIsLightScene(false);
-            } else if (p < 0.84) {
-              setActiveChapter('HERITAGE BLEND');
-              setIsLightScene(false);
-            } else if (p < 0.94) {
-              setActiveChapter('PACKAGING');
-              setIsLightScene(true);
-            } else {
-              setActiveChapter('YOUR KITCHEN');
-              setIsLightScene(true);
-            }
+            // HUD chapter names
+            if (p < 0.14) setActiveChapter('WHOLE SPICE');
+            else if (p < 0.28) setActiveChapter('PREPARATION');
+            else if (p < 0.42) setActiveChapter('GENTLE ROAST');
+            else if (p < 0.56) setActiveChapter('STONE MILLING');
+            else if (p < 0.70) setActiveChapter('SPICE POWDER');
+            else if (p < 0.84) setActiveChapter('HERITAGE BLEND');
+            else if (p < 0.94) setActiveChapter('PACKAGING');
+            else setActiveChapter('YOUR KITCHEN');
           }
         }
       });
 
-      // Master continuous timeline animating each scene in sequence
-      // Timeline duration: 14 units (approx 1.75 units per scene)
+      // ═════════════════════════════════════════════════════════════════
+      // TRANSITION 1 → 2: PHYSICAL MOVEMENT TO WINNOWING TRAY (p: ~0.14)
+      // The hero chilli physically glides across the viewport into the bamboo tray!
+      // ═════════════════════════════════════════════════════════════════
+      tl.to(heroChilliRef.current, {
+        x: -120,
+        y: 60,
+        rotation: 32,
+        scale: 1.15,
+        duration: 1.5,
+        ease: 'power1.inOut'
+      }, 0.5)
+      .to(winnowingTrayRef.current, {
+        autoAlpha: 1,
+        y: 0,
+        scale: 1,
+        duration: 1.2
+      }, 0.7)
+      .to(cameraRigRef.current, {
+        x: 40,
+        y: -20,
+        duration: 1.5
+      }, 0.5)
+      .to(text1Ref.current, { autoAlpha: 0, y: -20, duration: 0.8 }, 0.8)
+      .to(text2Ref.current, { autoAlpha: 1, y: 0, duration: 0.8 }, 1.2);
 
-      // Scene 1 -> Scene 2 (around progress 0.14)
-      tl.to(scene1Ref.current, { autoAlpha: 0, scale: 1.05, y: -30, duration: 1 }, 1.2)
-        .to(scene2Ref.current, { autoAlpha: 1, scale: 1, y: 0, duration: 1 }, 1.2)
+      // ═════════════════════════════════════════════════════════════════
+      // TRANSITION 2 → 3: TRAVEL FROM TRAY TO ROASTING KADAI (p: ~0.28)
+      // The chilli lifts from the tray and travels rightward onto hot embers kadai
+      // ═════════════════════════════════════════════════════════════════
+      tl.to(heroChilliRef.current, {
+        x: 130,
+        y: 20,
+        rotation: -18,
+        scale: 1.1,
+        duration: 1.5,
+        ease: 'power1.inOut'
+      }, 2.3)
+      .to(winnowingTrayRef.current, {
+        autoAlpha: 0,
+        y: 60,
+        scale: 0.85,
+        duration: 1.0
+      }, 2.3)
+      .to(roastingKadaiRef.current, {
+        autoAlpha: 1,
+        y: 0,
+        scale: 1,
+        duration: 1.2
+      }, 2.5)
+      .to(cameraRigRef.current, {
+        x: -50,
+        y: -10,
+        duration: 1.5
+      }, 2.3)
+      .to(text2Ref.current, { autoAlpha: 0, y: -20, duration: 0.8 }, 2.5)
+      .to(text3Ref.current, { autoAlpha: 1, y: 0, duration: 0.8 }, 2.9);
 
-      // Scene 2 -> Scene 3 (around progress 0.28)
-        .to(scene2Ref.current, { autoAlpha: 0, scale: 1.05, y: -30, duration: 1 }, 3.0)
-        .to(scene3Ref.current, { autoAlpha: 1, scale: 1, y: 0, duration: 1 }, 3.0)
+      // ═════════════════════════════════════════════════════════════════
+      // TRANSITION 3 → 4: TRAVEL INTO THE GRANITE MILL (p: ~0.42)
+      // Chilli lifts, camera rushes forward, centering on the massive granite mill
+      // ═════════════════════════════════════════════════════════════════
+      tl.to(heroChilliRef.current, {
+        x: 0,
+        y: 0,
+        rotation: 0,
+        scale: 0.75,
+        duration: 1.5,
+        ease: 'power1.inOut'
+      }, 4.1)
+      .to(roastingKadaiRef.current, {
+        autoAlpha: 0,
+        y: 60,
+        scale: 0.85,
+        duration: 1.0
+      }, 4.1)
+      .to(grinderStageRef.current, {
+        autoAlpha: 1,
+        scale: 1,
+        y: 0,
+        duration: 1.2
+      }, 4.2)
+      .to(cameraRigRef.current, {
+        x: 0,
+        y: -15,
+        scale: 1.3,
+        duration: 1.5
+      }, 4.1)
+      .to(text3Ref.current, { autoAlpha: 0, y: -20, duration: 0.8 }, 4.3)
+      .to(text4Ref.current, { autoAlpha: 1, y: 0, duration: 0.8 }, 4.7);
 
-      // Scene 3 -> Scene 4 (around progress 0.42)
-        .to(scene3Ref.current, { autoAlpha: 0, scale: 1.05, y: -30, duration: 1 }, 4.8)
-        .to(scene4Ref.current, { autoAlpha: 1, scale: 1, y: 0, duration: 1 }, 4.8)
+      // ═════════════════════════════════════════════════════════════════
+      // TRANSITION 4 → 5: REAL GRINDING TRANSFORMATION (p: ~0.56)
+      // Whole chilli shatters into shards -> Shards disperse -> Powder plumes burst!
+      // ═════════════════════════════════════════════════════════════════
+      tl.to(heroChilliRef.current, {
+        autoAlpha: 0,
+        scale: 0.3,
+        duration: 0.6
+      }, 5.8)
+      .to(chilliShardsRef.current, {
+        autoAlpha: 1,
+        scale: 1.4,
+        duration: 0.8,
+        ease: 'power2.out'
+      }, 5.8)
+      .to(powderPlumeRef.current, {
+        autoAlpha: 1,
+        scale: 1.8,
+        duration: 1.2,
+        ease: 'power2.out'
+      }, 6.0)
+      .to(chilliShardsRef.current, {
+        autoAlpha: 0,
+        scale: 2.2,
+        duration: 0.6
+      }, 6.6)
+      .to(grinderStageRef.current, {
+        autoAlpha: 0,
+        scale: 1.4,
+        duration: 0.8
+      }, 6.8)
+      .to(cameraRigRef.current, {
+        scale: 1.1,
+        y: 0,
+        duration: 1.2
+      }, 6.0)
+      .to(text4Ref.current, { autoAlpha: 0, y: -20, duration: 0.8 }, 6.0)
+      .to(text5Ref.current, { autoAlpha: 1, y: 0, duration: 0.8 }, 6.5);
 
-      // Scene 4 -> Scene 5 (around progress 0.56)
-        .to(scene4Ref.current, { autoAlpha: 0, scale: 1.05, y: -30, duration: 1 }, 6.6)
-        .to(scene5Ref.current, { autoAlpha: 1, scale: 1, y: 0, duration: 1 }, 6.6)
+      // ═════════════════════════════════════════════════════════════════
+      // TRANSITION 5 → 6: POWDER CONVERGES INTO BLENDING VORTEX (p: ~0.70)
+      // Multi-stream particle vortex spirals inward
+      // ═════════════════════════════════════════════════════════════════
+      tl.to(powderPlumeRef.current, {
+        autoAlpha: 0,
+        scale: 2.5,
+        duration: 0.8
+      }, 7.7)
+      .to(blendingVortexRef.current, {
+        autoAlpha: 1,
+        scale: 1,
+        rotation: 360,
+        duration: 1.4,
+        ease: 'power1.inOut'
+      }, 7.7)
+      .to(text5Ref.current, { autoAlpha: 0, y: -20, duration: 0.8 }, 7.7)
+      .to(text6Ref.current, { autoAlpha: 1, y: 0, duration: 0.8 }, 8.2);
 
-      // Scene 5 -> Scene 6 (around progress 0.70)
-        .to(scene5Ref.current, { autoAlpha: 0, scale: 1.05, y: -30, duration: 1 }, 8.4)
-        .to(scene6Ref.current, { autoAlpha: 1, scale: 1, y: 0, duration: 1 }, 8.4)
+      // ═════════════════════════════════════════════════════════════════
+      // TRANSITION 6 → 7: BLEND FUNNELS INTO PACKAGING & SEALS (p: ~0.84)
+      // Blended vortex funnels into pouch, golden heat seal sweeps across top
+      // ═════════════════════════════════════════════════════════════════
+      tl.to(blendingVortexRef.current, {
+        autoAlpha: 0,
+        scale: 0.4,
+        y: 60,
+        duration: 0.9
+      }, 9.3)
+      .to(pouchStageRef.current, {
+        autoAlpha: 1,
+        scale: 1,
+        y: 0,
+        duration: 1.2
+      }, 9.4)
+      .to(goldenSealSweepRef.current, {
+        scaleX: 1,
+        duration: 0.8,
+        ease: 'power2.inOut'
+      }, 10.0)
+      .to(text6Ref.current, { autoAlpha: 0, y: -20, duration: 0.8 }, 9.5)
+      .to(text7Ref.current, { autoAlpha: 1, y: 0, duration: 0.8 }, 10.0);
 
-      // Scene 6 -> Scene 7 (around progress 0.84)
-        .to(scene6Ref.current, { autoAlpha: 0, scale: 1.05, y: -30, duration: 1 }, 10.2)
-        .to(scene7Ref.current, { autoAlpha: 1, scale: 1, y: 0, duration: 1 }, 10.2)
+      // ═════════════════════════════════════════════════════════════════
+      // TRANSITION 7 → 8: COMMERCIAL PRODUCT REVEAL & TO KITCHEN (p: ~0.94)
+      // Camera pulls back, pouch morphs into the actual Indima product hero
+      // ═════════════════════════════════════════════════════════════════
+      tl.to(pouchStageRef.current, {
+        autoAlpha: 0,
+        scale: 0.85,
+        duration: 0.6
+      }, 11.2)
+      .to(productRevealRef.current, {
+        autoAlpha: 1,
+        scale: 1,
+        y: 0,
+        duration: 1.2,
+        ease: 'back.out(1.2)'
+      }, 11.3)
+      .to(cameraRigRef.current, {
+        scale: 1,
+        x: 0,
+        y: 0,
+        duration: 1.2
+      }, 11.2)
+      .to(text7Ref.current, { autoAlpha: 0, y: -20, duration: 0.8 }, 11.2)
+      .to(text8Ref.current, { autoAlpha: 1, y: 0, duration: 0.8 }, 11.7);
 
-      // Scene 7 -> Scene 8 (around progress 0.94)
-        .to(scene7Ref.current, { autoAlpha: 0, scale: 1.05, y: -30, duration: 1 }, 12.0)
-        .to(scene8Ref.current, { autoAlpha: 1, scale: 1, y: 0, duration: 1 }, 12.0);
-
-      // Force recalculation of scroll offsets once layout settles
       ScrollTrigger.refresh();
     }, wrapper);
 
@@ -193,7 +371,7 @@ export const ScrollSpiceJourney: React.FC<ScrollSpiceJourneyProps> = ({
     };
   }, []);
 
-  // Ambient Particle Canvas (Runs independently in rAF without re-running on scroll state changes)
+  // Ambient Golden Warm Particle Canvas
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -211,15 +389,15 @@ export const ScrollSpiceJourney: React.FC<ScrollSpiceJourneyProps> = ({
     };
     window.addEventListener('resize', handleResize);
 
-    const count = width < 640 ? 40 : 80;
+    const count = width < 640 ? 30 : 60;
     const particles = Array.from({ length: count }, () => ({
       x: Math.random() * width,
       y: Math.random() * height,
-      vx: (Math.random() - 0.5) * 0.4,
-      vy: -0.2 - Math.random() * 0.4,
-      size: 1.2 + Math.random() * 2.8,
-      color: ['#D49B28', '#C0392B', '#E28330', '#C5A059'][Math.floor(Math.random() * 4)],
-      alpha: 0.15 + Math.random() * 0.45
+      vx: (Math.random() - 0.5) * 0.35,
+      vy: -0.2 - Math.random() * 0.35,
+      size: 1.2 + Math.random() * 2.5,
+      color: ['#E5A93C', '#D49B28', '#C0392B', '#C5A059'][Math.floor(Math.random() * 4)],
+      alpha: 0.15 + Math.random() * 0.4
     }));
 
     const render = () => {
@@ -263,539 +441,422 @@ export const ScrollSpiceJourney: React.FC<ScrollSpiceJourneyProps> = ({
     <section
       id="scroll-journey-section"
       ref={wrapperRef}
-      className="journey-wrapper relative w-full h-[600vh]"
+      className="journey-wrapper relative w-full h-[620vh]"
     >
-      {/* Pinned Viewport Container (Remains pinned on screen for 600vh scroll) */}
+      {/* Light Yellowish Heritage Pinned Viewport Stage */}
       <div
         ref={pinRef}
-        className="journey-pin sticky top-0 h-screen w-full overflow-hidden flex flex-col justify-between select-none bg-gradient-to-b from-[#FAF4E8] via-[#F8EFE2] to-[#F3E5D4]"
+        className="journey-pin sticky top-0 h-screen w-full overflow-hidden flex flex-col justify-between select-none bg-gradient-to-b from-[#FDF8EE] via-[#FAF3DE] to-[#F5E8D0] text-[#1F1610]"
       >
-        {/* Background Ambient Canvas */}
+        {/* Soft Golden Sunshine Radiance Cones */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[750px] h-[550px] bg-gradient-to-b from-amber-300/20 via-orange-300/10 to-transparent blur-[140px] rounded-full pointer-events-none z-1" />
+        <div className="absolute bottom-10 right-10 w-[450px] h-[450px] bg-amber-400/15 blur-[120px] rounded-full pointer-events-none z-1" />
+
+        {/* Ambient Canvas */}
         <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-0" />
 
-        {/* Top HUD: Chapter Name & Real-Time Progress Indicator */}
+        {/* Top HUD: Real-time chapter & Progress */}
         <div className="relative z-30 pt-6 sm:pt-8 px-4 sm:px-8 max-w-7xl mx-auto w-full flex items-center justify-between text-xs font-mono">
-          <div
-            className={`flex items-center space-x-2.5 font-bold tracking-widest uppercase transition-colors duration-300 ${
-              isLightScene ? 'text-[#8B3214]' : 'text-amber-300'
-            }`}
-          >
-            <span
-              className={`w-2.5 h-2.5 rounded-full animate-ping ${
-                isLightScene ? 'bg-[#8B3214]' : 'bg-amber-400'
-              }`}
-            />
-            <span>{isKn ? 'ಪವಿತ್ರ ಪಯಣ' : 'THE TRANSFORMATION'}</span>
-            <span className="opacity-40">/</span>
-            <span className={`font-sans tracking-normal ${isLightScene ? 'text-[#5C483B]' : 'text-stone-300'}`}>
-              {activeChapter}
-            </span>
+          <div className="flex items-center space-x-2.5 font-bold tracking-widest text-[#8B3214] uppercase">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#8B3214] animate-ping" />
+            <span>{isKn ? 'ಪವಿತ್ರ ಪಯಣ' : 'THE LIVING TRANSFORMATION'}</span>
+            <span className="text-[#DFC7A2]">/</span>
+            <span className="font-sans text-[#5C483B] tracking-normal font-semibold">{activeChapter}</span>
           </div>
 
-          <div
-            className={`flex items-center space-x-3 transition-colors duration-300 ${
-              isLightScene ? 'text-[#5C483B]' : 'text-stone-300'
-            }`}
-          >
+          <div className="flex items-center space-x-3 text-[#5C483B]">
             <span className="hidden sm:inline font-sans text-[11px] tracking-widest uppercase font-bold">
               {isKn ? 'ಸ್ಕ್ರೋಲ್ ಪ್ರಗತಿ' : 'SCROLL PROGRESS'}
             </span>
-            <span
-              className={`font-bold text-sm font-mono ${
-                isLightScene ? 'text-[#8B3214]' : 'text-amber-300'
-              }`}
-            >
+            <span className="font-bold text-sm font-mono text-[#8B3214] bg-[#FAF6EE] px-2.5 py-1 rounded-full border border-[#DFC7A2] shadow-2xs">
               {hudProgress}%
             </span>
           </div>
         </div>
 
-        {/* Right Rail: Interactive Scrubbing Track Timeline */}
+        {/* Right Rail: Timeline Scrubber */}
         <div className="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 z-30 flex flex-col items-center space-y-3 pointer-events-none">
-          <div className="w-1.5 h-44 bg-black/15 rounded-full overflow-hidden relative">
+          <div className="w-1.5 h-44 bg-[#DFC7A2]/50 rounded-full overflow-hidden relative">
             <div
               className="w-full bg-gradient-to-b from-[#8B3214] via-[#D49B28] to-[#8B3214] rounded-full transition-all duration-150"
               style={{ height: `${Math.max(8, hudProgress)}%` }}
             />
           </div>
-          <span
-            className={`text-[10px] font-mono uppercase rotate-90 origin-center translate-y-3 font-bold ${
-              isLightScene ? 'text-[#8B3214]' : 'text-amber-300'
-            }`}
-          >
+          <span className="text-[10px] font-mono uppercase rotate-90 origin-center translate-y-3 font-bold text-[#8B3214]">
             TIMELINE
           </span>
         </div>
 
-        {/* ALL 8 SCENES PERMANENTLY IN THE DOM (Transitioned via GSAP Timeline) */}
-        <div className="journey-scenes absolute inset-0 w-full h-full">
-
-          {/* ══════════════════════════════════════════════════════════
-              SCENE 1: WHOLE SPICE (Chapter 01)
-              ══════════════════════════════════════════════════════════ */}
+        {/* ═════════════════════════════════════════════════════════════════
+            THE CONTINUOUS CINEMATIC CAMERA RIG
+            Holds all physical props and moves like a movie camera operator!
+            ═════════════════════════════════════════════════════════════════ */}
+        <div
+          ref={cameraRigRef}
+          className="camera-rig absolute inset-0 w-full h-full flex items-center justify-center pointer-events-none z-10"
+        >
+          {/* 1. THE TRAVELLING HERO CHILLI (The physical protagonist of the journey!) */}
           <div
-            ref={scene1Ref}
-            className="scene scene-1 absolute inset-0 flex flex-col items-center justify-center p-4 sm:p-8"
+            ref={heroChilliRef}
+            className="hero-spice-actor absolute z-25 flex items-center justify-center filter drop-shadow-xl"
           >
-            <div className="max-w-4xl mx-auto w-full grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
-              <div className="md:col-span-6 space-y-4 text-center md:text-left">
-                <div className="inline-flex items-center space-x-2 text-xs font-mono tracking-widest text-[#8B3214] uppercase font-bold">
-                  <Compass className="w-3.5 h-3.5" />
-                  <span>{isKn ? 'ಹಂತ ೦೧ · ಕಾಳು ಮಸಾಲೆ' : 'SCENE 01 · WHOLE SPICE'}</span>
-                </div>
-                <h2 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#1F1610] leading-tight">
-                  {isKn ? 'ಕಾಳು ಮಸಾಲೆಗಳ ಪವಿತ್ರ ಮೂಲ.' : 'It starts with the whole spice.'}
-                </h2>
-                <p className="text-xs sm:text-sm text-[#5C483B] max-w-md leading-relaxed font-normal">
-                  {isKn
-                    ? 'ಬ್ಯಾಡಗಿ ಮೆಣಸಿನಕಾಯಿ, ಸುವಾಸನಾಭರಿತ ಧನಿಯಾ ಮತ್ತು ಅರಿಶಿನ ಕೊಂಬುಗಳು. ಪ್ರತಿಯೊಂದು ರುಚಿಗೂ ಒಂದು ನೈಸರ್ಗಿಕ ಆರಂಭವಿದೆ.'
-                    : 'Single-origin Byadgi chillies, Salem turmeric fingers, and plump coriander seeds harvested directly from Karnataka generational growers.'}
-                </p>
-                <div className="pt-2 flex items-center justify-center md:justify-start space-x-4 text-xs font-mono text-[#8C6D53]">
-                  <span>WHOLE</span>
-                  <span className="text-[#DFC7A2]">·</span>
-                  <span>UNPROCESSED</span>
-                  <span className="text-[#DFC7A2]">·</span>
-                  <span>FARM DIRECT</span>
-                </div>
-              </div>
+            <svg viewBox="0 0 160 80" className="w-36 h-20 sm:w-52 sm:h-28">
+              {/* Stem */}
+              <path d="M 25 35 Q 12 30 5 18" stroke="#4A5D32" strokeWidth="4.5" fill="none" strokeLinecap="round" />
+              {/* Chilli Body */}
+              <path
+                d="M 25 35 C 55 12, 105 8, 145 28 C 158 35, 155 42, 142 45 C 105 52, 60 55, 25 35 Z"
+                fill="url(#byadgiGrad)"
+              />
+              {/* Natural Skin Highlights */}
+              <path d="M 50 24 Q 95 18 130 32" stroke="rgba(255,220,200,0.45)" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+              <defs>
+                <linearGradient id="byadgiGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#6E1208" />
+                  <stop offset="30%" stopColor="#9C1A0C" />
+                  <stop offset="70%" stopColor="#CE2D18" />
+                  <stop offset="100%" stopColor="#8C1307" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
 
-              <div className="md:col-span-6 flex justify-center">
-                <div className="relative w-64 h-64 sm:w-80 sm:h-80 rounded-3xl overflow-hidden shadow-2xl border border-[#DFC7A2] bg-[#1F1610]">
-                  <img
-                    src={rawSpicesImg}
-                    alt="Whole Karnataka Spices"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#1F1610] via-transparent to-transparent opacity-80" />
-                  <div className="absolute bottom-4 left-4 right-4 text-white">
-                    <p className="text-[10px] font-mono text-amber-300 font-bold uppercase tracking-wider">
-                      BYADGI CHILLI & CORIANDER
-                    </p>
-                    <p className="text-xs font-bold text-white/90">Pure Essential Oil Density</p>
-                  </div>
-                </div>
+          {/* 2. SCENE 2 PROP: TRADITIONAL BAMBOO WINNOWING TRAY (MORAM) */}
+          <div
+            ref={winnowingTrayRef}
+            className="absolute z-15 flex flex-col items-center justify-center"
+            style={{ transform: 'translate(-120px, 80px)' }}
+          >
+            <div className="w-60 h-36 sm:w-84 sm:h-48 rounded-full border-4 border-[#C5A059] bg-[#F7EAD0]/90 shadow-2xl flex items-center justify-center relative overflow-hidden">
+              <div className="absolute inset-0 bg-[radial-gradient(#C5A059_1px,transparent_1px)] [background-size:12px_12px] opacity-40" />
+              {/* Floating coriander & clean seeds inside tray */}
+              <div className="flex space-x-3 z-10 opacity-70">
+                <div className="w-3.5 h-3.5 rounded-full bg-[#C6A15E] shadow-xs" />
+                <div className="w-3 h-3 rounded-full bg-[#D49B28] shadow-xs" />
+                <div className="w-4 h-4 rounded-full bg-[#C6A15E] shadow-xs" />
+              </div>
+            </div>
+            <p className="text-[10px] font-mono font-bold text-[#8B3214] mt-2 bg-[#FFFDF9]/90 px-3 py-0.5 rounded-full border border-[#DFC7A2]">
+              TRADITIONAL BAMBOO MORAM
+            </p>
+          </div>
+
+          {/* 3. SCENE 3 PROP: ROASTING CAST-IRON KADAI WITH GLOWING EMBERS */}
+          <div
+            ref={roastingKadaiRef}
+            className="absolute z-15 flex flex-col items-center justify-center"
+            style={{ transform: 'translate(130px, 40px)' }}
+          >
+            <div className="w-64 h-32 sm:w-88 sm:h-44 rounded-full bg-gradient-to-b from-[#2E1E17] to-[#150D0A] border-4 border-[#5E3828] shadow-2xl flex items-center justify-center relative overflow-hidden">
+              {/* Glowing Warm Embers in Kadai */}
+              <div className="absolute inset-0 bg-radial-[circle_at_center,rgba(240,110,20,0.6)_0%,transparent_70%]" />
+              {/* Rising Heat Waves */}
+              <div className="flex space-x-6 z-10 animate-pulse text-amber-300">
+                <Sun className="w-5 h-5 text-amber-400" />
+                <Flame className="w-6 h-6 text-orange-400" />
+              </div>
+            </div>
+            <p className="text-[10px] font-mono font-bold text-[#8B3214] mt-2 bg-[#FFFDF9]/90 px-3 py-0.5 rounded-full border border-[#DFC7A2]">
+              SLOW EMBER ROASTING
+            </p>
+          </div>
+
+          {/* 4. SCENE 4 PROP: THE GRANITE CHAKKI STONE MILL (THE WOW MOMENT) */}
+          <div
+            ref={grinderStageRef}
+            className="grinder-stage absolute z-20 flex flex-col items-center justify-center"
+          >
+            <div className="relative w-64 h-64 sm:w-88 sm:h-88 rounded-full flex items-center justify-center bg-[#2B2623] border-8 border-[#524B46] shadow-2xl">
+              {/* Lower Stationary Stone Texture */}
+              <div className="absolute inset-0 rounded-full bg-[radial-gradient(#48423D_2px,transparent_2px)] [background-size:14px_14px] opacity-50" />
+
+              {/* Upper Rotating Granite Stone (Rotates with scroll progress!) */}
+              <svg
+                ref={millStoneRef}
+                viewBox="0 0 200 200"
+                className="w-56 h-56 sm:w-76 sm:h-76 relative z-10 filter drop-shadow-2xl"
+              >
+                <circle cx="100" cy="100" r="92" fill="#3A3430" stroke="#706862" strokeWidth="5" />
+                {/* Chiseled Grooves on Granite */}
+                <circle cx="100" cy="100" r="74" fill="none" stroke="#25211E" strokeWidth="3" strokeDasharray="8 10" />
+                <circle cx="100" cy="100" r="54" fill="none" stroke="#5C534D" strokeWidth="2.5" strokeDasharray="5 7" />
+                {/* Center Aperture where Whole Spice Enters */}
+                <circle cx="100" cy="100" r="26" fill="#141110" stroke="#8C8178" strokeWidth="3" />
+                {/* Wooden Turning Peg */}
+                <circle cx="158" cy="100" r="15" fill="#A06E42" stroke="#D29A68" strokeWidth="3" />
+              </svg>
+            </div>
+            <p className="text-[11px] font-mono font-bold text-[#8B3214] mt-3 bg-[#FFFDF9]/95 px-4 py-1 rounded-full border border-[#DFC7A2] shadow-sm">
+              NATURAL GRANITE STONE MILL
+            </p>
+          </div>
+
+          {/* 5. SCENE 4->5 TRANSFORMATION: CHILLI SHATTERS INTO FRACTURED SHARDS */}
+          <div
+            ref={chilliShardsRef}
+            className="absolute z-26 flex items-center justify-center pointer-events-none"
+          >
+            <div className="relative w-40 h-40">
+              {/* Radial Shatter Shards */}
+              <div className="absolute top-2 left-6 w-8 h-4 bg-[#A81F0F] rounded-sm rotate-45 shadow-md" />
+              <div className="absolute top-12 right-4 w-7 h-4 bg-[#C52B19] rounded-sm -rotate-30 shadow-md" />
+              <div className="absolute bottom-6 left-8 w-9 h-3 bg-[#8C1307] rounded-sm rotate-12 shadow-md" />
+              <div className="absolute bottom-10 right-8 w-6 h-5 bg-[#E03C22] rounded-sm -rotate-60 shadow-md" />
+              <div className="absolute top-8 right-12 w-4 h-4 rounded-full bg-[#E5A93C] shadow-md" />
+            </div>
+          </div>
+
+          {/* 6. SCENE 5 PROP: EXPANDING POWDER PLUME CLOUD */}
+          <div
+            ref={powderPlumeRef}
+            className="absolute z-22 flex items-center justify-center pointer-events-none"
+          >
+            <div className="w-80 h-80 sm:w-[500px] sm:h-[500px] rounded-full bg-radial-[circle_at_center,rgba(206,45,24,0.7)_0%,rgba(229,169,60,0.5)_45%,transparent_75%] blur-xl" />
+          </div>
+
+          {/* 7. SCENE 6 PROP: THE BLENDING VORTEX (FOUR CONVERGING SPICE STREAMS) */}
+          <div
+            ref={blendingVortexRef}
+            className="absolute z-22 flex items-center justify-center pointer-events-none"
+          >
+            <div className="relative w-72 h-72 sm:w-96 sm:h-96 rounded-full flex items-center justify-center">
+              {/* Converging Swirl Spiral SVG */}
+              <svg viewBox="0 0 200 200" className="w-full h-full animate-spin [animation-duration:12s]">
+                <circle cx="100" cy="100" r="85" fill="none" stroke="#C0392B" strokeWidth="8" strokeDasharray="40 25" opacity="0.85" />
+                <circle cx="100" cy="100" r="65" fill="none" stroke="#E5A93C" strokeWidth="8" strokeDasharray="30 20" opacity="0.85" />
+                <circle cx="100" cy="100" r="45" fill="none" stroke="#996633" strokeWidth="8" strokeDasharray="25 15" opacity="0.85" />
+                <circle cx="100" cy="100" r="25" fill="none" stroke="#2E6930" strokeWidth="7" strokeDasharray="15 10" opacity="0.85" />
+              </svg>
+              <div className="absolute w-20 h-20 rounded-full bg-gradient-to-r from-[#C0392B] via-[#E5A93C] to-[#996633] blur-md opacity-80" />
+            </div>
+          </div>
+
+          {/* 8. SCENE 7 PROP: POUCH FORMING & AIRTIGHT SEAL SWEEP */}
+          <div
+            ref={pouchStageRef}
+            className="absolute z-23 flex flex-col items-center justify-center pointer-events-none"
+          >
+            <div className="relative w-56 h-72 sm:w-68 sm:h-88 rounded-3xl bg-gradient-to-b from-[#8B170B] via-[#A82512] to-[#6F0F05] border-4 border-[#C5A059] shadow-2xl p-5 flex flex-col justify-between overflow-hidden">
+              {/* Shimmering Golden Heat Seal Sweep Bar */}
+              <div
+                ref={goldenSealSweepRef}
+                className="w-full h-3 bg-gradient-to-r from-amber-300 via-yellow-100 to-amber-300 rounded-full shadow-lg shadow-amber-400 origin-left"
+              />
+              {/* Brand Stamp on Pouch */}
+              <div className="text-center text-white space-y-1 my-auto">
+                <p className="text-[10px] font-mono tracking-widest text-amber-300 font-bold uppercase">INDIMA CRAFT</p>
+                <h4 className="font-serif text-lg font-bold">PURE HERITAGE MASALA</h4>
+                <p className="text-[11px] text-amber-100/80">Aroma Sealed at Origin</p>
+              </div>
+              <div className="text-center">
+                <span className="text-[10px] font-mono bg-white/20 text-white px-2.5 py-0.5 rounded-full border border-white/30">
+                  AROMA PROTECTED
+                </span>
               </div>
             </div>
           </div>
 
-          {/* ══════════════════════════════════════════════════════════
-              SCENE 2: PREPARATION & WINNOWING (Chapter 02)
-              ══════════════════════════════════════════════════════════ */}
+          {/* 9. SCENE 8 PROP: ACTUAL INDIMA COMMERCIAL PRODUCT REVEAL */}
           <div
-            ref={scene2Ref}
-            className="scene scene-2 absolute inset-0 flex flex-col items-center justify-center p-4 sm:p-8"
+            ref={productRevealRef}
+            className="absolute z-30 flex items-center justify-center pointer-events-auto"
           >
-            <div className="max-w-4xl mx-auto w-full grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
-              <div className="md:col-span-6 space-y-4 text-center md:text-left">
-                <div className="inline-flex items-center space-x-2 text-xs font-mono tracking-widest text-[#8B3214] uppercase font-bold">
-                  <Filter className="w-3.5 h-3.5" />
-                  <span>{isKn ? 'ಹಂತ ೦೨ · ಪರಿಶುದ್ಧತೆ' : 'SCENE 02 · PREPARATION'}</span>
-                </div>
-                <h2 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#1F1610] leading-tight">
-                  {isKn ? 'ಕೈಯಿಂದ ಆರಿಸುವ ತಾಳ್ಮೆ.' : 'Prepared with patience.'}
-                </h2>
-                <p className="text-xs sm:text-sm text-[#5C483B] max-w-md leading-relaxed font-normal">
-                  {isKn
-                    ? 'ಸಾಂಪ್ರದಾಯಿಕ ಮೊರದಲ್ಲಿ ಕೇರಿ ತೊಟ್ಟು, ಧೂಳು ಮತ್ತು ಕಸವನ್ನು ಕೈಯಿಂದಲೇ ಆರಿಸಿ ಕೇವಲ ಪರಿಶುದ್ಧ ಕಾಳುಗಳನ್ನು ಮಾತ್ರ ಮುಂದುವರಿಸಲಾಗುತ್ತದೆ.'
-                    : 'Sorted and winnowed by hand in traditional bamboo trays. Stems, hollow seeds, and dust are separated so only clean whole spice kernels proceed.'}
-                </p>
-                <div className="pt-2 flex items-center justify-center md:justify-start space-x-4 text-xs font-mono text-[#8C6D53]">
-                  <span>HAND SORTED</span>
-                  <span className="text-[#DFC7A2]">·</span>
-                  <span>WINNOWED</span>
-                  <span className="text-[#DFC7A2]">·</span>
-                  <span>NO CHAFF</span>
+            <div className="w-full max-w-sm bg-[#FFFDF9] border-2 border-[#DFC7A2] p-6 sm:p-7 rounded-3xl shadow-2xl space-y-4">
+              <div className="flex items-center justify-between text-[11px] font-mono font-bold text-[#8B3214]">
+                <span>INDIMA HERITAGE</span>
+                <span className="text-[#2B5329] bg-[#EAF2EB] px-2.5 py-0.5 rounded-full border border-[#CDE0D0]">
+                  FRESH PACKED
+                </span>
+              </div>
+
+              <div className="flex items-center space-x-4">
+                <img
+                  src={(featuredProduct.images && featuredProduct.images[0]) || spicePackImg}
+                  alt={featuredProduct.name_en}
+                  className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-2xl border border-[#DFC7A2] bg-[#FAF7F2] shrink-0 shadow-md"
+                />
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-serif text-base sm:text-lg font-bold text-[#1F1610] truncate">
+                    {isKn ? featuredProduct.name_kn : featuredProduct.name_en}
+                  </h3>
+                  <p className="text-xs text-[#5C483B] line-clamp-1 mt-0.5">
+                    {isKn ? featuredProduct.description_kn : featuredProduct.description_en}
+                  </p>
+                  <div className="mt-1.5 flex items-center space-x-2">
+                    <span className="font-mono font-bold text-base text-[#8B3214]">
+                      ₹{featuredProduct.price}
+                    </span>
+                    <span className="text-[11px] text-[#7A6455]">({featuredProduct.weight})</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="md:col-span-6 flex justify-center">
-                <div className="relative w-64 h-64 sm:w-80 sm:h-80 rounded-3xl overflow-hidden shadow-2xl border border-[#DFC7A2] bg-[#1F1610]">
-                  <img
-                    src={spiceCleanImg}
-                    alt="Winnowing Spices"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#1F1610] via-transparent to-transparent opacity-80" />
-                  <div className="absolute bottom-4 left-4 right-4 text-white">
-                    <p className="text-[10px] font-mono text-amber-300 font-bold uppercase tracking-wider">
-                      TRADITIONAL WINNOWING
-                    </p>
-                    <p className="text-xs font-bold text-white/90">De-stemmed & Naturally Cleaned</p>
-                  </div>
-                </div>
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={handleAddToCart}
+                  className="flex items-center justify-center space-x-1.5 py-3 px-3 rounded-2xl bg-[#8B3214] hover:bg-[#72270E] text-white font-bold text-xs transition-all shadow-md cursor-pointer"
+                >
+                  {isAddedToCart ? (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span>{isKn ? 'ಸೇರಿಸಲಾಗಿದೆ' : 'Added!'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShoppingBag className="w-4 h-4" />
+                      <span>{isKn ? 'ಕಾರ್ಟ್‌ಗೆ ಸೇರಿಸಿ' : 'Add to Cart'}</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onOpenProduct && featuredProduct) {
+                      onOpenProduct(featuredProduct);
+                    } else if (onExploreCatalog) {
+                      onExploreCatalog();
+                    }
+                  }}
+                  className="flex items-center justify-center space-x-1 py-3 px-3 rounded-2xl bg-[#FAF6EE] hover:bg-[#F2E8D8] text-[#1F1610] text-xs font-bold border border-[#DFC7A2] transition-colors cursor-pointer shadow-xs"
+                >
+                  <span>{isKn ? 'ವಿವರಗಳು' : 'Details'}</span>
+                  <ChevronRight className="w-4 h-4 text-[#8B3214]" />
+                </button>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* ══════════════════════════════════════════════════════════
-              SCENE 3: GENTLE ROASTING & EMBERS (Chapter 03)
-              ══════════════════════════════════════════════════════════ */}
-          <div
-            ref={scene3Ref}
-            className="scene scene-3 absolute inset-0 flex flex-col items-center justify-center p-4 sm:p-8 bg-gradient-to-b from-[#2E160E] via-[#3E1C11] to-[#220E08] text-white"
-          >
-            <div className="max-w-4xl mx-auto w-full grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
-              <div className="md:col-span-6 space-y-4 text-center md:text-left">
-                <div className="inline-flex items-center space-x-2 text-xs font-mono tracking-widest text-amber-400 uppercase font-bold">
-                  <Sun className="w-3.5 h-3.5" />
-                  <span>{isKn ? 'ಹಂತ ೦೩ · ಮಂದ ಉರಿ' : 'SCENE 03 · GENTLE ROAST'}</span>
-                </div>
-                <h2 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-tight">
-                  {isKn ? 'ಹದವಾದ ಮಂದ ಉರಿ.' : 'Gently warmed over embers.'}
-                </h2>
-                <p className="text-xs sm:text-sm text-stone-300 max-w-md leading-relaxed font-light">
-                  {isKn
-                    ? 'ಬಿಸಿಲಿನಲ್ಲಿ ಒಣಗಿಸಿ, ಸಾಂಪ್ರದಾಯಿಕ ಕಬ್ಬಿಣದ ಬಾಣಲೆಯಲ್ಲಿ ಮಂದ ಉರಿಯಲ್ಲಿ ಹುರಿಯಲಾಗುತ್ತದೆ. ಕಾಳುಗಳು ಸುಡದೆ ಸುಗಂಧ ತೈಲಗಳು ಎಚ್ಚರಗೊಳ್ಳುತ್ತವೆ.'
-                    : 'Sun-cured and slowly toasted in seasoned cast-iron kadai over gentle embers. Low heat awakens aromatic terpenes without scorching the delicate skins.'}
-                </p>
-                <div className="pt-2 flex items-center justify-center md:justify-start space-x-4 text-xs font-mono text-amber-300">
-                  <span>SLOW WARMTH</span>
-                  <span className="text-stone-500">·</span>
-                  <span>AROMA AWAKENING</span>
-                  <span className="text-stone-500">·</span>
-                  <span>CAST IRON</span>
-                </div>
-              </div>
-
-              <div className="md:col-span-6 flex justify-center">
-                <div className="relative w-64 h-64 sm:w-80 sm:h-80 rounded-3xl overflow-hidden shadow-2xl border border-amber-600/40 bg-stone-900">
-                  <img
-                    src={rawSpicesImg}
-                    alt="Spices Warming on Embers"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-radial-[circle_at_center,transparent_0%,rgba(40,15,5,0.7)_100%]" />
-                  <div className="absolute bottom-4 left-4 right-4 text-white">
-                    <p className="text-[10px] font-mono text-amber-400 font-bold uppercase tracking-wider">
-                      WOOD-FIRE ROASTED
-                    </p>
-                    <p className="text-xs font-bold text-white/90">Aromas Awakened at Source</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+        {/* ═════════════════════════════════════════════════════════════════
+            PERMANENT TYPOGRAPHIC CHAPTER NARRATIVE
+            Smoothly transitioned in lockstep with the physical camera
+            ═════════════════════════════════════════════════════════════════ */}
+        <div className="relative z-25 max-w-3xl mx-auto px-4 sm:px-8 text-center my-auto pointer-events-none">
+          {/* Chapter 1 */}
+          <div ref={text1Ref} className="space-y-3">
+            <p className="text-xs sm:text-sm font-mono tracking-[0.28em] text-[#8B3214] uppercase font-bold">
+              {isKn ? 'ಹಂತ ೦೧ · ಕಾಳು ಮಸಾಲೆ' : 'SCENE 01 · WHOLE SPICE'}
+            </p>
+            <h2 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#1F1610] leading-tight">
+              {isKn ? 'ಕಾಳು ಮಸಾಲೆಗಳ ಪವಿತ್ರ ಮೂಲ.' : 'It starts with the whole spice.'}
+            </h2>
+            <p className="text-xs sm:text-sm text-[#5C483B] max-w-md mx-auto font-normal">
+              {isKn
+                ? 'ಬ್ಯಾಡಗಿ ಮೆಣಸಿನಕಾಯಿ, ಸುವಾಸನಾಭರಿತ ಧನಿಯಾ ಮತ್ತು ಅರಿಶಿನ ಕೊಂಬುಗಳು.'
+                : 'Whole Byadgi chillies, coriander seeds, and Salem turmeric roots.'}
+            </p>
           </div>
 
-          {/* ══════════════════════════════════════════════════════════
-              SCENE 4: THE GRANITE STONE MILL (Chapter 04) — THE WOW MOMENT
-              ══════════════════════════════════════════════════════════ */}
-          <div
-            ref={scene4Ref}
-            className="scene scene-4 absolute inset-0 flex flex-col items-center justify-center p-4 sm:p-8 bg-gradient-to-b from-[#1C1816] via-[#2A2421] to-[#120F0E] text-white"
-          >
-            <div className="max-w-4xl mx-auto w-full grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
-              <div className="md:col-span-6 space-y-4 text-center md:text-left">
-                <div className="inline-flex items-center space-x-2 text-xs font-mono tracking-widest text-amber-400 uppercase font-bold">
-                  <Flame className="w-3.5 h-3.5" />
-                  <span>{isKn ? 'ಹಂತ ೦೪ · ಕಲ್ಲಿನ ಬೀಸುವಿಕೆ' : 'SCENE 04 · STONE MILLING'}</span>
-                </div>
-                <h2 className="font-serif text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-orange-400 to-red-400 leading-tight">
-                  {isKn ? 'ಕಾಳು → ಅಪ್ಪಟ ಪುಡಿ' : 'WHOLE → GROUND'}
-                </h2>
-                <p className="text-xs sm:text-sm text-stone-300 max-w-md leading-relaxed font-light">
-                  {isKn
-                    ? 'ನೈಸರ್ಗಿಕ ಗ್ರಾನೈಟ್ ಕಲ್ಲಿನಲ್ಲಿ ನಿಧಾನವಾಗಿ ಬೀಸಲಾಗುತ್ತದೆ. ಯಾವುದೇ ಹೆಚ್ಚಿನ ಶಾಖವಿಲ್ಲದೆ ಮಸಾಲೆಯ ಬಣ್ಣ, ಸುವಾಸನೆ ಮತ್ತು ನೈಜ ರುಚಿ ಹಾಗೆಯೇ ಉಳಿಯುತ್ತದೆ.'
-                    : 'Natural granite millstone rotates with your scroll, crushing whole spices without extreme industrial friction. The delicate nutrition and aroma remain intact.'}
-                </p>
-                <div className="pt-2 flex items-center justify-center md:justify-start space-x-4 text-xs font-mono text-amber-400">
-                  <span>COOL MILLING</span>
-                  <span className="text-stone-600">·</span>
-                  <span>GRANITE STONE</span>
-                  <span className="text-stone-600">·</span>
-                  <span>NO BURNING</span>
-                </div>
-              </div>
-
-              {/* Dynamic Rotating Granite Mill Stone Graphic */}
-              <div className="md:col-span-6 flex justify-center">
-                <div className="relative w-64 h-64 sm:w-80 sm:h-80 rounded-full flex items-center justify-center bg-stone-900 border-4 border-stone-700 shadow-2xl overflow-hidden">
-                  <img
-                    src={stoneGrindImg}
-                    alt="Granite Stone Mill"
-                    className="absolute inset-0 w-full h-full object-cover opacity-60"
-                  />
-                  {/* Rotating Granite Upper Stone */}
-                  <svg
-                    ref={millStoneRef}
-                    viewBox="0 0 200 200"
-                    className="w-56 h-56 sm:w-64 sm:h-64 relative z-10 transition-transform duration-75"
-                  >
-                    <circle cx="100" cy="100" r="90" fill="#3D3734" stroke="#665F5A" strokeWidth="4" />
-                    <circle cx="100" cy="100" r="70" fill="none" stroke="#25211F" strokeWidth="3" strokeDasharray="6 8" />
-                    <circle cx="100" cy="100" r="50" fill="none" stroke="#524B46" strokeWidth="2" strokeDasharray="4 6" />
-                    {/* Center Aperture */}
-                    <circle cx="100" cy="100" r="22" fill="#141110" />
-                    {/* Wooden Turning Peg Handle */}
-                    <circle cx="155" cy="100" r="14" fill="#996033" stroke="#C4844E" strokeWidth="2" />
-                  </svg>
-                  {/* Exploding Red & Gold Micro-fragments */}
-                  <div className="absolute inset-0 bg-radial-[circle_at_center,transparent_30%,rgba(192,57,43,0.3)_100%] pointer-events-none" />
-                </div>
-              </div>
-            </div>
+          {/* Chapter 2 */}
+          <div ref={text2Ref} className="space-y-3">
+            <p className="text-xs sm:text-sm font-mono tracking-[0.28em] text-[#8B3214] uppercase font-bold">
+              {isKn ? 'ಹಂತ ೦೨ · ಪರಿಶುದ್ಧತೆ' : 'SCENE 02 · PREPARATION'}
+            </p>
+            <h2 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#1F1610] leading-tight">
+              {isKn ? 'ಕೈಯಿಂದ ಆರಿಸುವ ತಾಳ್ಮೆ.' : 'Prepared with patience.'}
+            </h2>
+            <p className="text-xs sm:text-sm text-[#5C483B] max-w-md mx-auto font-normal">
+              {isKn
+                ? 'ಸಾಂಪ್ರದಾಯಿಕ ಮೊರದಲ್ಲಿ ಕೇರಿ ತೊಟ್ಟು ಮತ್ತು ಧೂಳನ್ನು ಬೇರ್ಪಡಿಸುವುದು.'
+                : 'Winnowed and de-stemmed by hand in traditional bamboo trays.'}
+            </p>
           </div>
 
-          {/* ══════════════════════════════════════════════════════════
-              SCENE 5: SPICE POWDER DYNAMICS (Chapter 05)
-              ══════════════════════════════════════════════════════════ */}
-          <div
-            ref={scene5Ref}
-            className="scene scene-5 absolute inset-0 flex flex-col items-center justify-center p-4 sm:p-8 bg-gradient-to-b from-[#8B230B] via-[#701605] to-[#450C03] text-white"
-          >
-            <div className="max-w-4xl mx-auto w-full grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
-              <div className="md:col-span-6 space-y-4 text-center md:text-left">
-                <div className="inline-flex items-center space-x-2 text-xs font-mono tracking-widest text-amber-300 uppercase font-bold">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>{isKn ? 'ಹಂತ ೦೫ · ಪರಿಶುದ್ಧ ಪುಡಿ' : 'SCENE 05 · SPICE POWDER'}</span>
-                </div>
-                <h2 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-tight">
-                  {isKn ? 'ದಟ್ಟವಾದ ನೈಸರ್ಗಿಕ ಬಣ್ಣ.' : 'Vibrant, pure powder.'}
-                </h2>
-                <p className="text-xs sm:text-sm text-stone-200 max-w-md leading-relaxed font-light">
-                  {isKn
-                    ? 'ಕಲ್ಲಿನಲ್ಲಿ ಬೀಸಿದ ನಂತರ ಮಸಾಲೆಯೊಳಗಿನ ನೈಸರ್ಗಿಕ ತೈಲ ಮತ್ತು ಅಪ್ಪಟ ಬಣ್ಣ ಹರಿಯುತ್ತದೆ. ಯಾವುದೇ ಕೃತಕ ಬಣ್ಣಗಳ ಅಗತ್ಯವೇ ಇಲ್ಲ.'
-                    : 'Dense crimson Byadgi red and golden turmeric oils flow freely in fine particle streams, exhibiting natural vibrancy without artificial dyes.'}
-                </p>
-                <div className="pt-2 flex items-center justify-center md:justify-start space-x-4 text-xs font-mono text-amber-200">
-                  <span>UNADULTERATED</span>
-                  <span className="text-red-300">·</span>
-                  <span>OIL DENSE</span>
-                  <span className="text-red-300">·</span>
-                  <span>PURE TEXTURE</span>
-                </div>
-              </div>
-
-              <div className="md:col-span-6 flex justify-center">
-                <div className="relative w-64 h-64 sm:w-80 sm:h-80 rounded-3xl overflow-hidden shadow-2xl border border-amber-400/40 bg-red-950">
-                  <img
-                    src={spiceBlendImg}
-                    alt="Cascading Spice Powder"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                  <div className="absolute bottom-4 left-4 right-4 text-white">
-                    <p className="text-[10px] font-mono text-amber-300 font-bold uppercase tracking-wider">
-                      FRESH STONE POWDER
-                    </p>
-                    <p className="text-xs font-bold text-white/90">Rich Texture & Volatile Aromas</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+          {/* Chapter 3 */}
+          <div ref={text3Ref} className="space-y-3">
+            <p className="text-xs sm:text-sm font-mono tracking-[0.28em] text-[#8B3214] uppercase font-bold">
+              {isKn ? 'ಹಂತ ೦೩ · ಮಂದ ಉರಿ' : 'SCENE 03 · GENTLE ROAST'}
+            </p>
+            <h2 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#1F1610] leading-tight">
+              {isKn ? 'ಹದವಾದ ಮಂದ ಉರಿ.' : 'Gently warmed over embers.'}
+            </h2>
+            <p className="text-xs sm:text-sm text-[#5C483B] max-w-md mx-auto font-normal">
+              {isKn
+                ? 'ಕಬ್ಬಿಣದ ಬಾಣಲೆಯಲ್ಲಿ ಹದವಾಗಿ ಹುರಿದು ಸುಗಂಧ ತೈಲಗಳನ್ನು ಎಚ್ಚರಗೊಳಿಸುವುದು.'
+                : 'Slow dry-toasting releases fragrant volatile oils without scorching.'}
+            </p>
           </div>
 
-          {/* ══════════════════════════════════════════════════════════
-              SCENE 6: BLENDING VORTEX (Chapter 06)
-              ══════════════════════════════════════════════════════════ */}
-          <div
-            ref={scene6Ref}
-            className="scene scene-6 absolute inset-0 flex flex-col items-center justify-center p-4 sm:p-8 bg-gradient-to-b from-[#2A160F] via-[#3C1E14] to-[#1E0D07] text-white"
-          >
-            <div className="max-w-4xl mx-auto w-full grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
-              <div className="md:col-span-6 space-y-4 text-center md:text-left">
-                <div className="inline-flex items-center space-x-2 text-xs font-mono tracking-widest text-amber-400 uppercase font-bold">
-                  <Layers className="w-3.5 h-3.5" />
-                  <span>{isKn ? 'ಹಂತ ೦೬ · ಮಿಶ್ರಣ' : 'SCENE 06 · HERITAGE BLEND'}</span>
-                </div>
-                <h2 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-tight">
-                  {isKn ? 'ಸಮತೋಲಿತ ಪಾರಂಪರಿಕ ರುಚಿ.' : 'Flavour comes together.'}
-                </h2>
-                <p className="text-xs sm:text-sm text-stone-300 max-w-md leading-relaxed font-light">
-                  {isKn
-                    ? 'ಶತಮಾನಗಳ ಹಳೆಯ ಕರ್ನಾಟಕ ಪಾಕವಿಧಾನದ ಅಳತೆಯಲ್ಲಿ ಬೆರೆಸಿದ ಮಸಾಲೆಗಳು. ಬಿಸಿಬೇಳೆಬಾತ್, ಸಾಂಬಾರ್ ಮತ್ತು ರಸಂಗೆ ಬೇಕಾದ ನೈಜ ಸಮತೋಲನ.'
-                    : 'Ground spices converge in micro-batches with roasted copra, Malnad cloves, and stone flower according to sacred regional Karnataka culinary balance.'}
-                </p>
-                <div className="pt-2 flex items-center justify-center md:justify-start space-x-4 text-xs font-mono text-amber-400">
-                  <span>SACRED RATIOS</span>
-                  <span className="text-stone-600">·</span>
-                  <span>MICRO-BATCH</span>
-                  <span className="text-stone-600">·</span>
-                  <span>KITCHEN HERITAGE</span>
-                </div>
-              </div>
-
-              <div className="md:col-span-6 flex justify-center">
-                <div className="relative w-64 h-64 sm:w-80 sm:h-80 rounded-3xl overflow-hidden shadow-2xl border border-[#DFC7A2]/40 bg-stone-900">
-                  <img
-                    src={spiceBlendImg}
-                    alt="Heritage Blend"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                  <div className="absolute bottom-4 left-4 right-4 text-white">
-                    <p className="text-[10px] font-mono text-amber-400 font-bold uppercase tracking-wider">
-                      HERITAGE FORMULATION
-                    </p>
-                    <p className="text-xs font-bold text-white/90">Harmonized Karnataka Proportions</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+          {/* Chapter 4 */}
+          <div ref={text4Ref} className="space-y-3">
+            <p className="text-xs sm:text-sm font-mono tracking-[0.28em] text-[#8B3214] uppercase font-bold">
+              {isKn ? 'ಹಂತ ೦೪ · ಕಲ್ಲಿನ ಬೀಸುವಿಕೆ' : 'SCENE 04 · STONE MILLING'}
+            </p>
+            <h2 className="font-serif text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-[#8B3214] leading-tight">
+              {isKn ? 'ಕಾಳು → ಅಪ್ಪಟ ಪುಡಿ' : 'WHOLE → GROUND'}
+            </h2>
+            <p className="text-xs sm:text-sm text-[#5C483B] max-w-md mx-auto font-normal">
+              {isKn
+                ? 'ನೈಸರ್ಗಿಕ ಗ್ರಾನೈಟ್ ಕಲ್ಲಿನಲ್ಲಿ ನಿಧಾನವಾಗಿ ಬೀಸಿದ ಪರಿಮಳ.'
+                : 'Granite stones rotate with your scroll, crushing whole spices into aromatic micro-particles.'}
+            </p>
           </div>
 
-          {/* ══════════════════════════════════════════════════════════
-              SCENE 7: PACKAGING & AROMA SEAL (Chapter 07)
-              ══════════════════════════════════════════════════════════ */}
-          <div
-            ref={scene7Ref}
-            className="scene scene-7 absolute inset-0 flex flex-col items-center justify-center p-4 sm:p-8"
-          >
-            <div className="max-w-4xl mx-auto w-full grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
-              <div className="md:col-span-6 space-y-4 text-center md:text-left">
-                <div className="inline-flex items-center space-x-2 text-xs font-mono tracking-widest text-[#8B3214] uppercase font-bold">
-                  <Package className="w-3.5 h-3.5" />
-                  <span>{isKn ? 'ಹಂತ ೦೭ · ಪ್ಯಾಕಿಂಗ್' : 'SCENE 07 · PACKAGING'}</span>
-                </div>
-                <h2 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#1F1610] leading-tight">
-                  {isKn ? 'ಸುವಾಸನೆಯ ಶಾಶ್ವತ ಲಾಕ್.' : 'Sealed at the source.'}
-                </h2>
-                <p className="text-xs sm:text-sm text-[#5C483B] max-w-md leading-relaxed font-normal">
-                  {isKn
-                    ? 'ಬೀಸಿದ ಕೆಲವೇ ಸಮಯದಲ್ಲಿ ಗಾಳಿ, ಬೆಳಕು ಮತ್ತು ತೇವಾಂಶ ತಾಗದಂತೆ ವಿಶೇಷ ಸುವಾಸನೆ-ಲಾಕ್ ಕವರ್‌ಗಳಲ್ಲಿ ಪ್ಯಾಕ್ ಮಾಡಲಾಗುತ್ತದೆ.'
-                    : 'Multi-layer aroma-barrier pouches are sealed within hours of milling to lock in volatile oils and fresh aroma until you open them at home.'}
-                </p>
-                <div className="pt-2 flex items-center justify-center md:justify-start space-x-4 text-xs font-mono text-[#8C6D53]">
-                  <span>AROMA LOCKED</span>
-                  <span className="text-[#DFC7A2]">·</span>
-                  <span>OXYGEN BARRIER</span>
-                  <span className="text-[#DFC7A2]">·</span>
-                  <span>FRESH PACKED</span>
-                </div>
-              </div>
-
-              <div className="md:col-span-6 flex justify-center">
-                <div className="relative w-64 h-64 sm:w-80 sm:h-80 rounded-3xl overflow-hidden shadow-2xl border border-[#DFC7A2] bg-[#FAF7F2]">
-                  <img
-                    src={spicePackImg}
-                    alt="Aroma Sealed Pack"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                  <div className="absolute bottom-4 left-4 right-4 text-white">
-                    <p className="text-[10px] font-mono text-amber-300 font-bold uppercase tracking-wider">
-                      SEALED FOR FRESHNESS
-                    </p>
-                    <p className="text-xs font-bold text-white/90">Airtight Pouch Protection</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+          {/* Chapter 5 */}
+          <div ref={text5Ref} className="space-y-3">
+            <p className="text-xs sm:text-sm font-mono tracking-[0.28em] text-[#8B3214] uppercase font-bold">
+              {isKn ? 'ಹಂತ ೦೫ · ಪರಿಶುದ್ಧ ಪುಡಿ' : 'SCENE 05 · SPICE POWDER'}
+            </p>
+            <h2 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#1F1610] leading-tight">
+              {isKn ? 'ದಟ್ಟವಾದ ನೈಸರ್ಗಿಕ ಬಣ್ಣ.' : 'Vibrant, pure powder.'}
+            </h2>
+            <p className="text-xs sm:text-sm text-[#5C483B] max-w-md mx-auto font-normal">
+              {isKn
+                ? 'ಕಲ್ಲಿನಲ್ಲಿ ಉಳಿದ ನೈಸರ್ಗಿಕ ತೈಲಾಂಶ ಮತ್ತು ಕಣ್ಣು ಕೋರೈಸುವ ಕೆಂಪು-ಚಿನ್ನದ ಬಣ್ಣ.'
+                : 'Dense natural color and oil texture cascading in air currents.'}
+            </p>
           </div>
 
-          {/* ══════════════════════════════════════════════════════════
-              SCENE 8: COMMERCIAL PRODUCT REVEAL & YOUR KITCHEN (Chapter 08)
-              ══════════════════════════════════════════════════════════ */}
-          <div
-            ref={scene8Ref}
-            className="scene scene-8 absolute inset-0 flex flex-col items-center justify-center p-4 sm:p-8"
-          >
-            <div className="max-w-4xl mx-auto w-full grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
-              <div className="md:col-span-6 space-y-4 text-center md:text-left">
-                <div className="inline-flex items-center space-x-2 text-xs font-mono tracking-widest text-[#8B3214] uppercase font-bold">
-                  <Utensils className="w-3.5 h-3.5" />
-                  <span>{isKn ? 'ಹಂತ ೦೮ · ನಿಮ್ಮ ಅಡುಗೆಗೆ' : 'SCENE 08 · TO YOUR KITCHEN'}</span>
-                </div>
-                <h2 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#1F1610] leading-tight">
-                  {isKn ? 'ನಿಮ್ಮ ಕುಟುಂಬದ ಅಡುಗೆಗೆ ಸಿದ್ಧ.' : 'Ready for your kitchen.'}
-                </h2>
-                <p className="text-xs sm:text-sm text-[#5C483B] max-w-md leading-relaxed font-normal">
-                  {isKn
-                    ? 'ಕಲ್ಲಿನಿಂದ ನಿಮ್ಮ ಸಾಂಬಾರ್ ಪಾತ್ರೆಗೆ. ತುಪ್ಪದ ಒಗ್ಗರಣೆಯ ಸುವಾಸನೆ ನಿಮ್ಮ ಮನೆಯನ್ನು ತುಂಬುತ್ತದೆ.'
-                    : 'From our granite mill to your simmering brass pot. Pure comforting aroma that delights your family at the dining table.'}
-                </p>
-
-                {/* Direct Action Link to Catalogue */}
-                <div className="pt-2 flex items-center justify-center md:justify-start">
-                  <button
-                    type="button"
-                    onClick={onExploreCatalog}
-                    className="inline-flex items-center space-x-2 text-xs font-bold text-[#8B3214] hover:text-[#72270E] transition-colors cursor-pointer"
-                  >
-                    <span>{isKn ? 'ಎಲ್ಲಾ ಮಸಾಲೆಗಳ ಸಂಗ್ರಹ ವೀಕ್ಷಿಸಿ' : 'Explore Full Spice Collection'}</span>
-                    <ArrowDown className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Commercial Product Card Reveal with Real Cart & Details */}
-              <div className="md:col-span-6 flex justify-center">
-                <div className="w-full max-w-sm bg-[#FFFDF9] border border-[#DFC7A2] p-5 sm:p-6 rounded-3xl shadow-2xl space-y-4 pointer-events-auto">
-                  <div className="flex items-center justify-between text-[11px] font-mono font-bold text-[#8B3214]">
-                    <span>INDIMA CRAFT</span>
-                    <span className="text-[#2B5329] bg-[#EAF2EB] px-2 py-0.5 rounded-full">IN STOCK</span>
-                  </div>
-
-                  <div className="flex items-center space-x-4">
-                    <img
-                      src={(featuredProduct.images && featuredProduct.images[0]) || spicePackImg}
-                      alt={featuredProduct.name_en}
-                      className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-2xl border border-[#DFC7A2] bg-[#FAF7F2] shrink-0 shadow-sm"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-serif text-base sm:text-lg font-bold text-[#1F1610] truncate">
-                        {isKn ? featuredProduct.name_kn : featuredProduct.name_en}
-                      </h3>
-                      <p className="text-xs text-[#5C483B] line-clamp-1 mt-0.5">
-                        {isKn ? featuredProduct.description_kn : featuredProduct.description_en}
-                      </p>
-                      <div className="mt-1.5 flex items-center space-x-2">
-                        <span className="font-mono font-bold text-base text-[#8B3214]">
-                          ₹{featuredProduct.price}
-                        </span>
-                        <span className="text-[11px] text-[#7A6455]">({featuredProduct.weight})</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Add to Cart & View Details */}
-                  <div className="grid grid-cols-2 gap-2.5 pt-1">
-                    <button
-                      type="button"
-                      onClick={handleAddToCart}
-                      className="flex items-center justify-center space-x-1.5 py-3 px-3 rounded-2xl bg-[#8B3214] hover:bg-[#72270E] text-white font-bold text-xs transition-all shadow-md cursor-pointer"
-                    >
-                      {isAddedToCart ? (
-                        <>
-                          <Check className="w-4 h-4" />
-                          <span>{isKn ? 'ಸೇರಿಸಲಾಗಿದೆ' : 'Added!'}</span>
-                        </>
-                      ) : (
-                        <>
-                          <ShoppingBag className="w-4 h-4" />
-                          <span>{isKn ? 'ಕಾರ್ಟ್‌ಗೆ ಸೇರಿಸಿ' : 'Add to Cart'}</span>
-                        </>
-                      )}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (onOpenProduct && featuredProduct) {
-                          onOpenProduct(featuredProduct);
-                        } else if (onExploreCatalog) {
-                          onExploreCatalog();
-                        }
-                      }}
-                      className="flex items-center justify-center space-x-1 py-3 px-3 rounded-2xl bg-[#FAF6EE] hover:bg-[#F2E8D8] text-[#1F1610] text-xs font-bold border border-[#DFC7A2] transition-colors cursor-pointer shadow-xs"
-                    >
-                      <span>{isKn ? 'ವಿವರಗಳು' : 'Details'}</span>
-                      <ChevronRight className="w-4 h-4 text-[#8B3214]" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+          {/* Chapter 6 */}
+          <div ref={text6Ref} className="space-y-3">
+            <p className="text-xs sm:text-sm font-mono tracking-[0.28em] text-[#8B3214] uppercase font-bold">
+              {isKn ? 'ಹಂತ ೦೬ · ಮಿಶ್ರಣ' : 'SCENE 06 · HERITAGE BLEND'}
+            </p>
+            <h2 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#1F1610] leading-tight">
+              {isKn ? 'ಸಮತೋಲಿತ ಪಾರಂಪರಿಕ ರುಚಿ.' : 'Flavour comes together.'}
+            </h2>
+            <p className="text-xs sm:text-sm text-[#5C483B] max-w-md mx-auto font-normal">
+              {isKn
+                ? 'ಶತಮಾನಗಳ ಹಳೆಯ ಕರ್ನಾಟಕ ಪಾಕವಿಧಾನದ ಅಳತೆಯಲ್ಲಿ ಬೆರೆಸಿದ ಮಸಾಲೆಗಳು.'
+                : 'Multiple single-origin spice streams converge into a balanced blend.'}
+            </p>
           </div>
 
+          {/* Chapter 7 */}
+          <div ref={text7Ref} className="space-y-3">
+            <p className="text-xs sm:text-sm font-mono tracking-[0.28em] text-[#8B3214] uppercase font-bold">
+              {isKn ? 'ಹಂತ ೦೭ · ಪ್ಯಾಕಿಂಗ್' : 'SCENE 07 · PACKAGING'}
+            </p>
+            <h2 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#1F1610] leading-tight">
+              {isKn ? 'ಸುವಾಸನೆಯ ಶಾಶ್ವತ ಲಾಕ್.' : 'Sealed at the source.'}
+            </h2>
+            <p className="text-xs sm:text-sm text-[#5C483B] max-w-md mx-auto font-normal">
+              {isKn
+                ? 'ಬೀಸಿದ ಕೆಲವೇ ಸಮಯದಲ್ಲಿ ಗಾಳಿ ತಾಗದಂತೆ ಪ್ಯಾಕ್ ಮಾಡಿ ಸುವಾಸನೆ ಲಾಕ್ ಮಾಡುವುದು.'
+                : 'Aroma-barrier airtight sealing preserves delicate volatile oils.'}
+            </p>
+          </div>
+
+          {/* Chapter 8 */}
+          <div ref={text8Ref} className="space-y-3">
+            <p className="text-xs sm:text-sm font-mono tracking-[0.28em] text-[#8B3214] uppercase font-bold">
+              {isKn ? 'ಹಂತ ೦೮ · ನಿಮ್ಮ ಅಡುಗೆಗೆ' : 'SCENE 08 · TO YOUR KITCHEN'}
+            </p>
+            <h2 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#1F1610] leading-tight">
+              {isKn ? 'ನಿಮ್ಮ ಕುಟುಂಬದ ಅಡುಗೆಗೆ ಸಿದ್ಧ.' : 'Ready for your kitchen.'}
+            </h2>
+            <p className="text-xs sm:text-sm text-[#5C483B] max-w-md mx-auto font-normal">
+              {isKn
+                ? 'ಕಲ್ಲಿನಿಂದ ನಿಮ್ಮ ಸಾಂಬಾರ್ ಪಾತ್ರೆಗೆ. ಮನೆಯಿಡೀ ಹರಡುವ ಘಮಲು.'
+                : 'From our granite mill to your simmering brass pot.'}
+            </p>
+          </div>
         </div>
 
         {/* Bottom Pinned Footer */}
-        <div
-          className={`relative z-30 pb-6 sm:pb-8 px-4 sm:px-8 max-w-7xl mx-auto w-full flex items-center justify-between text-xs font-mono transition-colors duration-300 ${
-            isLightScene ? 'text-[#7A6455]' : 'text-stone-400'
-          }`}
-        >
+        <div className="relative z-30 pb-6 sm:pb-8 px-4 sm:px-8 max-w-7xl mx-auto w-full flex items-center justify-between text-xs font-mono text-[#7A6455]">
           <span className="truncate">
             {isKn
               ? 'ಪ್ರಕೃತಿಯಿಂದ ನಿಮ್ಮ ಮನೆಯ ತಟ್ಟೆಯವರೆಗೆ · ಇಂದಿಮಾ'
@@ -805,9 +866,7 @@ export const ScrollSpiceJourney: React.FC<ScrollSpiceJourneyProps> = ({
           <button
             type="button"
             onClick={onExploreCatalog}
-            className={`flex items-center space-x-1.5 transition-colors cursor-pointer font-bold ${
-              isLightScene ? 'text-[#8B3214] hover:text-[#72270E]' : 'text-amber-300 hover:text-amber-200'
-            }`}
+            className="flex items-center space-x-1.5 transition-colors cursor-pointer font-bold text-[#8B3214] hover:text-[#72270E]"
           >
             <span>{isKn ? 'ಎಲ್ಲಾ ಮಸಾಲೆಗಳ ಸಂಗ್ರಹ' : 'Full Catalogue'}</span>
             <ArrowDown className="w-3.5 h-3.5" />
