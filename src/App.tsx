@@ -5,7 +5,12 @@ import { WishlistProvider } from './contexts/WishlistContext';
 import { AdminAuthProvider, useAdminAuth } from './contexts/AdminAuthContext';
 
 import { Header } from './components/Header';
-import { HeroBanner } from './components/HeroBanner';
+import { CinematicHero } from './components/CinematicHero';
+import { BrandStatement } from './components/BrandStatement';
+import { ScrollSpiceJourney } from './components/ScrollSpiceJourney';
+import { ProcessCraftSection } from './components/ProcessCraftSection';
+import { TrustQualitySection } from './components/TrustQualitySection';
+import { FinalCtaSection } from './components/FinalCtaSection';
 import { CategoryBar } from './components/CategoryBar';
 import { ProductCard } from './components/ProductCard';
 import { ProductDetailsModal } from './components/ProductDetailsModal';
@@ -14,7 +19,6 @@ import { CheckoutModal } from './components/CheckoutModal';
 import { OrderConfirmationModal } from './components/OrderConfirmationModal';
 import { TrackOrderModal } from './components/TrackOrderModal';
 import { WelcomeBackOrderCard } from './components/WelcomeBackOrderCard';
-import { SpiceJourneyExperience } from './components/SpiceJourneyExperience';
 import { RecipeSection } from './components/RecipeSection';
 import { HeritageStorySection } from './components/HeritageStorySection';
 import { HealthWisdomSection } from './components/HealthWisdomSection';
@@ -295,15 +299,25 @@ const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToA
 
       {/* Main Storefront Body */}
       <main className="flex-1">
-        {/* Hero Section */}
-        <HeroBanner
+        {/* 01 — Cinematic Hero */}
+        <CinematicHero
           banner={(banners || []).find(b => b.type === 'hero' && b.active !== false && b.enabled !== false) || (banners || []).find(b => b.active !== false && b.enabled !== false) || banners?.[0]}
+          onExploreClick={() => scrollToSection('scroll-journey-section')}
           onShopClick={() => scrollToSection('products-section')}
-          onOffersClick={() => scrollToSection('offers-section')}
         />
 
-        {/* 8-Stage Interactive Spice Journey: From Spice to Kitchen */}
-        <SpiceJourneyExperience />
+        {/* 02 — Brand Statement */}
+        <BrandStatement />
+
+        {/* 03 — From Whole Spice to Your Kitchen (Continuous GSAP Scroll Timeline) */}
+        <ScrollSpiceJourney
+          products={products}
+          onOpenProduct={setSelectedProduct}
+          onExploreCatalog={() => scrollToSection('products-section')}
+        />
+
+        {/* 04 — The Artisanal Craft & Process */}
+        <ProcessCraftSection />
 
         {/* Personalized Returning Customer Welcome Back & Order Tracking (Token-authorized only) */}
         <WelcomeBackOrderCard
@@ -435,6 +449,14 @@ const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToA
           reviews={reviews}
           products={products}
           onReviewAdded={handleReviewAdded}
+        />
+
+        {/* 09 — Truthful Trust & Quality Section */}
+        <TrustQualitySection />
+
+        {/* 10 — Final Cinematic CTA */}
+        <FinalCtaSection
+          onShopClick={() => scrollToSection('products-section')}
         />
       </main>
 

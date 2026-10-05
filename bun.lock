@@ -15,6 +15,7 @@
         "express": "^4.21.2",
         "firebase": "^12.18.0",
         "firebase-admin": "^14.3.0",
+        "gsap": "^3.15.0",
         "heic-convert": "^2.1.0",
         "lucide-react": "^0.546.0",
         "motion": "^12.23.24",
@@ -622,6 +623,8 @@
     "gopd": ["gopd@1.2.0", "", {}, ""],
 
     "graceful-fs": ["graceful-fs@4.2.11", "", {}, ""],
+
+    "gsap": ["gsap@3.15.0", "", {}, "sha512-dMW4CWBTUK1AEEDeZc1g4xpPGIrSf9fJF960qbTZmN/QwZIWY5wgliS6JWl9/25fpTGJrMRtSjGtOmPnfjZB+A=="],
 
     "gtoken": ["gtoken@7.1.0", "", { "dependencies": { "gaxios": "^6.0.0", "jws": "^4.0.0" } }, ""],
 
