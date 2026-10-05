@@ -44,21 +44,21 @@ export const FinishedProductShowcase: React.FC<FinishedProductShowcaseProps> = (
             <h2 className="font-serif text-3xl sm:text-5xl font-bold tracking-tight text-[#1F1610] leading-tight">
               {isKn ? (
                 <>
-                  ಕಲ್ಲಿನಲ್ಲಿ ಅರೆದ ಅಪ್ಪಟ ಮಸಾಲೆಗಳು. <br />
-                  <span className="text-[#8B3214]">ನಿಮ್ಮ ಕೈಗೆ ಸಿದ್ಧ.</span>
+                  ಕಾಳಜಿಯಿಂದ ಸಿದ್ಧಪಡಿಸಿದ ಮಸಾಲೆಗಳು. <br />
+                  <span className="text-[#8B3214]">ನಿಮ್ಮ ಅಡುಗೆಗೆ ಸಿದ್ಧ.</span>
                 </>
               ) : (
                 <>
-                  From Granite Mill to Airtight Seal. <br />
-                  <span className="text-[#8B3214]">Our Flagship Finished Blends.</span>
+                  Crafted with Care. <br />
+                  <span className="text-[#8B3214]">Our Everyday Finished Blends.</span>
                 </>
               )}
             </h2>
 
             <p className="text-xs sm:text-sm text-[#5C483B] max-w-xl font-normal leading-relaxed">
               {isKn
-                ? 'ಪ್ರತಿಯೊಂದು ಪಾಕೆಟ್‌ ಕೂಡ ಯಾವುದೇ ಕೃತಕ ಬಣ್ಣ, ಮರದ ಪುಡಿ ಅಥವಾ ರಾಸಾಯನಿಕಗಳಿಲ್ಲದೆ ಶುದ್ಧವಾಗಿ ಸಿದ್ಧಪಡಿಸಲಾಗಿದೆ. ತೆರೆದಾಗ ಸುವಾಸನೆ ನಿಮ್ಮ ಮನೆಯಿಡೀ ಹರಡುತ್ತದೆ.'
-                : 'Sealed fresh in nitrogen-flushed, aroma-barrier pouches within hours of stone-milling. Experience pure essential oil volatility in every pinch.'}
+                ? 'ಪ್ರತಿಯೊಂದು ಪಾಕೆಟ್‌ ಕೂಡ ದಿನನಿತ್ಯದ ಸಾಂಬಾರ್, ರಸಂ ಮತ್ತು ಪಲ್ಯಗಳಿಗೆ ಹೊಂದಿಕೊಳ್ಳುವಂತೆ ಪ್ರೀತಿಯಿಂದ ಸಿದ್ಧಪಡಿಸಲಾಗಿದೆ.'
+                : 'Prepared in small batches and packed fresh for everyday South Indian kitchen recipes.'}
             </p>
           </div>
 
@@ -93,10 +93,10 @@ export const FinishedProductShowcase: React.FC<FinishedProductShowcaseProps> = (
                     loading="lazy"
                   />
 
-                  {/* Purity Ribbon Badge */}
+                  {/* Authentic Badge */}
                   <div className="absolute top-3 left-3 inline-flex items-center space-x-1 px-2.5 py-1 rounded-full bg-[#FAF0DC] text-[#8B3214] border border-[#DFC7A2] text-[10px] font-mono font-bold uppercase tracking-wider">
                     <ShieldCheck className="w-3 h-3 text-[#8B3214]" />
-                    <span>{isKn ? '೧೦೦% ಶುದ್ಧ' : 'Stone-Ground'}</span>
+                    <span>{isKn ? 'ಸಾಂಪ್ರದಾಯಿಕ' : 'Authentic'}</span>
                   </div>
 
                   {/* Net Weight */}

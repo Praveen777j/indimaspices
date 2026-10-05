@@ -33,7 +33,7 @@ export const BrandStatement: React.FC = () => {
 
         <p className="text-sm sm:text-base lg:text-lg text-[#5C483B] max-w-2xl mx-auto leading-relaxed font-normal">
           {isKn
-            ? 'ಒಗ್ಗರಣೆಯ ಸದ್ದು, ಮನೆಯಿಡೀ ಹರಡುವ ಪರಿಮಳ, ತಟ್ಟೆಯಲ್ಲಿ ಮೂಡುವ ನೈಜ ರುಚಿ — ಇವೆಲ್ಲವೂ ಆರಂಭವಾಗುವುದು ಕಲ್ಲಿನಲ್ಲಿ ಬೀಸಿದ ಅಪ್ಪಟ ಮಸಾಲೆಗಳಿಂದ. ಯಾವುದೇ ಕೃತಕ ತಂತ್ರಗಳಿಲ್ಲದೆ ನೈಸರ್ಗಿಕ ವಿಧಾನದಲ್ಲಿ ತಯಾರಿಸುವ ಪರಂಪರೆ ನಮ್ಮದು.'
+            ? 'ಒಗ್ಗರಣೆಯ ಸದ್ದು, ಮನೆಯಿಡೀ ಹರಡುವ ಪರಿಮಳ, ತಟ್ಟೆಯಲ್ಲಿ ಮೂಡುವ ನೈಜ ರುಚಿ — ಇವೆಲ್ಲವೂ ಆರಂಭವಾಗುವುದು ತಾಳ್ಮೆಯಿಂದ ಸಿದ್ಧಪಡಿಸಿದ ಅಪ್ಪಟ ಮಸಾಲೆಗಳಿಂದ. ಯಾವುದೇ ಕೃತಕ ತಂತ್ರಗಳಿಲ್ಲದೆ ನೈಸರ್ಗಿಕ ವಿಧಾನದಲ್ಲಿ ತಯಾರಿಸುವ ಪರಂಪರೆ ನಮ್ಮದು.'
             : 'Before the sizzle of mustard seeds in hot ghee, before the aroma fills every corner of your home, before the first spoonful shared with family — there is the spice. Whole, patient, and full of natural character.'}
         </p>
 

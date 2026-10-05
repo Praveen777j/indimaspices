@@ -1,5 +1,5 @@
 import React from 'react';
-import { Compass, Filter, Sun, Flame, Layers, Package } from 'lucide-react';
+import { Compass, Filter, Sun, Sparkles, Layers, Package } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 export const ProcessCraftSection: React.FC = () => {
@@ -10,83 +10,83 @@ export const ProcessCraftSection: React.FC = () => {
     {
       number: '01',
       icon: Compass,
-      title_en: 'Whole Crop Sourcing',
-      title_kn: 'ನೈಜ ಮೂಲದಿಂದ ಸಂಗ್ರಹ',
+      title_en: 'Careful Sourcing',
+      title_kn: 'ಗುಣಮಟ್ಟದ ಕಾಳುಗಳ ಆಯ್ಕೆ',
       desc_en:
-        'Harvested directly from generational growers across Karnataka: deep-red Byadgi chillies, fragrant round coriander seeds, and Salem turmeric roots.',
+        'We begin with whole spices chosen for their natural aroma, clean appearance, and traditional culinary quality.',
       desc_kn:
-        'ಕರ್ನಾಟಕದ ನೈಜ ಕೃಷಿ ಭೂಮಿಗಳಿಂದ ಬ್ಯಾಡಗಿ ಮೆಣಸಿನಕಾಯಿ, ಸುವಾಸನಾಭರಿತ ಧನಿಯಾ ಮತ್ತು ಅರಿಶಿನ ಕೊಂಬುಗಳನ್ನು ನೇರವಾಗಿ ಸಂಗ್ರಹಿಸುತ್ತೇವೆ.'
+        'ನೈಸರ್ಗಿಕ ಸುವಾಸನೆ ಮತ್ತು ಸಾಂಪ್ರದಾಯಿಕ ಅಡುಗೆಗೆ ಸೂಕ್ತವಾದ ಉತ್ತಮ ಕಾಳು ಮಸಾಲೆಗಳನ್ನು ಕಾಳಜಿಯಿಂದ ಆಯ್ಕೆ ಮಾಡುತ್ತೇವೆ.'
     },
     {
       number: '02',
       icon: Filter,
-      title_en: 'Artisanal Sorting',
-      title_kn: 'ಕೈಯಿಂದ ಆರಿಸುವ ಪರಿಶುದ್ಧತೆ',
+      title_en: 'Hand Cleaning',
+      title_kn: 'ಕೈಯಿಂದ ಆರಿಸಿ ಶುಚಿಗೊಳಿಸುವಿಕೆ',
       desc_en:
-        'Every harvest is winnowed and de-stemmed by hand in traditional bamboo trays to eliminate field debris, hollow pods, and dust before any processing starts.',
+        'Every batch is manually cleaned and sorted to remove stems, dust, and hollow pods before any preparation begins.',
       desc_kn:
-        'ಸಾಂಪ್ರದಾಯಿಕ ಮೊರದಲ್ಲಿ ಕೇರಿ ತೊಟ್ಟು, ಧೂಳು ಮತ್ತು ಕಸವನ್ನು ಕೈಯಿಂದಲೇ ಆರಿಸಿ ಶುದ್ಧ ಕಾಳುಗಳನ್ನು ಮಾತ್ರ ಸಂಸ್ಕರಣೆಗೆ ಆರಿಸಲಾಗುತ್ತದೆ.'
+        'ಯಾವುದೇ ಸಂಸ್ಕರಣೆಗೂ ಮುನ್ನ ಕಾಳುಗಳನ್ನು ಕೈಯಿಂದಲೇ ಆರಿಸಿ, ತೊಟ್ಟು ಮತ್ತು ಧೂಳನ್ನು ತೆಗೆದು ಶುದ್ಧಗೊಳಿಸಲಾಗುತ್ತದೆ.'
     },
     {
       number: '03',
       icon: Sun,
-      title_en: 'Solar & Fire Curing',
-      title_kn: 'ಬಿಸಿಲು ಮತ್ತು ಮಂದ ಉರಿ',
+      title_en: 'Natural Sun Drying',
+      title_kn: 'ನೈಸರ್ಗಿಕ ಬಿಸಿಲಿನಲ್ಲಿ ಒಣಗಿಸುವುದು',
       desc_en:
-        'Spices are solar-cured on raised hygienic mats, then slowly warmed over low embers in cast-iron kadai to release essential oils without blistering.',
+        'Whole spices are sun-dried under warm natural sunlight to eliminate surface humidity and prepare them for grinding.',
       desc_kn:
-        'ನೈಸರ್ಗಿಕ ಬಿಸಿಲಿನಲ್ಲಿ ಒಣಗಿಸಿ, ಕಬ್ಬಿಣದ ಬಾಣಲೆಯಲ್ಲಿ ಮಂದ ಉರಿಯಲ್ಲಿ ಹುರಿಯುವುದರಿಂದ ಸುಗಂಧ ತೈಲಗಳು ಎಚ್ಚರಗೊಂಡು ನೈಜ ಸುವಾಸನೆ ಮೂಡುತ್ತದೆ.'
+        'ಕಾಳುಗಳನ್ನು ನೈಸರ್ಗಿಕ ಬಿಸಿಲಿನಲ್ಲಿ ಹದವಾಗಿ ಒಣಗಿಸಿ, ತೇವಾಂಶವನ್ನು ನಿವಾರಿಸಿ ಪುಡಿ ಮಾಡಲು ಸಿದ್ಧಪಡಿಸಲಾಗುತ್ತದೆ.'
     },
     {
       number: '04',
-      icon: Flame,
-      title_en: 'Granite Stone-Milling',
-      title_kn: 'ನೈಸರ್ಗಿಕ ಕಲ್ಲಿನ ಬೀಸುವಿಕೆ',
+      icon: Sparkles,
+      title_en: 'Small Batch Grinding',
+      title_kn: 'ಸಣ್ಣ ಬ್ಯಾಚ್‌ಗಳಲ್ಲಿ ಪುಡಿ ಮಾಡುವುದು',
       desc_en:
-        'Unlike commercial pulverizers that burn away volatile aroma with extreme heat, our natural granite stones grind slowly at ambient temperature.',
+        'Milled in controlled small batches with care so the natural aromatic oils and authentic flavors remain intact.',
       desc_kn:
-        'ವೇಗದ ಮೆಷಿನ್‌ಗಳಂತೆ ಬಿಸಿಯಾಗದೆ, ಸಾಂಪ್ರದಾಯಿಕ ಗ್ರಾನೈಟ್ ಕಲ್ಲಿನಲ್ಲಿ ನಿಧಾನವಾಗಿ ಬೀಸಿ ನೈಸರ್ಗಿಕ ತೈಲ ಮತ್ತು ಸುವಾಸನೆಯನ್ನು ಕಾಪಾಡಲಾಗುತ್ತದೆ.'
+        'ಸಣ್ಣ ಬ್ಯಾಚ್‌ಗಳಲ್ಲಿ ನಿಧಾನವಾಗಿ ಪುಡಿ ಮಾಡುವುದರಿಂದ ಮಸಾಲೆಯ ಸಹಜ ಪರಿಮಳ ಮತ್ತು ರುಚಿ ಹಾಗೆಯೇ ಉಳಿಯುತ್ತದೆ.'
     },
     {
       number: '05',
       icon: Layers,
-      title_en: 'Generational Blending',
-      title_kn: 'ಪಾರಂಪರಿಕ ಸೂತ್ರಗಳ ಮಿಶ್ರಣ',
+      title_en: 'Traditional Blending',
+      title_kn: 'ಸಾಂಪ್ರದಾಯಿಕ ಮಿಶ್ರಣ',
       desc_en:
-        'Stone-ground spices are harmonized in micro-batches according to authentic regional Karnataka culinary proportions passed down through families.',
+        'Spices are measured according to time-tested regional Karnataka proportions for everyday sambar, rasam, and curries.',
       desc_kn:
-        'ಬಿಸಿಬೇಳೆಬಾತ್, ಸಾಂಬಾರ್ ಮತ್ತು ರಸಂ ಪುಡಿಗಳಿಗೆ ಬೇಕಾದ ಪ್ರತಿಯೊಂದು ಮಸಾಲೆಯನ್ನು ಶತಮಾನಗಳ ಹಳೆಯ ಕರ್ನಾಟಕ ಪಾಕವಿಧಾನದಂತೆ ಅಳತೆ ಮಾಡಿ ಬೆರೆಸಲಾಗುತ್ತದೆ.'
+        'ದಿನನಿತ್ಯದ ಸಾಂಬಾರ್ ಮತ್ತು ರಸಂಗೆ ಹೊಂದಿಕೊಳ್ಳುವಂತೆ ಸಾಂಪ್ರದಾಯಿಕ ಅಳತೆಯ ಪ್ರಕಾರ ಮಸಾಲೆಗಳನ್ನು ಬೆರೆಸಲಾಗುತ್ತದೆ.'
     },
     {
       number: '06',
       icon: Package,
-      title_en: 'Aroma-Lock Sealing',
-      title_kn: 'ಸುವಾಸನೆ ಲಾಕ್ ಮಾಡುವ ಪ್ಯಾಕಿಂಗ್',
+      title_en: 'Airtight Packaging',
+      title_kn: 'ಗಾಳಿಯಾಡದ ಸುರಕ್ಷಿತ ಪ್ಯಾಕಿಂಗ್',
       desc_en:
-        'Airtight multi-layer oxygen-barrier pouches are sealed within hours of milling to lock in volatile aromas until you open them in your home kitchen.',
+        'Packed securely in airtight packets shortly after preparation to ensure freshness reaches your dining table.',
       desc_kn:
-        'ಕಲ್ಲಿನಲ್ಲಿ ಬೀಸಿದ ಕೆಲವೇ ಸಮಯದಲ್ಲಿ ಗಾಳಿ ಮತ್ತು ಬೆಳಕು ತಾಗದಂತಹ ವಿಶೇಷ ಸುವಾಸನೆ-ಲಾಕ್ ಕವರ್‌ಗಳಲ್ಲಿ ಪ್ಯಾಕ್ ಮಾಡಲಾಗುತ್ತದೆ.'
+        'ತಯಾರಿಸಿದ ಕೆಲವೇ ಸಮಯದಲ್ಲಿ ಗಾಳಿಯಾಡದ ಪ್ಯಾಕೆಟ್‌ಗಳಲ್ಲಿ ಪ್ಯಾಕ್ ಮಾಡಿ ತಾಜಾತನವನ್ನು ಕಾಪಾಡಲಾಗುತ್ತದೆ.'
     }
   ];
 
   return (
-    <section id="process-section" className="py-20 sm:py-28 bg-[#FAF6EE] text-[#1F1610] relative">
+    <section id="process-craft-section" className="py-20 sm:py-28 bg-[#FAF6EE] text-[#1F1610] relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-8">
         {/* Header */}
         <div className="max-w-3xl mb-12 sm:mb-16">
           <div className="inline-flex items-center space-x-2 text-xs font-mono tracking-widest text-[#8B3214] uppercase mb-3">
             <span className="w-1.5 h-1.5 rounded-full bg-[#8B3214]" />
-            <span>{isKn ? 'ಪದ್ಧತಿ ಮತ್ತು ಕಲೆ' : 'THE ARTISANAL METHOD'}</span>
+            <span>{isKn ? 'ತಯಾರಿಕೆಯ ಸರಳ ಹಂತಗಳು' : 'OUR PREPARATION PROCESS'}</span>
           </div>
 
           <h2 className="font-serif text-3xl sm:text-5xl font-bold tracking-tight text-[#1F1610] leading-tight">
-            {isKn ? 'ನಾವು ಮಸಾಲೆ ತಯಾರಿಸುವ ಪ್ರಾಮಾಣಿಕ ವಿಧಾನ' : 'How we craft honest spices.'}
+            {isKn ? 'ನಾವು ಮಸಾಲೆ ಸಿದ್ಧಪಡಿಸುವ ಪ್ರಾಮಾಣಿಕ ವಿಧಾನ' : 'How We Prepare Our Everyday Spices.'}
           </h2>
 
           <p className="text-sm sm:text-base text-[#5C483B] mt-4 font-normal max-w-2xl leading-relaxed">
             {isKn
-              ? 'ಕಾರ್ಖಾನೆಯ ಶಾರ್ಟ್‌ಕಟ್‌ಗಳಿಲ್ಲದೆ, ಪೂರ್ವಜರ ನಿಧಾನವಾದ ಕಲ್ಲಿನ ಬೀಸುವ ವಿಧಾನವನ್ನು ಗೌರವಿಸಿ ತಯಾರಿಸಲಾಗುವ ಸಾತ್ವಿಕ ಮಸಾಲೆಗಳು.'
-              : 'No shortcuts, no artificial food dyes, no synthetic fillers. Just the unhurried craft of working with whole nature.'}
+              ? 'ಯಾವುದೇ ಕೃತಕ ಬಣ್ಣಗಳಿಲ್ಲದೆ, ಪ್ರೀತಿ ಮತ್ತು ಕಾಳಜಿಯಿಂದ ಸಿದ್ಧಪಡಿಸಲಾಗುವ ಮನೆ ಮಸಾಲೆಗಳು.'
+              : 'Crafted with care, patience, and respect for traditional family home cooking.'}
           </p>
         </div>
 
@@ -100,21 +100,22 @@ export const ProcessCraftSection: React.FC = () => {
                 className="bg-[#FFFDF9] border border-[#DFC7A2] rounded-3xl p-6 sm:p-8 space-y-4 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group"
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-mono text-2xl font-bold text-[#8B3214]/30 group-hover:text-[#8B3214] transition-colors">
-                    {step.number}
-                  </span>
-                  <div className="p-2.5 rounded-2xl bg-[#FAF6EE] text-[#8B3214] border border-[#DFC7A2]">
+                  <div className="w-10 h-10 rounded-2xl bg-[#FAF0DC] flex items-center justify-center text-[#8B3214] border border-[#DFC7A2]">
                     <Icon className="w-5 h-5" />
                   </div>
+                  <span className="font-mono text-xs font-bold text-[#8C6D53] tracking-widest">
+                    STEP {step.number}
+                  </span>
                 </div>
 
-                <h3 className="font-serif text-xl font-bold text-[#1F1610]">
-                  {isKn ? step.title_kn : step.title_en}
-                </h3>
-
-                <p className="text-xs sm:text-sm text-[#5C483B] leading-relaxed font-normal">
-                  {isKn ? step.desc_kn : step.desc_en}
-                </p>
+                <div className="space-y-2">
+                  <h3 className="font-serif text-lg font-bold text-[#1F1610] group-hover:text-[#8B3214] transition-colors">
+                    {isKn ? step.title_kn : step.title_en}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-[#5C483B] leading-relaxed font-normal">
+                    {isKn ? step.desc_kn : step.desc_en}
+                  </p>
+                </div>
               </div>
             );
           })}

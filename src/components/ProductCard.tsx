@@ -66,7 +66,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
     }
     return (
       <span className="bg-[#EAF2EB] border border-[#CDE0D0] text-[#2B5329] text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-2xs backdrop-blur-md truncate">
-        {isKn ? 'ಕಲ್ಲಿನ ಪುಡಿ' : 'Stone-Ground'}
+        {isKn ? 'ಸಾಂಪ್ರದಾಯಿಕ' : 'Authentic'}
       </span>
     );
   };

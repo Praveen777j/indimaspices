@@ -782,45 +782,45 @@ export const ScrollSpiceJourney: React.FC<ScrollSpiceJourneyProps> = ({
           {/* Chapter 4 */}
           <div ref={text4Ref} className="space-y-3">
             <p className="text-xs sm:text-sm font-mono tracking-[0.28em] text-[#8B3214] uppercase font-bold">
-              {isKn ? 'ಹಂತ ೦೪ · ಕಲ್ಲಿನ ಬೀಸುವಿಕೆ' : 'SCENE 04 · STONE MILLING'}
+              {isKn ? 'ಹಂತ ೦೪ · ಪುಡಿ ಮಾಡುವಿಕೆ' : 'SCENE 04 · MILLING'}
             </p>
             <h2 className="font-serif text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-[#8B3214] leading-tight">
               {isKn ? 'ಕಾಳು → ಅಪ್ಪಟ ಪುಡಿ' : 'WHOLE → GROUND'}
             </h2>
             <p className="text-xs sm:text-sm text-[#5C483B] max-w-md mx-auto font-normal">
               {isKn
-                ? 'ನೈಸರ್ಗಿಕ ಗ್ರಾನೈಟ್ ಕಲ್ಲಿನಲ್ಲಿ ನಿಧಾನವಾಗಿ ಬೀಸಿದ ಪರಿಮಳ.'
-                : 'Granite stones rotate with your scroll, crushing whole spices into aromatic micro-particles.'}
+                ? 'ಸಣ್ಣ ಬ್ಯಾಚ್‌ಗಳಲ್ಲಿ ಹದವಾಗಿ ಬೀಸಿ ನೈಸರ್ಗಿಕ ಸುವಾಸನೆ ಕಾಪಾಡುವುದು.'
+                : 'Milling stones rotate with your scroll, gently grinding whole spices into aromatic powder.'}
             </p>
           </div>
 
           {/* Chapter 5 */}
           <div ref={text5Ref} className="space-y-3">
             <p className="text-xs sm:text-sm font-mono tracking-[0.28em] text-[#8B3214] uppercase font-bold">
-              {isKn ? 'ಹಂತ ೦೫ · ಪರಿಶುದ್ಧ ಪುಡಿ' : 'SCENE 05 · SPICE POWDER'}
+              {isKn ? 'ಹಂತ ೦೫ · ತಾಜಾ ಪುಡಿ' : 'SCENE 05 · FRESH POWDER'}
             </p>
             <h2 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#1F1610] leading-tight">
-              {isKn ? 'ದಟ್ಟವಾದ ನೈಸರ್ಗಿಕ ಬಣ್ಣ.' : 'Vibrant, pure powder.'}
+              {isKn ? 'ದಟ್ಟವಾದ ನೈಸರ್ಗಿಕ ಬಣ್ಣ.' : 'Vibrant, natural powder.'}
             </h2>
             <p className="text-xs sm:text-sm text-[#5C483B] max-w-md mx-auto font-normal">
               {isKn
-                ? 'ಕಲ್ಲಿನಲ್ಲಿ ಉಳಿದ ನೈಸರ್ಗಿಕ ತೈಲಾಂಶ ಮತ್ತು ಕಣ್ಣು ಕೋರೈಸುವ ಕೆಂಪು-ಚಿನ್ನದ ಬಣ್ಣ.'
-                : 'Dense natural color and oil texture cascading in air currents.'}
+                ? 'ಯಾವುದೇ ಕೃತಕ ಬಣ್ಣಗಳಿಲ್ಲದೆ ಸಹಜ ಕೆಂಪು ಮತ್ತು ಹಳದಿ ವರ್ಣ.'
+                : 'Natural colour and texture from whole spices ground with care.'}
             </p>
           </div>
 
           {/* Chapter 6 */}
           <div ref={text6Ref} className="space-y-3">
             <p className="text-xs sm:text-sm font-mono tracking-[0.28em] text-[#8B3214] uppercase font-bold">
-              {isKn ? 'ಹಂತ ೦೬ · ಮಿಶ್ರಣ' : 'SCENE 06 · HERITAGE BLEND'}
+              {isKn ? 'ಹಂತ ೦೬ · ಮಿಶ್ರಣ' : 'SCENE 06 · TRADITIONAL BLEND'}
             </p>
             <h2 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#1F1610] leading-tight">
               {isKn ? 'ಸಮತೋಲಿತ ಪಾರಂಪರಿಕ ರುಚಿ.' : 'Flavour comes together.'}
             </h2>
             <p className="text-xs sm:text-sm text-[#5C483B] max-w-md mx-auto font-normal">
               {isKn
-                ? 'ಶತಮಾನಗಳ ಹಳೆಯ ಕರ್ನಾಟಕ ಪಾಕವಿಧಾನದ ಅಳತೆಯಲ್ಲಿ ಬೆರೆಸಿದ ಮಸಾಲೆಗಳು.'
-                : 'Multiple single-origin spice streams converge into a balanced blend.'}
+                ? 'ದಿನನಿತ್ಯದ ಅಡುಗೆಗೆ ಬೇಕಾದ ಸಾಂಪ್ರದಾಯಿಕ ಅಳತೆಯಲ್ಲಿ ಬೆರೆಸಿದ ಮಸಾಲೆಗಳು.'
+                : 'Spices are combined in time-tested proportions for everyday family meals.'}
             </p>
           </div>
 
@@ -830,12 +830,12 @@ export const ScrollSpiceJourney: React.FC<ScrollSpiceJourneyProps> = ({
               {isKn ? 'ಹಂತ ೦೭ · ಪ್ಯಾಕಿಂಗ್' : 'SCENE 07 · PACKAGING'}
             </p>
             <h2 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#1F1610] leading-tight">
-              {isKn ? 'ಸುವಾಸನೆಯ ಶಾಶ್ವತ ಲಾಕ್.' : 'Sealed at the source.'}
+              {isKn ? 'ತಾಜಾತನದ ಸುರಕ್ಷಿತ ಪ್ಯಾಕಿಂಗ್.' : 'Sealed for freshness.'}
             </h2>
             <p className="text-xs sm:text-sm text-[#5C483B] max-w-md mx-auto font-normal">
               {isKn
-                ? 'ಬೀಸಿದ ಕೆಲವೇ ಸಮಯದಲ್ಲಿ ಗಾಳಿ ತಾಗದಂತೆ ಪ್ಯಾಕ್ ಮಾಡಿ ಸುವಾಸನೆ ಲಾಕ್ ಮಾಡುವುದು.'
-                : 'Aroma-barrier airtight sealing preserves delicate volatile oils.'}
+                ? 'ತಯಾರಿಸಿದ ಕೆಲವೇ ಸಮಯದಲ್ಲಿ ಗಾಳಿಯಾಡದಂತೆ ಪ್ಯಾಕ್ ಮಾಡುವುದು.'
+                : 'Packed in airtight packets to ensure natural aroma reaches your kitchen.'}
             </p>
           </div>
 
@@ -849,8 +849,8 @@ export const ScrollSpiceJourney: React.FC<ScrollSpiceJourneyProps> = ({
             </h2>
             <p className="text-xs sm:text-sm text-[#5C483B] max-w-md mx-auto font-normal">
               {isKn
-                ? 'ಕಲ್ಲಿನಿಂದ ನಿಮ್ಮ ಸಾಂಬಾರ್ ಪಾತ್ರೆಗೆ. ಮನೆಯಿಡೀ ಹರಡುವ ಘಮಲು.'
-                : 'From our granite mill to your simmering brass pot.'}
+                ? 'ನಮ್ಮ ಮಸಾಲೆಗಳಿಂದ ನಿಮ್ಮ ಮನೆಯ ಸಾಂಬಾರ್ ಪಾತ್ರೆಗೆ. ಸವಿಯಾದ ಮನೆ ಊಟ.'
+                : 'From whole spices to your simmering pot. Wholesome taste for the family table.'}
             </p>
           </div>
         </div>

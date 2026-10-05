@@ -180,8 +180,8 @@ export const Header: React.FC<HeaderProps> = ({
             </span>
             <span className="font-medium text-amber-50 truncate text-[11px]">
               {isKn
-                ? 'ಬೆಂಗಳೂರಿನಲ್ಲಿ ಕಲ್ಲಿನ ಬೀಸುವ ಪದ್ಧತಿಯಲ್ಲಿ ತಯಾರಾದ 100% ನೈಸರ್ಗಿಕ ಮಸಾಲೆಗಳು'
-                : 'Freshly Stone-Ground in Bengaluru • 100% Natural, Chemical-Free Spices'}
+                ? 'ಬೆಂಗಳೂರಿನಲ್ಲಿ ಕಾಳಜಿಯಿಂದ ತಯಾರಾದ ಸಾಂಪ್ರದಾಯಿಕ ಮನೆ ಮಸಾಲೆಗಳು'
+                : 'Authentic Spices from Bengaluru • Crafted with Care'}
             </span>
           </div>
 
@@ -353,7 +353,7 @@ export const Header: React.FC<HeaderProps> = ({
                 {settings.business_name || 'Indima'}
               </span>
               <span className="text-[10px] text-[#2B5329] font-bold block truncate">
-                {isKn ? '100% ನೈಸರ್ಗಿಕ' : 'Stone-Ground • Pure'}
+                {isKn ? '100% ನೈಸರ್ಗಿಕ' : 'Authentic • Pure'}
               </span>
             </div>
           </div>
@@ -436,7 +436,7 @@ export const Header: React.FC<HeaderProps> = ({
               className="hover:text-[#8B3214] transition-colors cursor-pointer text-[#2B5329] font-bold flex items-center space-x-1 bg-[#EAF2EB] px-2.5 py-0.5 rounded-full"
             >
               <Leaf className="w-3 h-3 text-[#2B5329]" />
-              <span>{isKn ? 'ಆರೋಗ್ಯ & ರಾಸಾಯನಿಕ-ಮುಕ್ತ ಶುದ್ಧತೆ' : 'Health Benefits & 0% Chemicals'}</span>
+              <span>{isKn ? 'ಆರೋಗ್ಯ & ಸಾಂಪ್ರದಾಯಿಕ ಒಳನೋಟಗಳು' : 'Traditional Health & Wellness'}</span>
             </button>
             <button
               onClick={() => onNavigateToSection('spice-journey-section')}
@@ -565,7 +565,7 @@ export const Header: React.FC<HeaderProps> = ({
                 >
                   <div className="flex items-center space-x-2.5">
                     <Leaf className="w-4 h-4 text-[#2B5329]" />
-                    <span>{isKn ? 'ಆರೋಗ್ಯ & ರಾಸಾಯನಿಕ-ಮುಕ್ತ ಶುದ್ಧತೆ' : 'Health Benefits & 0% Chemicals'}</span>
+                    <span>{isKn ? 'ಆರೋಗ್ಯ & ಸಾಂಪ್ರದಾಯಿಕ ಒಳನೋಟಗಳು' : 'Traditional Health & Wellness'}</span>
                   </div>
                   <ChevronRight className="w-3.5 h-3.5 text-[#2B5329]" />
                 </button>

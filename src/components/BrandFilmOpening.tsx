@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { ArrowDown, Sparkles, MapPin, ShoppingBag } from 'lucide-react';
+import { ArrowDown, Sparkles, MapPin, ShoppingBag, Play } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { BusinessSettings, Banner } from '../types';
 import { indimaBrandLogoImg } from '../assets/images';
@@ -22,13 +22,14 @@ export const BrandFilmOpening: React.FC<BrandFilmOpeningProps> = ({
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [isPlayingVideo, setIsPlayingVideo] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setLoaded(true), 150);
     return () => clearTimeout(timer);
   }, []);
 
-  // Ambient Dark/Warm Golden Particles & Light Sweep Canvas with 3D spice depth
+  // Ambient Dark/Warm Golden Particles & Light Sweep Canvas
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -46,7 +47,7 @@ export const BrandFilmOpening: React.FC<BrandFilmOpeningProps> = ({
     };
     window.addEventListener('resize', handleResize);
 
-    const count = width < 640 ? 40 : 80;
+    const count = width < 640 ? 40 : 75;
     const particles = Array.from({ length: count }, () => ({
       x: Math.random() * width,
       y: Math.random() * height,
@@ -111,11 +112,8 @@ export const BrandFilmOpening: React.FC<BrandFilmOpeningProps> = ({
 
   // Admin Synchronized Content
   const businessName = settings?.business_name || 'Indima Spice Co.';
-  const defaultTagline = isKn
-    ? (settings?.tagline_kn || 'ತಾಯಿಯ ಪ್ರೀತಿಯಷ್ಟೇ ಪರಿಶುದ್ಧ')
-    : (settings?.tagline_en || "Pure as mother's love");
 
-  // If admin has set custom active banner title/subtitle, use it with highest priority
+  // If admin has set custom active banner title/subtitle, use it
   const bannerHeadline = banner?.title_en
     ? (isKn ? (banner.title_kn || banner.title_en) : banner.title_en)
     : null;
@@ -127,6 +125,8 @@ export const BrandFilmOpening: React.FC<BrandFilmOpeningProps> = ({
   const bannerCta = banner?.primary_btn_text_en
     ? (isKn ? (banner.primary_btn_text_kn || banner.primary_btn_text_en) : banner.primary_btn_text_en)
     : null;
+
+  const hasAdminVideo = banner?.media_type === 'video' && Boolean(banner?.media_url);
 
   return (
     <section
@@ -146,37 +146,60 @@ export const BrandFilmOpening: React.FC<BrandFilmOpeningProps> = ({
           <span>{businessName}</span>
           <span className="text-stone-600">/</span>
           <span className="text-stone-400 font-sans tracking-normal hidden sm:inline">
-            {settings?.city || 'Basavanagudi, Bengaluru'}
+            {settings?.city || 'Bengaluru, Karnataka'}
           </span>
         </div>
 
         <div className="text-right text-[11px] font-mono text-amber-300/90 tracking-wider flex items-center space-x-2">
           <MapPin className="w-3.5 h-3.5 text-amber-400" />
-          <span>KARNATAKA HERITAGE</span>
+          <span>~30 YEARS OF EXPERIENCE</span>
         </div>
       </div>
 
       {/* Center Cinematic Opening: Prominent Logo + Light Sweep + Welcome */}
       <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-8 text-center my-auto py-10 sm:py-16">
-        {/* Step 1: Prominent Official Indima Brand Logo with Light Sweep */}
-        <div
-          className={`transition-all duration-1000 delay-100 mb-8 sm:mb-10 flex flex-col items-center ${
-            loaded ? 'opacity-100 scale-100 translate-y-0 filter-none' : 'opacity-0 scale-90 translate-y-8 blur-sm'
-          }`}
-        >
-          <div className="relative group p-2.5 rounded-3xl bg-gradient-to-b from-[#2C1D16] to-[#1A100B] border-2 border-amber-500/40 shadow-2xl shadow-amber-950/70 hover:border-amber-400 transition-colors">
-            {/* Shimmer Light Sweep Overlay */}
-            <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
-              <div className="w-full h-full bg-gradient-to-r from-transparent via-amber-200/30 to-transparent -translate-x-full animate-[shimmer_3.5s_infinite]" />
+        {/* Step 1: Real Admin Video OR Prominent Indima Brand Logo with Light Sweep */}
+        {hasAdminVideo && banner?.media_url ? (
+          <div className="mb-8 flex flex-col items-center">
+            <div className="relative w-full max-w-2xl aspect-video rounded-3xl overflow-hidden border-2 border-amber-500/40 shadow-2xl bg-black">
+              {banner.media_url.includes('youtube.com') || banner.media_url.includes('youtu.be') ? (
+                <iframe
+                  src={banner.media_url.replace('watch?v=', 'embed/')}
+                  title="Indima Brand Video"
+                  className="w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              ) : (
+                <video
+                  src={banner.media_url}
+                  controls
+                  className="w-full h-full object-cover"
+                  poster={banner.fallback_image || indimaBrandLogoImg}
+                />
+              )}
             </div>
-
-            <img
-              src={indimaBrandLogoImg}
-              alt={businessName}
-              className="w-28 h-28 sm:w-36 sm:h-36 object-contain rounded-2xl p-1 bg-white"
-            />
           </div>
-        </div>
+        ) : (
+          <div
+            className={`transition-all duration-1000 delay-100 mb-8 sm:mb-10 flex flex-col items-center ${
+              loaded ? 'opacity-100 scale-100 translate-y-0 filter-none' : 'opacity-0 scale-90 translate-y-8 blur-sm'
+            }`}
+          >
+            <div className="relative group p-2.5 rounded-3xl bg-gradient-to-b from-[#2C1D16] to-[#1A100B] border-2 border-amber-500/40 shadow-2xl shadow-amber-950/70 hover:border-amber-400 transition-colors">
+              {/* Shimmer Light Sweep Overlay */}
+              <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
+                <div className="w-full h-full bg-gradient-to-r from-transparent via-amber-200/30 to-transparent -translate-x-full animate-[shimmer_3.5s_infinite]" />
+              </div>
+
+              <img
+                src={indimaBrandLogoImg}
+                alt={businessName}
+                className="w-28 h-28 sm:w-36 sm:h-36 object-contain rounded-2xl p-1 bg-white"
+              />
+            </div>
+          </div>
+        )}
 
         {/* Step 2: Welcome to Indima + Brand Tagline */}
         <div
@@ -202,7 +225,7 @@ export const BrandFilmOpening: React.FC<BrandFilmOpeningProps> = ({
               <>
                 Pure as mother&apos;s love. <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-orange-400 to-amber-200">
-                  Crafted in Bengaluru.
+                  Rooted in Karnataka.
                 </span>
               </>
             )}
@@ -211,8 +234,8 @@ export const BrandFilmOpening: React.FC<BrandFilmOpeningProps> = ({
           <p className="text-xs sm:text-sm md:text-base text-stone-300 max-w-xl mx-auto font-light leading-relaxed pt-2">
             {bannerSubtitle ||
               (isKn
-                ? 'ಮೂರು ದಶಕಗಳ ನೈಜ ಅನುಭವದೊಂದಿಗೆ, ಪೂರ್ವಜರ ಪರಂಪರೆಯಂತೆ ತಯಾರಿಸಲಾಗುವ ಶುದ್ಧ ಕರ್ನಾಟಕದ ಮನೆ ಮಸಾಲೆಗಳು.'
-                : 'Three decades of culinary devotion. Whole Karnataka spices transformed the honest traditional way for family dining tables.')}
+                ? 'ಸುಮಾರು ಮೂರು ದಶಕಗಳ ಅನುಭವದೊಂದಿಗೆ, ದಿನನಿತ್ಯದ ಅಡುಗೆಗೆ ಪ್ರೀತಿಯಿಂದ ಸಿದ್ಧಪಡಿಸಲಾಗುವ ಮನೆ ಮಸಾಲೆಗಳು.'
+                : 'Three decades of experience. Built around a simple belief: good food begins with good spices. Crafted with care for family dining tables.')}
           </p>
 
           {/* Action Buttons */}
@@ -222,7 +245,7 @@ export const BrandFilmOpening: React.FC<BrandFilmOpeningProps> = ({
               type="button"
               className="inline-flex items-center space-x-3 px-8 py-4 rounded-full bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-[#140E0A] font-bold text-xs sm:text-sm tracking-wider uppercase transition-all shadow-xl shadow-amber-950/50 hover:scale-104 cursor-pointer w-full sm:w-auto justify-center"
             >
-              <span>{bannerCta || (isKn ? 'ಪರಂಪರೆಯ ಕಥೆ ನೋಡಿ' : 'Begin the Experience')}</span>
+              <span>{bannerCta || (isKn ? 'ನಮ್ಮ ಕಥೆ ತಿಳಿಯಿರಿ' : 'Explore Our Story')}</span>
               <ArrowDown className="w-4 h-4" />
             </button>
 
@@ -244,7 +267,7 @@ export const BrandFilmOpening: React.FC<BrandFilmOpeningProps> = ({
       <div className="relative z-10 pb-6 sm:pb-8 px-4 sm:px-8 max-w-7xl mx-auto w-full flex items-center justify-between text-xs text-stone-400 font-mono">
         <div className="flex items-center space-x-2">
           <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-          <span>{isKn ? 'ಕೆಳಗೆ ಸ್ಕ್ರೋಲ್ ಮಾಡಿ' : 'SCROLL DOWN TO ENTER THE BRAND FILM'}</span>
+          <span>{isKn ? 'ಕೆಳಗೆ ಸ್ಕ್ರೋಲ್ ಮಾಡಿ' : 'SCROLL DOWN TO DISCOVER OUR JOURNEY'}</span>
         </div>
 
         <div className="flex items-center space-x-1.5 animate-bounce text-amber-400 font-bold">

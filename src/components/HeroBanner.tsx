@@ -97,7 +97,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
               <MapPin className="w-3.5 h-3.5 text-[#8B3214] shrink-0" />
               <span className="truncate">{badgeText}</span>
               <span className="text-[#DFCFC0] shrink-0">|</span>
-              <span className="text-[#2B5329] font-bold shrink-0">{isKn ? '100% ರಾಸಾಯನಿಕ-ಮುಕ್ತ' : '0% Chemicals'}</span>
+              <span className="text-[#2B5329] font-bold shrink-0">{isKn ? '100% ನೈಸರ್ಗಿಕ' : 'Authentic Spices'}</span>
             </div>
 
             {/* Main Headline */}
@@ -114,19 +114,19 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5 pt-1">
               <div className="flex items-center space-x-2 text-xs font-semibold text-[#1F1610]">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>{isKn ? 'ಕಲ್ಲಿನ ಬೀಸುವಿಕೆಯಿಂದ ತೈಲಾಂಶ ಸಂರಕ್ಷಣೆ' : 'Stone-ground: Volatile oils intact'}</span>
+                <span>{isKn ? 'ಆಯ್ಕೆ ಮಾಡಿದ ಗುಣಮಟ್ಟದ ಕಾಳುಗಳು' : 'Carefully selected whole spices'}</span>
               </div>
               <div className="flex items-center space-x-2 text-xs font-semibold text-[#1F1610]">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>{isKn ? 'ಯಾವುದೇ ಕೃತಕ ಬಣ್ಣ ಅಥವಾ ಹುಡಿ ಇಲ್ಲ' : 'No synthetic dyes, husk or fillers'}</span>
+                <span>{isKn ? 'ಕರ್ನಾಟಕದ ಸಾಂಪ್ರದಾಯಿಕ ರುಚಿ' : 'Traditional Karnataka flavours'}</span>
               </div>
               <div className="flex items-center space-x-2 text-xs font-semibold text-[#1F1610]">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>{isKn ? '50% ಕಡಿಮೆ ಪ್ರಮಾಣದಲ್ಲೇ ಅದ್ಭುತ ರುಚಿ' : 'Use 50% less: Rich, deep natural taste'}</span>
+                <span>{isKn ? 'ದಿನನಿತ್ಯದ ಮನೆ ಊಟಕ್ಕೆ ಸೂಕ್ತ' : 'Crafted for everyday family meals'}</span>
               </div>
               <div className="flex items-center space-x-2 text-xs font-semibold text-[#1F1610]">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>{isKn ? 'ಬೆಂಗಳೂರಿನಲ್ಲಿ ಮನೆ ಮನೆಗೆ ನೇರ ವಿತರಣೆ' : 'Bengaluru Doorstep Fresh Delivery'}</span>
+                <span>{isKn ? 'ಮನೆ ಬಾಗಿಲಿಗೆ ತಾಜಾ ವಿತರಣೆ' : 'Doorstep fresh delivery'}</span>
               </div>
             </div>
 
