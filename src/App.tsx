@@ -5,10 +5,13 @@ import { WishlistProvider } from './contexts/WishlistContext';
 import { AdminAuthProvider, useAdminAuth } from './contexts/AdminAuthContext';
 
 import { Header } from './components/Header';
-import { CinematicHero } from './components/CinematicHero';
+import { BrandFilmOpening } from './components/BrandFilmOpening';
 import { BrandStatement } from './components/BrandStatement';
+import { HeritageStorySection } from './components/HeritageStorySection';
+import { SpiceOriginSection } from './components/SpiceOriginSection';
 import { ScrollSpiceJourney } from './components/ScrollSpiceJourney';
 import { ProcessCraftSection } from './components/ProcessCraftSection';
+import { FinishedProductShowcase } from './components/FinishedProductShowcase';
 import { TrustQualitySection } from './components/TrustQualitySection';
 import { FinalCtaSection } from './components/FinalCtaSection';
 import { CategoryBar } from './components/CategoryBar';
@@ -20,7 +23,6 @@ import { OrderConfirmationModal } from './components/OrderConfirmationModal';
 import { TrackOrderModal } from './components/TrackOrderModal';
 import { WelcomeBackOrderCard } from './components/WelcomeBackOrderCard';
 import { RecipeSection } from './components/RecipeSection';
-import { HeritageStorySection } from './components/HeritageStorySection';
 import { HealthWisdomSection } from './components/HealthWisdomSection';
 import { FestivalOffersSection } from './components/FestivalOffersSection';
 import { AncientSpiceHistorySection } from './components/AncientSpiceHistorySection';
@@ -299,25 +301,41 @@ const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToA
 
       {/* Main Storefront Body */}
       <main className="flex-1">
-        {/* 01 — Cinematic Hero */}
-        <CinematicHero
+        {/* 01 — LOGO & WELCOME TO INDIMA (The Brand Film Opening) */}
+        <BrandFilmOpening
+          settings={fallbackSettings}
           banner={(banners || []).find(b => b.type === 'hero' && b.active !== false && b.enabled !== false) || (banners || []).find(b => b.active !== false && b.enabled !== false) || banners?.[0]}
-          onExploreClick={() => scrollToSection('scroll-journey-section')}
+          onExploreClick={() => scrollToSection('brand-story-section')}
           onShopClick={() => scrollToSection('products-section')}
         />
 
-        {/* 02 — Brand Statement */}
+        {/* 02 — BRAND STORY (The Indima Philosophy) */}
         <BrandStatement />
 
-        {/* 03 — From Whole Spice to Your Kitchen (Continuous GSAP Scroll Timeline) */}
-        <ScrollSpiceJourney
+        {/* 03 — 30-YEAR HERITAGE (Artisanal Bengaluru Kitchen & Heritage Pillars) */}
+        <HeritageStorySection />
+
+        {/* 04 — SPICE ORIGIN (Single-Origin Provenance across Karnataka) */}
+        <SpiceOriginSection />
+
+        {/* 05 — SPICE-MAKING JOURNEY (Continuous GSAP 8-Scene Physical Transformation) */}
+        <div id="spice-journey-section">
+          <ScrollSpiceJourney
+            products={products}
+            onOpenProduct={setSelectedProduct}
+            onExploreCatalog={() => scrollToSection('products-section')}
+          />
+        </div>
+
+        {/* The Artisanal Craft Details */}
+        <ProcessCraftSection />
+
+        {/* 06 — FINISHED PRODUCT (Flagship Stone-Ground Pouches) */}
+        <FinishedProductShowcase
           products={products}
           onOpenProduct={setSelectedProduct}
-          onExploreCatalog={() => scrollToSection('products-section')}
+          onExploreShop={() => scrollToSection('products-section')}
         />
-
-        {/* 04 — The Artisanal Craft & Process */}
-        <ProcessCraftSection />
 
         {/* Personalized Returning Customer Welcome Back & Order Tracking (Token-authorized only) */}
         <WelcomeBackOrderCard
@@ -440,9 +458,6 @@ const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToA
 
         {/* Health & Ayurvedic Wisdom */}
         <HealthWisdomSection />
-
-        {/* Heritage Story & Stone-Ground Process */}
-        <HeritageStorySection />
 
         {/* Customer Reviews & Feedback */}
         <CustomerReviewsSection

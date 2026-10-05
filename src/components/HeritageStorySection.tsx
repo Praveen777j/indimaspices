@@ -44,7 +44,7 @@ export const HeritageStorySection: React.FC = () => {
             <div className="space-y-2">
               <div className="inline-flex items-center space-x-1.5 px-3 py-1 bg-[#FAF7F2] border border-[#DFCFC0] rounded-full text-xs font-bold text-[#8B3214]">
                 <Sparkles className="w-3.5 h-3.5 text-[#8B3214]" />
-                <span>{isKn ? 'ನಮ್ಮ ಪರಂಪರೆಯ ಕಥೆ' : 'Our Bengaluru Heritage'}</span>
+                <span>{isKn ? 'ಭಾಗ ೦೩ · ೩೦+ ವರ್ಷಗಳ ಬೆಂಗಳೂರು ಪರಂಪರೆ' : 'PART 03 · 30-YEAR BENGALURU HERITAGE'}</span>
               </div>
               <h2 className="font-serif text-2xl sm:text-4xl font-bold text-[#1F1610] leading-tight">
                 {isKn

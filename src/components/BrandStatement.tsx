@@ -7,7 +7,7 @@ export const BrandStatement: React.FC = () => {
   const isKn = language === 'kn';
 
   return (
-    <section className="relative py-20 sm:py-32 lg:py-40 bg-[#FAF6EE] text-[#1F1610] overflow-hidden select-none">
+    <section id="brand-story-section" className="relative py-20 sm:py-32 lg:py-40 bg-[#FAF6EE] text-[#1F1610] overflow-hidden select-none">
       {/* Background ambient lighting */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-amber-400/8 blur-[160px] rounded-full pointer-events-none" />
 
