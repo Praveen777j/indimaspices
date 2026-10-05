@@ -22,6 +22,21 @@ interface ScrollSpiceJourneyProps {
   onExploreCatalog?: () => void;
 }
 
+interface Particle {
+  x: number;
+  y: number;
+  baseX: number;
+  baseY: number;
+  vx: number;
+  vy: number;
+  size: number;
+  color: string;
+  alpha: number;
+  streamOrigin?: number; // 0: red, 1: yellow, 2: brown, 3: green
+  angle?: number;
+  radius?: number;
+}
+
 export const ScrollSpiceJourney: React.FC<ScrollSpiceJourneyProps> = ({
   products = [],
   onOpenProduct,
@@ -37,7 +52,7 @@ export const ScrollSpiceJourney: React.FC<ScrollSpiceJourneyProps> = ({
   const [activeChapter, setActiveChapter] = useState('WHOLE SPICE');
   const [isAddedToCart, setIsAddedToCart] = useState(false);
 
-  // Pick a featured product for the final reveal (e.g. Sambar Powder, Rasam Powder, or first product)
+  // Pick actual catalog product for the final reveal
   const featuredProduct: Product =
     products.find(p => p.active && (p.name_en?.toLowerCase().includes('sambar') || p.name_en?.toLowerCase().includes('rasam'))) ||
     products.find(p => p.active) || {
@@ -68,18 +83,16 @@ export const ScrollSpiceJourney: React.FC<ScrollSpiceJourneyProps> = ({
       category_id: 'blends'
     };
 
+  // ScrollTrigger Setup
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-
-    // Check prefers-reduced-motion
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     const trigger = ScrollTrigger.create({
       trigger: container,
       start: 'top top',
       end: 'bottom bottom',
-      scrub: prefersReducedMotion ? 0.2 : 0.6,
+      scrub: 0.5,
       onUpdate: self => {
         const p = self.progress;
         setScrollProgress(p);
@@ -91,7 +104,7 @@ export const ScrollSpiceJourney: React.FC<ScrollSpiceJourneyProps> = ({
         else if (p < 0.72) setActiveChapter('SPICE POWDER');
         else if (p < 0.85) setActiveChapter('HERITAGE BLEND');
         else if (p < 0.94) setActiveChapter('AROMA PACKAGING');
-        else setActiveChapter('YOUR KITCHEN');
+        else setActiveChapter('PRODUCT REVEAL');
       }
     });
 
@@ -100,7 +113,7 @@ export const ScrollSpiceJourney: React.FC<ScrollSpiceJourneyProps> = ({
     };
   }, []);
 
-  // HTML5 High-Performance Canvas Rendering Engine for continuous morphing
+  // Canvas Cinematic Animation Engine
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -118,413 +131,480 @@ export const ScrollSpiceJourney: React.FC<ScrollSpiceJourneyProps> = ({
     };
     window.addEventListener('resize', handleResize);
 
-    // Dynamic Spice Powder Particles Field
-    const particlePool = Array.from({ length: 180 }, () => ({
-      x: Math.random() * width,
-      y: Math.random() * height,
-      baseX: Math.random() * width,
-      baseY: Math.random() * height,
-      vx: (Math.random() - 0.5) * 1.5,
-      vy: (Math.random() - 0.5) * 1.5,
-      size: 1.2 + Math.random() * 2.8,
-      color: ['#D49B28', '#C0392B', '#8B3214', '#264E36', '#E28330'][Math.floor(Math.random() * 5)],
-      orbitAngle: Math.random() * Math.PI * 2,
-      orbitRadius: 40 + Math.random() * 220,
-      orbitSpeed: 0.01 + Math.random() * 0.02
-    }));
+    // Particle cloud for exploding powder and multi-stream blending (thousands on desktop, optimized on mobile)
+    const particleCount = width < 640 ? 350 : 800;
+    const particles: Particle[] = [];
+    const colors = [
+      '#C0392B', // Byadgi Chilli Red
+      '#D49B28', // Salem Turmeric Gold
+      '#996633', // Coriander/Cumin Sand
+      '#2E6930', // Curry Leaf Green
+      '#E67E22'  // Roasted Paprika
+    ];
 
-    // Rendering Loop scrubbed continuously by scrollProgress
+    for (let i = 0; i < particleCount; i++) {
+      particles.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        baseX: Math.random() * width,
+        baseY: Math.random() * height,
+        vx: (Math.random() - 0.5) * 4,
+        vy: (Math.random() - 0.5) * 4,
+        size: 1.5 + Math.random() * 3.5,
+        color: colors[i % colors.length],
+        alpha: 0.3 + Math.random() * 0.7,
+        streamOrigin: i % 4,
+        angle: Math.random() * Math.PI * 2,
+        radius: 40 + Math.random() * 260
+      });
+    }
+
+    // Dynamic background interpolator based on scrollProgress
+    const getBackgroundColor = (p: number) => {
+      if (p < 0.15) {
+        // Scene A: Warm cream with golden terracotta aura
+        return { top: '#FAF4E8', bottom: '#F3E5D0', textDark: true };
+      } else if (p < 0.3) {
+        // Scene B: Earthy warm bamboo & sandalwood
+        return { top: '#F4EADA', bottom: '#E9D6BE', textDark: true };
+      } else if (p < 0.44) {
+        // Scene C: Cast-iron embers glow
+        return { top: '#3D2014', bottom: '#22110B', textDark: false };
+      } else if (p < 0.58) {
+        // Scene D: Granite stone milling contrast
+        return { top: '#1F1A18', bottom: '#141110', textDark: false };
+      } else if (p < 0.72) {
+        // Scene E: Bright Saffron / Saffron Glow
+        return { top: '#993300', bottom: '#5A1707', textDark: false };
+      } else if (p < 0.85) {
+        // Scene F: Blending Vortex (Deep heritage warmth)
+        return { top: '#2E1911', bottom: '#1A0E0A', textDark: false };
+      } else if (p < 0.94) {
+        // Scene G: Packaging (Warm Brass & Cream)
+        return { top: '#FAF3E8', bottom: '#EDE0CC', textDark: true };
+      } else {
+        // Scene H: Kitchen Feast & Product Reveal
+        return { top: '#FAF5EA', bottom: '#F2E5D4', textDark: true };
+      }
+    };
+
     const render = () => {
-      ctx.clearRect(0, 0, width, height);
-      const p = scrollProgress; // 0.0 to 1.0
+      const p = scrollProgress;
+      const bg = getBackgroundColor(p);
 
-      // Dynamic cinematic camera center & zoom
+      // Render Dynamic Background
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, height);
+      bgGrad.addColorStop(0, bg.top);
+      bgGrad.addColorStop(1, bg.bottom);
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, width, height);
+
       const centerX = width / 2;
       const centerY = height / 2;
 
-      // ==========================================
-      // STAGE A: WHOLE SPICE (0.0 to 0.15)
-      // ==========================================
-      if (p <= 0.2) {
-        const stageAlpha = p < 0.15 ? 1 : Math.max(0, 1 - (p - 0.15) / 0.05);
+      // ========================================================
+      // SCENE 1: WHOLE SPICES (p: 0.0 - 0.15)
+      // Camera zooms in on the hero Byadgi chilli while other spices float
+      // ========================================================
+      if (p <= 0.18) {
+        const alpha = p < 0.14 ? 1 : Math.max(0, 1 - (p - 0.14) / 0.04);
         ctx.save();
-        ctx.globalAlpha = stageAlpha;
+        ctx.globalAlpha = alpha;
 
-        // Camera zooms in as user scrolls 0 -> 0.15
-        const zoom = 1 + p * 2.5;
+        const zoom = 1 + p * 1.8;
         ctx.translate(centerX, centerY);
         ctx.scale(zoom, zoom);
 
-        // 1. Surrounding Whole Spices (Coriander, Turmeric, Cumin, Pepper)
-        // Coriander seeds orbiting
-        [-120, -70, 80, 130].forEach((ox, i) => {
-          const oy = Math.sin(p * 5 + i) * 30 + (i % 2 === 0 ? -60 : 70);
+        // Ambient golden warm halo in center
+        const halo = ctx.createRadialGradient(0, 0, 10, 0, 0, 300);
+        halo.addColorStop(0, 'rgba(235, 170, 60, 0.35)');
+        halo.addColorStop(0.6, 'rgba(215, 95, 40, 0.12)');
+        halo.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = halo;
+        ctx.beginPath();
+        ctx.arc(0, 0, 300, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Orbiting Coriander & Turmeric
+        [-110, 120, -60, 150].forEach((ox, i) => {
+          const oy = Math.sin(p * 6 + i) * 35 + (i % 2 === 0 ? -60 : 70);
           ctx.beginPath();
-          ctx.arc(ox * (1 - p * 0.5), oy * (1 - p * 0.5), 9, 0, Math.PI * 2);
-          ctx.fillStyle = '#C6A15E';
-          ctx.shadowColor = 'rgba(0,0,0,0.4)';
-          ctx.shadowBlur = 10;
+          ctx.arc(ox * (1 - p * 0.4), oy * (1 - p * 0.4), 10, 0, Math.PI * 2);
+          ctx.fillStyle = i % 2 === 0 ? '#C6A15E' : '#D49B28';
+          ctx.shadowColor = 'rgba(0,0,0,0.2)';
+          ctx.shadowBlur = 12;
           ctx.fill();
         });
 
-        // Golden Turmeric root fragment
+        // The Hero Byadgi Chilli
         ctx.save();
-        ctx.translate(140 * (1 - p * 0.6), -80 * (1 - p * 0.4));
-        ctx.rotate(0.3 + p);
-        ctx.beginPath();
-        ctx.ellipse(0, 0, 24, 10, 0.4, 0, Math.PI * 2);
-        ctx.fillStyle = '#D49B28';
-        ctx.fill();
-        ctx.restore();
-
-        // 2. The Hero Byadgi Dried Red Chilli
-        // Chilli tilts and approaches camera
-        ctx.save();
-        ctx.rotate(-0.2 + p * 0.8);
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+        ctx.rotate(-0.25 + p * 0.6);
+        ctx.shadowColor = 'rgba(70, 20, 10, 0.4)';
         ctx.shadowBlur = 30;
         ctx.shadowOffsetY = 15;
 
-        // Curved Chilli Body
         ctx.beginPath();
-        ctx.moveTo(-60, 18);
-        ctx.bezierCurveTo(-25, -20, 25, -30, 75, -10);
-        ctx.bezierCurveTo(90, -4, 94, 6, 78, 12);
-        ctx.bezierCurveTo(40, 26, -12, 32, -60, 18);
+        ctx.moveTo(-65, 18);
+        ctx.bezierCurveTo(-25, -22, 25, -30, 80, -10);
+        ctx.bezierCurveTo(95, -4, 98, 6, 82, 12);
+        ctx.bezierCurveTo(45, 28, -12, 34, -65, 18);
         ctx.closePath();
 
-        const chilliGrad = ctx.createLinearGradient(-60, -20, 85, 20);
+        const chilliGrad = ctx.createLinearGradient(-65, -20, 95, 20);
         chilliGrad.addColorStop(0, '#5C0F06');
         chilliGrad.addColorStop(0.3, '#941B0C');
         chilliGrad.addColorStop(0.7, '#C52B19');
-        chilliGrad.addColorStop(1, '#6F1207');
+        chilliGrad.addColorStop(1, '#701308');
         ctx.fillStyle = chilliGrad;
         ctx.fill();
 
-        // Highlight
-        ctx.shadowBlur = 0;
+        // Stem
         ctx.beginPath();
-        ctx.moveTo(-20, -8);
-        ctx.quadraticCurveTo(20, -16, 55, -4);
-        ctx.strokeStyle = 'rgba(255, 210, 190, 0.4)';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        // Stalk
-        ctx.beginPath();
-        ctx.moveTo(-60, 18);
-        ctx.quadraticCurveTo(-78, 25, -88, 38);
-        ctx.strokeStyle = '#3E5028';
-        ctx.lineWidth = 3.8;
+        ctx.moveTo(-65, 18);
+        ctx.quadraticCurveTo(-82, 24, -92, 38);
+        ctx.strokeStyle = '#43562C';
+        ctx.lineWidth = 4;
         ctx.stroke();
 
         ctx.restore();
         ctx.restore();
       }
 
-      // ==========================================
-      // STAGE B: PREPARATION & WINNOWING (0.15 to 0.32)
-      // ==========================================
-      if (p >= 0.13 && p <= 0.35) {
-        const stageProgress = Math.max(0, Math.min(1, (p - 0.15) / 0.15));
-        const stageAlpha =
-          p < 0.15
-            ? (p - 0.13) / 0.02
-            : p > 0.3
-            ? Math.max(0, 1 - (p - 0.3) / 0.05)
-            : 1;
+      // ========================================================
+      // SCENE 2: PREPARATION & WINNOWING (p: 0.15 - 0.32)
+      // The hero chilli PHYSICALLY TRAVELS across the screen and lands
+      // in a traditional bamboo tray, unwanted dust/chaff separates outward
+      // ========================================================
+      if (p >= 0.12 && p <= 0.34) {
+        const stageProgress = Math.max(0, Math.min(1, (p - 0.14) / 0.16));
+        const alpha = p < 0.14 ? (p - 0.12) / 0.02 : p > 0.3 ? Math.max(0, 1 - (p - 0.3) / 0.04) : 1;
 
         ctx.save();
-        ctx.globalAlpha = stageAlpha;
+        ctx.globalAlpha = alpha;
 
-        // Traditional woven bamboo winnowing tray perspective in center
+        // Traditional Bamboo Winnowing Tray (Moram) Perspective
         ctx.save();
-        ctx.translate(centerX, centerY + 20);
+        ctx.translate(centerX, centerY + 30);
         ctx.scale(1, 0.45);
         ctx.beginPath();
-        ctx.arc(0, 0, Math.min(width * 0.42, 280), 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(197, 160, 89, 0.08)';
-        ctx.strokeStyle = 'rgba(197, 160, 89, 0.35)';
-        ctx.lineWidth = 3;
-        ctx.stroke();
-        ctx.fill();
-        ctx.restore();
-
-        // Hero chilli physically traveling across and settling in center
-        const chilliX = centerX - 120 + stageProgress * 120;
-        const chilliY = centerY - 60 + stageProgress * 60;
-        ctx.save();
-        ctx.translate(chilliX, chilliY);
-        ctx.rotate(stageProgress * 0.4);
-        ctx.scale(1.3, 1.3);
-
-        ctx.beginPath();
-        ctx.moveTo(-45, 14);
-        ctx.bezierCurveTo(-18, -15, 18, -22, 55, -7);
-        ctx.bezierCurveTo(65, -3, 68, 5, 56, 9);
-        ctx.bezierCurveTo(28, 20, -10, 24, -45, 14);
-        ctx.closePath();
-        ctx.fillStyle = '#B02514';
-        ctx.fill();
-        ctx.restore();
-
-        // Particles of dust & hollow chaff separating outward
-        for (let i = 0; i < 28; i++) {
-          const separation = stageProgress * 260;
-          const angle = (i / 28) * Math.PI * 2;
-          const px = centerX + Math.cos(angle) * (60 + separation);
-          const py = centerY + Math.sin(angle) * (30 + separation * 0.5);
-          ctx.beginPath();
-          ctx.arc(px, py, 1.5, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(180, 150, 120, ' + (1 - stageProgress * 0.8) + ')';
-          ctx.fill();
-        }
-
-        ctx.restore();
-      }
-
-      // ==========================================
-      // STAGE C: GENTLE CURING & ROASTING (0.30 to 0.46)
-      // ==========================================
-      if (p >= 0.28 && p <= 0.48) {
-        const stageProgress = Math.max(0, Math.min(1, (p - 0.3) / 0.14));
-        const stageAlpha =
-          p < 0.3
-            ? (p - 0.28) / 0.02
-            : p > 0.44
-            ? Math.max(0, 1 - (p - 0.44) / 0.04)
-            : 1;
-
-        ctx.save();
-        ctx.globalAlpha = stageAlpha;
-
-        // Seasoned cast-iron kadai glowing with low wood-ember heat
-        const kadaiGrad = ctx.createRadialGradient(
-          centerX,
-          centerY + 30,
-          10,
-          centerX,
-          centerY + 30,
-          180
-        );
-        kadaiGrad.addColorStop(0, 'rgba(230, 100, 20, 0.35)');
-        kadaiGrad.addColorStop(0.5, 'rgba(180, 50, 10, 0.15)');
-        kadaiGrad.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = kadaiGrad;
-        ctx.fillRect(0, 0, width, height);
-
-        // Whole chilli & spices warming up, releasing golden aroma vapor spirals
-        for (let s = 0; s < 12; s++) {
-          const vaporY = centerY + 10 - stageProgress * 150 - s * 12;
-          const vaporX = centerX + Math.sin(stageProgress * 8 + s) * 35;
-          ctx.beginPath();
-          ctx.arc(vaporX, vaporY, 2 + s * 0.4, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(212, 155, 40, ' + Math.max(0, 0.6 - stageProgress * 0.5) + ')';
-          ctx.fill();
-        }
-
-        ctx.restore();
-      }
-
-      // ==========================================
-      // STAGE D: THE GRANITE STONE MILL (0.44 to 0.60) — WOW MOMENT!
-      // ==========================================
-      if (p >= 0.42 && p <= 0.62) {
-        const millProgress = Math.max(0, Math.min(1, (p - 0.44) / 0.14));
-        const stageAlpha =
-          p < 0.44
-            ? (p - 0.42) / 0.02
-            : p > 0.58
-            ? Math.max(0, 1 - (p - 0.58) / 0.04)
-            : 1;
-
-        ctx.save();
-        ctx.globalAlpha = stageAlpha;
-
-        // Granite Chakki / Stone Base (textured circular stone)
-        ctx.save();
-        ctx.translate(centerX, centerY);
-        ctx.beginPath();
-        ctx.arc(0, 0, Math.min(width * 0.35, 220), 0, Math.PI * 2);
-        const stoneGrad = ctx.createRadialGradient(0, 0, 20, 0, 0, 220);
-        stoneGrad.addColorStop(0, '#363230');
-        stoneGrad.addColorStop(0.7, '#24201E');
-        stoneGrad.addColorStop(1, '#151312');
-        ctx.fillStyle = stoneGrad;
-        ctx.shadowColor = 'rgba(0,0,0,0.85)';
-        ctx.shadowBlur = 40;
-        ctx.fill();
-
-        // Upper Rotating Granite Mill Stone — rotates dynamically with scroll!
-        const rotAngle = millProgress * Math.PI * 4;
-        ctx.rotate(rotAngle);
-
-        ctx.beginPath();
-        ctx.arc(0, 0, Math.min(width * 0.24, 150), 0, Math.PI * 2);
-        ctx.fillStyle = '#484442';
-        ctx.strokeStyle = '#625D59';
+        ctx.arc(0, 0, Math.min(width * 0.42, 300), 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(215, 180, 120, 0.35)';
+        ctx.strokeStyle = '#A88045';
         ctx.lineWidth = 4;
         ctx.stroke();
         ctx.fill();
 
-        // Wooden handle pivot on the mill stone
-        ctx.beginPath();
-        ctx.arc(Math.min(width * 0.16, 95), 0, 14, 0, Math.PI * 2);
-        ctx.fillStyle = '#A06E42';
-        ctx.fill();
-
-        // Central feed aperture where whole chilli enters
-        ctx.beginPath();
-        ctx.arc(0, 0, 26, 0, Math.PI * 2);
-        ctx.fillStyle = '#110F0E';
-        ctx.fill();
-
+        // Bamboo weave ribs
+        ctx.strokeStyle = 'rgba(160, 120, 60, 0.2)';
+        ctx.lineWidth = 2;
+        for (let r = -240; r <= 240; r += 25) {
+          ctx.beginPath();
+          ctx.moveTo(r, -150);
+          ctx.lineTo(r, 150);
+          ctx.stroke();
+        }
         ctx.restore();
 
-        // Whole chilli fracturing and shattering into bursts of fine powder
-        const burstCount = 90;
-        for (let b = 0; b < burstCount; b++) {
-          const burstDist = millProgress * (80 + (b % 15) * 12);
-          const bAngle = (b / burstCount) * Math.PI * 2 + rotAngle;
-          const bx = centerX + Math.cos(bAngle) * burstDist;
-          const by = centerY + Math.sin(bAngle) * burstDist;
+        // The Chilli Physically Traveling Across the Screen (Landing into tray)
+        const travelX = centerX - 240 + stageProgress * 240;
+        const travelY = centerY - 140 + stageProgress * 170;
+        ctx.save();
+        ctx.translate(travelX, travelY);
+        ctx.rotate(-0.4 + stageProgress * 0.8);
+        ctx.scale(1.4, 1.4);
+
+        ctx.beginPath();
+        ctx.moveTo(-50, 14);
+        ctx.bezierCurveTo(-20, -18, 20, -24, 60, -8);
+        ctx.bezierCurveTo(72, -3, 75, 5, 62, 10);
+        ctx.bezierCurveTo(30, 22, -10, 26, -50, 14);
+        ctx.closePath();
+        ctx.fillStyle = '#BA2310';
+        ctx.shadowColor = 'rgba(0,0,0,0.3)';
+        ctx.shadowBlur = 15;
+        ctx.fill();
+        ctx.restore();
+
+        // Visible Chaff & Dust Particles Separating Outward into the air
+        for (let i = 0; i < 35; i++) {
+          const separation = stageProgress * 280;
+          const angle = (i / 35) * Math.PI * 2;
+          const px = centerX + Math.cos(angle) * (70 + separation);
+          const py = centerY + Math.sin(angle) * (35 + separation * 0.5);
           ctx.beginPath();
-          ctx.arc(bx, by, 1.8 + Math.random() * 2.5, 0, Math.PI * 2);
-          ctx.fillStyle = b % 3 === 0 ? '#C0392B' : b % 3 === 1 ? '#D49B28' : '#8B3214';
+          ctx.arc(px, py, 1.8, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(160, 130, 90, ' + Math.max(0, 0.8 - stageProgress * 0.7) + ')';
           ctx.fill();
         }
 
         ctx.restore();
       }
 
-      // ==========================================
-      // STAGE E: SPICE POWDER DYNAMICS (0.58 to 0.74)
-      // ==========================================
-      if (p >= 0.56 && p <= 0.76) {
-        const powderProgress = Math.max(0, Math.min(1, (p - 0.58) / 0.14));
-        const stageAlpha =
-          p < 0.58
-            ? (p - 0.56) / 0.02
-            : p > 0.72
-            ? Math.max(0, 1 - (p - 0.72) / 0.04)
-            : 1;
+      // ========================================================
+      // SCENE 3: GENTLE CURING & ROASTING (p: 0.30 - 0.46)
+      // Spices move toward cast-iron kadai, warm golden embers glow, rising aromatic vapor
+      // ========================================================
+      if (p >= 0.28 && p <= 0.47) {
+        const stageProgress = Math.max(0, Math.min(1, (p - 0.3) / 0.14));
+        const alpha = p < 0.3 ? (p - 0.28) / 0.02 : p > 0.43 ? Math.max(0, 1 - (p - 0.43) / 0.04) : 1;
 
         ctx.save();
-        ctx.globalAlpha = stageAlpha;
+        ctx.globalAlpha = alpha;
 
-        // Rich cascading powder streams flowing outward and forming mounds
-        particlePool.slice(0, 120).forEach((pt, idx) => {
-          const flowY = centerY - 140 + ((pt.baseY + powderProgress * height * 1.2) % (height * 0.8));
-          const flowX =
-            centerX +
-            Math.sin(flowY * 0.015 + idx) * (60 + powderProgress * 140) +
-            pt.vx * 20;
+        // Radiant Wood Embers Heat Glow
+        const emberGlow = ctx.createRadialGradient(
+          centerX,
+          centerY + 40,
+          20,
+          centerX,
+          centerY + 40,
+          260
+        );
+        emberGlow.addColorStop(0, 'rgba(240, 110, 20, 0.55)');
+        emberGlow.addColorStop(0.4, 'rgba(200, 60, 15, 0.3)');
+        emberGlow.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = emberGlow;
+        ctx.fillRect(0, 0, width, height);
 
-          ctx.beginPath();
-          ctx.arc(flowX, flowY, pt.size * (1 + powderProgress * 0.8), 0, Math.PI * 2);
-          ctx.fillStyle = idx % 2 === 0 ? '#C0392B' : '#D49B28';
-          ctx.shadowColor = ctx.fillStyle;
-          ctx.shadowBlur = 6;
-          ctx.fill();
-        });
-
+        // Cast-iron Kadai Base
+        ctx.save();
+        ctx.translate(centerX, centerY + 30);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, Math.min(width * 0.38, 260), 90, 0, 0, Math.PI * 2);
+        ctx.fillStyle = '#261C18';
+        ctx.strokeStyle = '#4A352D';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+        ctx.fill();
         ctx.restore();
-      }
 
-      // ==========================================
-      // STAGE F: BLENDING VORTEX (0.72 to 0.87)
-      // ==========================================
-      if (p >= 0.7 && p <= 0.89) {
-        const blendProgress = Math.max(0, Math.min(1, (p - 0.72) / 0.13));
-        const stageAlpha =
-          p < 0.72
-            ? (p - 0.7) / 0.02
-            : p > 0.85
-            ? Math.max(0, 1 - (p - 0.85) / 0.04)
-            : 1;
-
+        // Spices resting on the hot surface
         ctx.save();
-        ctx.globalAlpha = stageAlpha;
+        ctx.translate(centerX, centerY + 20);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 45, 14, -0.2, 0, Math.PI * 2);
+        ctx.fillStyle = '#A81C0B';
+        ctx.fill();
+        ctx.restore();
 
-        // Swirling Golden-Red Spiral Vortex of converged spices
-        particlePool.forEach((pt, i) => {
-          pt.orbitAngle += pt.orbitSpeed * 3;
-          const currentRadius = pt.orbitRadius * (1 - blendProgress * 0.75);
-          const px = centerX + Math.cos(pt.orbitAngle) * currentRadius;
-          const py = centerY + Math.sin(pt.orbitAngle) * (currentRadius * 0.7);
-
+        // Rising Golden Aromatic Terpenes / Vapor Streams
+        for (let s = 0; s < 18; s++) {
+          const vaporY = centerY + 10 - stageProgress * 220 - s * 14;
+          const vaporX = centerX + Math.sin(stageProgress * 10 + s) * 45;
           ctx.beginPath();
-          ctx.arc(px, py, pt.size * 1.2, 0, Math.PI * 2);
-          ctx.fillStyle = pt.color;
-          ctx.shadowColor = pt.color;
+          ctx.arc(vaporX, vaporY, 2.5 + s * 0.5, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(235, 175, 45, ' + Math.max(0, 0.7 - stageProgress * 0.5) + ')';
+          ctx.shadowColor = '#EBAF2D';
           ctx.shadowBlur = 8;
           ctx.fill();
+        }
+
+        ctx.restore();
+      }
+
+      // ========================================================
+      // SCENE 4: THE GRANITE STONE MILL (p: 0.44 - 0.60) — THE WOW MOMENT!
+      // Whole chilli enters grinder -> Granite stone visibly rotates with scroll ->
+      // Chilli fractures apart -> Explosive burst of micro-particles!
+      // ========================================================
+      if (p >= 0.42 && p <= 0.62) {
+        const millProgress = Math.max(0, Math.min(1, (p - 0.44) / 0.14));
+        const alpha = p < 0.44 ? (p - 0.42) / 0.02 : p > 0.58 ? Math.max(0, 1 - (p - 0.58) / 0.04) : 1;
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+
+        // Lower Granite Mortar Base
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.beginPath();
+        ctx.arc(0, 0, Math.min(width * 0.38, 240), 0, Math.PI * 2);
+        const stoneGrad = ctx.createRadialGradient(0, 0, 30, 0, 0, 240);
+        stoneGrad.addColorStop(0, '#423D3A');
+        stoneGrad.addColorStop(0.7, '#2A2624');
+        stoneGrad.addColorStop(1, '#151312');
+        ctx.fillStyle = stoneGrad;
+        ctx.shadowColor = 'rgba(0,0,0,0.8)';
+        ctx.shadowBlur = 40;
+        ctx.fill();
+
+        // Upper Granite Grinding Stone — ROTATES DIRECTLY WITH SCROLL PROGRESS
+        const rotAngle = millProgress * Math.PI * 6;
+        ctx.rotate(rotAngle);
+
+        ctx.beginPath();
+        ctx.arc(0, 0, Math.min(width * 0.26, 160), 0, Math.PI * 2);
+        ctx.fillStyle = '#524D49';
+        ctx.strokeStyle = '#706A65';
+        ctx.lineWidth = 5;
+        ctx.stroke();
+        ctx.fill();
+
+        // Textured Granite Grooves
+        for (let g = 0; g < 8; g++) {
+          ctx.beginPath();
+          ctx.arc(0, 0, Math.min(width * 0.22, 135) - g * 15, 0, Math.PI);
+          ctx.strokeStyle = 'rgba(25, 22, 20, 0.4)';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+
+        // Wooden Pivot Handle
+        ctx.beginPath();
+        ctx.arc(Math.min(width * 0.17, 105), 0, 15, 0, Math.PI * 2);
+        ctx.fillStyle = '#A06E42';
+        ctx.fill();
+
+        // Central Grinding Aperture
+        ctx.beginPath();
+        ctx.arc(0, 0, 30, 0, Math.PI * 2);
+        ctx.fillStyle = '#0F0E0D';
+        ctx.fill();
+
+        ctx.restore();
+
+        // The Chilli Fracturing & EXPLODING into thousands of vibrant particles
+        const burstCount = width < 640 ? 120 : 240;
+        for (let b = 0; b < burstCount; b++) {
+          const bAngle = (b / burstCount) * Math.PI * 2 + rotAngle;
+          const burstDist = millProgress * (70 + (b % 20) * 15);
+          const bx = centerX + Math.cos(bAngle) * burstDist;
+          const by = centerY + Math.sin(bAngle) * burstDist;
+
+          ctx.beginPath();
+          ctx.arc(bx, by, 2 + Math.random() * 3.5, 0, Math.PI * 2);
+          ctx.fillStyle = b % 3 === 0 ? '#C0392B' : b % 3 === 1 ? '#D49B28' : '#E67E22';
+          ctx.shadowColor = ctx.fillStyle;
+          ctx.shadowBlur = 8;
+          ctx.fill();
+        }
+
+        ctx.restore();
+      }
+
+      // ========================================================
+      // SCENE 5: POWDER SHOULD FILL THE SCREEN (p: 0.58 - 0.74)
+      // Powder particles swirl, stream, form waves, and fill the entire viewport
+      // ========================================================
+      if (p >= 0.56 && p <= 0.76) {
+        const powderProgress = Math.max(0, Math.min(1, (p - 0.58) / 0.14));
+        const alpha = p < 0.58 ? (p - 0.56) / 0.02 : p > 0.72 ? Math.max(0, 1 - (p - 0.72) / 0.04) : 1;
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+
+        // Swirling waves of deep saffron and crimson spice powder
+        particles.forEach((pt, i) => {
+          const flowWave = Math.sin(pt.baseX * 0.02 + powderProgress * 8 + i) * 60;
+          const px = (pt.baseX + powderProgress * width * 0.8) % width;
+          const py = (pt.baseY + flowWave) % height;
+
+          ctx.beginPath();
+          ctx.arc(px, py, pt.size * (1 + powderProgress * 0.8), 0, Math.PI * 2);
+          ctx.fillStyle = i % 2 === 0 ? '#C0392B' : '#E5A93C';
+          ctx.shadowColor = ctx.fillStyle;
+          ctx.shadowBlur = 10;
+          ctx.fill();
         });
 
         ctx.restore();
       }
 
-      // ==========================================
-      // STAGE G: PACKAGING SEAL (0.85 to 0.95)
-      // ==========================================
+      // ========================================================
+      // SCENE 6: BLENDING VORTEX (p: 0.72 - 0.87)
+      // Multiple spice streams (Red Byadgi, Golden Turmeric, Brown Coriander, Green Curry Leaf)
+      // physically converging into a central spinning vortex
+      // ========================================================
+      if (p >= 0.70 && p <= 0.89) {
+        const blendProgress = Math.max(0, Math.min(1, (p - 0.72) / 0.13));
+        const alpha = p < 0.72 ? (p - 0.70) / 0.02 : p > 0.85 ? Math.max(0, 1 - (p - 0.85) / 0.04) : 1;
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+
+        // Four Corner Streams Converging Inward
+        particles.forEach((pt, i) => {
+          pt.angle = (pt.angle || 0) + 0.04;
+          const startRadius = Math.max(width, height) * 0.6;
+          const currentRadius = startRadius * (1 - blendProgress) + (pt.radius || 100) * blendProgress;
+
+          // Corner stream offsets
+          let cornerAngle = 0;
+          if (pt.streamOrigin === 0) {
+            cornerAngle = -Math.PI * 0.75; // Red (Top-Left)
+            pt.color = '#C0392B';
+          } else if (pt.streamOrigin === 1) {
+            cornerAngle = -Math.PI * 0.25; // Gold (Top-Right)
+            pt.color = '#D49B28';
+          } else if (pt.streamOrigin === 2) {
+            cornerAngle = Math.PI * 0.75; // Brown (Bottom-Left)
+            pt.color = '#996633';
+          } else {
+            cornerAngle = Math.PI * 0.25; // Green (Bottom-Right)
+            pt.color = '#2E6930';
+          }
+
+          const angle = cornerAngle * (1 - blendProgress) + (pt.angle || 0) * blendProgress;
+          const px = centerX + Math.cos(angle) * currentRadius;
+          const py = centerY + Math.sin(angle) * currentRadius * 0.7;
+
+          ctx.beginPath();
+          ctx.arc(px, py, pt.size * 1.3, 0, Math.PI * 2);
+          ctx.fillStyle = pt.color;
+          ctx.shadowColor = pt.color;
+          ctx.shadowBlur = 10;
+          ctx.fill();
+        });
+
+        ctx.restore();
+      }
+
+      // ========================================================
+      // SCENE 7: POWDER -> PACKAGING (p: 0.85 - 0.95)
+      // The blended powder physically funnels into a pouch silhouette,
+      // seals with a metallic golden sweep, Indima branding becomes visible
+      // ========================================================
       if (p >= 0.83 && p <= 0.96) {
         const packProgress = Math.max(0, Math.min(1, (p - 0.85) / 0.09));
-        const stageAlpha =
-          p < 0.85
-            ? (p - 0.83) / 0.02
-            : p > 0.94
-            ? Math.max(0, 1 - (p - 0.94) / 0.02)
-            : 1;
+        const alpha = p < 0.85 ? (p - 0.83) / 0.02 : p > 0.94 ? Math.max(0, 1 - (p - 0.94) / 0.02) : 1;
 
         ctx.save();
-        ctx.globalAlpha = stageAlpha;
+        ctx.globalAlpha = alpha;
 
-        // Pouch outline forming in 3D
+        // Pouch Dimensions
+        const pw = Math.min(width * 0.5, 260);
+        const ph = Math.min(height * 0.52, 340);
+
         ctx.save();
         ctx.translate(centerX, centerY);
-        ctx.rotate((1 - packProgress) * 0.2);
+        ctx.rotate((1 - packProgress) * 0.15);
 
-        // Pouch Silhouette
-        const pw = Math.min(width * 0.5, 240);
-        const ph = Math.min(height * 0.5, 320);
-
-        ctx.shadowColor = 'rgba(0,0,0,0.8)';
+        // Pouch Body with Brand Red & Brass Sheen
+        ctx.shadowColor = 'rgba(70, 20, 10, 0.4)';
         ctx.shadowBlur = 35;
         ctx.beginPath();
-        ctx.roundRect(-pw / 2, -ph / 2, pw, ph, 18);
+        ctx.roundRect(-pw / 2, -ph / 2, pw, ph, 20);
         const pouchGrad = ctx.createLinearGradient(-pw / 2, -ph / 2, pw / 2, ph / 2);
-        pouchGrad.addColorStop(0, '#2C1D18');
-        pouchGrad.addColorStop(0.5, '#45281F');
-        pouchGrad.addColorStop(1, '#1A120F');
+        pouchGrad.addColorStop(0, '#8B170B');
+        pouchGrad.addColorStop(0.5, '#A82512');
+        pouchGrad.addColorStop(1, '#6F0F05');
         ctx.fillStyle = pouchGrad;
         ctx.fill();
 
-        // Metallic golden light sweep across the seal top
-        const sweepY = -ph / 2 + packProgress * ph;
+        // Shimmering Golden Seal Top
+        const sealY = -ph / 2 + packProgress * ph;
         ctx.strokeStyle = '#D49B28';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(-pw / 2 + 10, sweepY);
-        ctx.lineTo(pw / 2 - 10, sweepY);
+        ctx.lineWidth = 4;
         ctx.shadowColor = '#D49B28';
-        ctx.shadowBlur = 15;
+        ctx.shadowBlur = 18;
+        ctx.beginPath();
+        ctx.moveTo(-pw / 2 + 15, sealY);
+        ctx.lineTo(pw / 2 - 15, sealY);
         ctx.stroke();
 
         ctx.restore();
         ctx.restore();
       }
-
-      // Subtle persistent ambient floating dust
-      ctx.globalAlpha = 0.35;
-      particlePool.slice(0, 20).forEach(pt => {
-        pt.baseY -= 0.3;
-        if (pt.baseY < 0) pt.baseY = height;
-        ctx.beginPath();
-        ctx.arc(pt.baseX, pt.baseY, pt.size * 0.7, 0, Math.PI * 2);
-        ctx.fillStyle = '#D49B28';
-        ctx.fill();
-      });
-      ctx.globalAlpha = 1;
 
       animId = requestAnimationFrame(render);
     };
@@ -543,67 +623,85 @@ export const ScrollSpiceJourney: React.FC<ScrollSpiceJourneyProps> = ({
     setTimeout(() => setIsAddedToCart(false), 2400);
   };
 
+  const isLightScene = scrollProgress < 0.3 || scrollProgress > 0.85;
+
   return (
     <section
       id="scroll-journey-section"
       ref={containerRef}
-      className="relative w-full bg-[#100B08] text-[#FFF9F2] h-[550vh]"
+      className="relative w-full h-[580vh]"
     >
-      {/* Pinned Viewport Stage */}
-      <div className="sticky top-0 h-screen w-full overflow-hidden flex flex-col justify-between">
-        {/* Dynamic Canvas Transformation Engine */}
+      {/* Pinned Viewport Cinematic Stage */}
+      <div className="sticky top-0 h-screen w-full overflow-hidden flex flex-col justify-between select-none">
+        {/* Living Canvas Transformation Engine */}
         <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-0" />
 
-        {/* Cinematic Vignette */}
-        <div className="absolute inset-0 bg-radial-[circle_at_center,transparent_20%,rgba(16,11,8,0.85)_100%] pointer-events-none z-1" />
-
-        {/* Top Floating HUD: Chapter Name & Progress Bar */}
+        {/* Top HUD: Current Chapter & Real-Time Progress Bar */}
         <div className="relative z-10 pt-6 sm:pt-8 px-4 sm:px-8 max-w-7xl mx-auto w-full flex items-center justify-between text-xs font-mono">
-          <div className="flex items-center space-x-2 text-[#D49B28]">
-            <span className="w-2 h-2 rounded-full bg-[#D49B28] animate-ping" />
-            <span className="font-bold tracking-widest uppercase">
-              {isKn ? 'ಪವಿತ್ರ ಪಯಣ' : 'THE TRANSFORMATION'}
+          <div
+            className={`flex items-center space-x-2.5 font-bold tracking-widest uppercase transition-colors duration-300 ${
+              isLightScene ? 'text-[#8B3214]' : 'text-amber-400'
+            }`}
+          >
+            <span
+              className={`w-2.5 h-2.5 rounded-full animate-ping ${
+                isLightScene ? 'bg-[#8B3214]' : 'bg-amber-400'
+              }`}
+            />
+            <span>{isKn ? 'ಪವಿತ್ರ ಪಯಣ' : 'THE TRANSFORMATION'}</span>
+            <span className="opacity-40">/</span>
+            <span className={`font-sans tracking-normal ${isLightScene ? 'text-[#5C483B]' : 'text-stone-300'}`}>
+              {activeChapter}
             </span>
-            <span className="text-stone-600">/</span>
-            <span className="text-stone-300 font-sans tracking-normal">{activeChapter}</span>
           </div>
 
-          {/* Scrubbed Percentage Indicator */}
-          <div className="flex items-center space-x-3 text-stone-400">
-            <span className="hidden sm:inline font-sans text-[11px] tracking-widest uppercase">
+          <div
+            className={`flex items-center space-x-3 transition-colors duration-300 ${
+              isLightScene ? 'text-[#5C483B]' : 'text-stone-400'
+            }`}
+          >
+            <span className="hidden sm:inline font-sans text-[11px] tracking-widest uppercase font-bold">
               {isKn ? 'ಸ್ಕ್ರೋಲ್ ಪ್ರಗತಿ' : 'SCROLL PROGRESS'}
             </span>
-            <span className="text-[#D49B28] font-bold text-sm font-mono">
+            <span
+              className={`font-bold text-sm font-mono ${
+                isLightScene ? 'text-[#8B3214]' : 'text-amber-400'
+              }`}
+            >
               {Math.round(scrollProgress * 100)}%
             </span>
           </div>
         </div>
 
-        {/* Right Rail: Interactive Scrubbing Track Timeline */}
+        {/* Right Rail Timeline Scrubber */}
         <div className="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center space-y-3 pointer-events-none">
-          <div className="w-1 h-36 bg-stone-800 rounded-full overflow-hidden relative">
+          <div className="w-1.5 h-40 bg-black/15 rounded-full overflow-hidden relative">
             <div
-              className="w-full bg-gradient-to-b from-[#D49B28] via-[#C0392B] to-[#D49B28] rounded-full transition-all duration-150"
+              className="w-full bg-gradient-to-b from-[#8B3214] via-[#D49B28] to-[#8B3214] rounded-full transition-all duration-150"
               style={{ height: `${Math.max(8, scrollProgress * 100)}%` }}
             />
           </div>
-          <span className="text-[10px] font-mono text-stone-500 uppercase rotate-90 origin-center translate-y-3">
+          <span
+            className={`text-[10px] font-mono uppercase rotate-90 origin-center translate-y-3 font-bold ${
+              isLightScene ? 'text-[#8B3214]' : 'text-amber-400'
+            }`}
+          >
             TIMELINE
           </span>
         </div>
 
-        {/* Center Typography Overlays Driven strictly by scrollProgress */}
+        {/* Center Typography Overlays Driven Strictly by scrollProgress */}
         <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-8 text-center my-auto pointer-events-none">
           {/* Chapter 1: Whole Spice (0.00 - 0.15) */}
           {scrollProgress <= 0.15 && (
-            <div className="space-y-3 transition-opacity duration-300">
-              <p className="text-xs sm:text-sm font-mono tracking-[0.25em] text-[#D49B28] uppercase">
+            <div className="space-y-3 transition-all duration-300">
+              <p className="text-xs sm:text-sm font-mono tracking-[0.28em] text-[#8B3214] uppercase font-bold">
                 {isKn ? 'ಹಂತ ೦೧ · ಕಾಳು ಮಸಾಲೆ' : 'SCENE 01 · WHOLE SPICE'}
               </p>
-              <h2 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-tight">
+              <h2 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#1F1610] leading-tight">
                 {isKn ? 'ಕಾಳು ಮಸಾಲೆಗಳ ಪವಿತ್ರ ಮೂಲ.' : 'It starts with the whole spice.'}
               </h2>
-              <p className="text-xs sm:text-sm text-stone-300 max-w-md mx-auto">
+              <p className="text-xs sm:text-sm text-[#5C483B] max-w-md mx-auto font-normal">
                 {isKn
                   ? 'ಬ್ಯಾಡಗಿ ಮೆಣಸಿನಕಾಯಿ, ಸುವಾಸನಾಭರಿತ ಧನಿಯಾ ಮತ್ತು ಅರಿಶಿನ ಕೊಂಬುಗಳು.'
                   : 'Single-origin Byadgi chillies, coriander seeds, and Salem turmeric.'}
@@ -611,113 +709,113 @@ export const ScrollSpiceJourney: React.FC<ScrollSpiceJourneyProps> = ({
             </div>
           )}
 
-          {/* Chapter 2: Preparation & Sorting (0.15 - 0.30) */}
+          {/* Chapter 2: Preparation & Winnowing (0.15 - 0.30) */}
           {scrollProgress > 0.15 && scrollProgress <= 0.3 && (
-            <div className="space-y-3 transition-opacity duration-300">
-              <p className="text-xs sm:text-sm font-mono tracking-[0.25em] text-[#D49B28] uppercase">
+            <div className="space-y-3 transition-all duration-300">
+              <p className="text-xs sm:text-sm font-mono tracking-[0.28em] text-[#8B3214] uppercase font-bold">
                 {isKn ? 'ಹಂತ ೦೨ · ಪರಿಶುದ್ಧತೆ' : 'SCENE 02 · PREPARATION'}
               </p>
-              <h2 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-tight">
+              <h2 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#1F1610] leading-tight">
                 {isKn ? 'ಕೈಯಿಂದ ಆರಿಸುವ ತಾಳ್ಮೆ.' : 'Prepared with patience.'}
               </h2>
-              <p className="text-xs sm:text-sm text-stone-300 max-w-md mx-auto">
+              <p className="text-xs sm:text-sm text-[#5C483B] max-w-md mx-auto font-normal">
                 {isKn
-                  ? 'ಸಾಂಪ್ರದಾಯಿಕ ಮೊರದಲ್ಲಿ ಕೇರಿ ತೊಟ್ಟು ಮತ್ತು ಧೂಳನ್ನು ತೆಗೆಯಲಾಗುತ್ತದೆ.'
-                  : 'Carefully sorted and winnowed by hand before any heat or milling begins.'}
+                  ? 'ಸಾಂಪ್ರದಾಯಿಕ ಮೊರದಲ್ಲಿ ಕೇರಿ ತೊಟ್ಟು ಮತ್ತು ಧೂಳನ್ನು ತೆಗೆದು ಶುದ್ಧ ಕಾಳುಗಳನ್ನು ಸಿದ್ಧಪಡಿಸುವುದು.'
+                  : 'Sorted and winnowed by hand before any heat or milling begins.'}
               </p>
             </div>
           )}
 
           {/* Chapter 3: Gentle Roasting (0.30 - 0.44) */}
           {scrollProgress > 0.3 && scrollProgress <= 0.44 && (
-            <div className="space-y-3 transition-opacity duration-300">
-              <p className="text-xs sm:text-sm font-mono tracking-[0.25em] text-[#D49B28] uppercase">
+            <div className="space-y-3 transition-all duration-300">
+              <p className="text-xs sm:text-sm font-mono tracking-[0.28em] text-amber-400 uppercase font-bold">
                 {isKn ? 'ಹಂತ ೦೩ · ಮಂದ ಉರಿ' : 'SCENE 03 · GENTLE ROAST'}
               </p>
               <h2 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-tight">
                 {isKn ? 'ಹದವಾದ ಮಂದ ಉರಿ.' : 'Gently warmed over embers.'}
               </h2>
-              <p className="text-xs sm:text-sm text-stone-300 max-w-md mx-auto">
+              <p className="text-xs sm:text-sm text-stone-300 max-w-md mx-auto font-light">
                 {isKn
                   ? 'ಕಾಳುಗಳು ಸುಡದೆ ಸುಗಂಧ ತೈಲಗಳು ಎಚ್ಚರಗೊಳ್ಳುವಂತೆ ಹದವಾಗಿ ಹುರಿಯುವುದು.'
-                  : 'Releasing fragrant volatile terpenes without scorching delicate skins.'}
+                  : 'Awakening fragrant aromatic volatiles without scorching delicate skins.'}
               </p>
             </div>
           )}
 
-          {/* Chapter 4: Stone Milling (0.44 - 0.58) — WOW MOMENT */}
+          {/* Chapter 4: Stone Milling (0.44 - 0.58) — THE WOW MOMENT */}
           {scrollProgress > 0.44 && scrollProgress <= 0.58 && (
-            <div className="space-y-3 transition-opacity duration-300">
-              <p className="text-xs sm:text-sm font-mono tracking-[0.25em] text-[#D49B28] uppercase">
+            <div className="space-y-3 transition-all duration-300">
+              <p className="text-xs sm:text-sm font-mono tracking-[0.28em] text-amber-400 uppercase font-bold">
                 {isKn ? 'ಹಂತ ೦೪ · ಕಲ್ಲಿನ ಬೀಸುವಿಕೆ' : 'SCENE 04 · STONE MILLING'}
               </p>
               <h2 className="font-serif text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-orange-400 to-red-400 leading-tight">
                 {isKn ? 'ಕಾಳು → ಅಪ್ಪಟ ಪುಡಿ' : 'WHOLE → GROUND'}
               </h2>
-              <p className="text-xs sm:text-sm text-stone-300 max-w-md mx-auto">
+              <p className="text-xs sm:text-sm text-stone-300 max-w-md mx-auto font-light">
                 {isKn
                   ? 'ನೈಸರ್ಗಿಕ ಗ್ರಾನೈಟ್ ಕಲ್ಲಿನಲ್ಲಿ ನಿಧಾನವಾಗಿ ಬೀಸಿದ ಪರಿಮಳ.'
-                  : 'Slow-speed granite stone crushes whole pods into aromatic micro-particles.'}
+                  : 'Granite stones rotate with your scroll, crushing whole spices into aromatic micro-particles.'}
               </p>
             </div>
           )}
 
           {/* Chapter 5: Spice Powder (0.58 - 0.72) */}
           {scrollProgress > 0.58 && scrollProgress <= 0.72 && (
-            <div className="space-y-3 transition-opacity duration-300">
-              <p className="text-xs sm:text-sm font-mono tracking-[0.25em] text-[#D49B28] uppercase">
+            <div className="space-y-3 transition-all duration-300">
+              <p className="text-xs sm:text-sm font-mono tracking-[0.28em] text-amber-300 uppercase font-bold">
                 {isKn ? 'ಹಂತ ೦೫ · ಪರಿಶುದ್ಧ ಪುಡಿ' : 'SCENE 05 · SPICE POWDER'}
               </p>
               <h2 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-tight">
                 {isKn ? 'ದಟ್ಟವಾದ ನೈಸರ್ಗಿಕ ಬಣ್ಣ.' : 'Vibrant, pure powder.'}
               </h2>
-              <p className="text-xs sm:text-sm text-stone-300 max-w-md mx-auto">
+              <p className="text-xs sm:text-sm text-stone-200 max-w-md mx-auto font-light">
                 {isKn
                   ? 'ಯಾವುದೇ ಕೃತಕ ಬಣ್ಣಗಳಿಲ್ಲದೆ ಕಲ್ಲಿನಲ್ಲಿ ಉಳಿದ ನೈಜ ತೈಲಾಂಶ.'
-                  : 'Dense natural color and oil texture straight from the mill stone.'}
+                  : 'Dense natural color and oil texture cascading in air currents.'}
               </p>
             </div>
           )}
 
           {/* Chapter 6: Blending (0.72 - 0.85) */}
           {scrollProgress > 0.72 && scrollProgress <= 0.85 && (
-            <div className="space-y-3 transition-opacity duration-300">
-              <p className="text-xs sm:text-sm font-mono tracking-[0.25em] text-[#D49B28] uppercase">
+            <div className="space-y-3 transition-all duration-300">
+              <p className="text-xs sm:text-sm font-mono tracking-[0.28em] text-amber-400 uppercase font-bold">
                 {isKn ? 'ಹಂತ ೦೬ · ಮಿಶ್ರಣ' : 'SCENE 06 · HERITAGE BLEND'}
               </p>
               <h2 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-tight">
                 {isKn ? 'ಸಮತೋಲಿತ ಪಾರಂಪರಿಕ ರುಚಿ.' : 'Flavour comes together.'}
               </h2>
-              <p className="text-xs sm:text-sm text-stone-300 max-w-md mx-auto">
+              <p className="text-xs sm:text-sm text-stone-300 max-w-md mx-auto font-light">
                 {isKn
                   ? 'ಶತಮಾನಗಳ ಹಳೆಯ ಕರ್ನಾಟಕ ಪಾಕವಿಧಾನದ ಅಳತೆಯಲ್ಲಿ ಬೆರೆಸಿದ ಮಸಾಲೆಗಳು.'
-                  : 'Harmonizing single spices according to sacred generational proportions.'}
+                  : 'Multiple spice streams converge into a central harmonic blending spiral.'}
               </p>
             </div>
           )}
 
           {/* Chapter 7: Packaging (0.85 - 0.94) */}
           {scrollProgress > 0.85 && scrollProgress <= 0.94 && (
-            <div className="space-y-3 transition-opacity duration-300">
-              <p className="text-xs sm:text-sm font-mono tracking-[0.25em] text-[#D49B28] uppercase">
+            <div className="space-y-3 transition-all duration-300">
+              <p className="text-xs sm:text-sm font-mono tracking-[0.28em] text-[#8B3214] uppercase font-bold">
                 {isKn ? 'ಹಂತ ೦೭ · ಪ್ಯಾಕಿಂಗ್' : 'SCENE 07 · PACKAGING'}
               </p>
-              <h2 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-tight">
+              <h2 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#1F1610] leading-tight">
                 {isKn ? 'ಸುವಾಸನೆಯ ಶಾಶ್ವತ ಲಾಕ್.' : 'Sealed at the source.'}
               </h2>
-              <p className="text-xs sm:text-sm text-stone-300 max-w-md mx-auto">
+              <p className="text-xs sm:text-sm text-[#5C483B] max-w-md mx-auto font-normal">
                 {isKn
                   ? 'ಬೀಸಿದ ಕೆಲವೇ ಸಮಯದಲ್ಲಿ ಗಾಳಿ ತಾಗದಂತೆ ಪ್ಯಾಕ್ ಮಾಡಿ ತಾಜಾತನ ಸಂರಕ್ಷಣೆ.'
-                  : 'Multi-layer aroma-barrier sealing preserves essential notes until your kitchen.'}
+                  : 'Multi-layer aroma-barrier sealing locks volatile oils until your kitchen.'}
               </p>
             </div>
           )}
 
-          {/* Chapter 8: Your Kitchen & Live Ecommerce Product Reveal (0.94 - 1.00) */}
+          {/* Chapter 8: Commercial Product Reveal (0.94 - 1.00) */}
           {scrollProgress > 0.94 && (
-            <div className="space-y-4 pointer-events-auto max-w-md mx-auto bg-[#1A120E]/90 border border-[#D49B28]/40 p-5 sm:p-6 rounded-3xl backdrop-blur-md shadow-2xl transition-all duration-300 animate-in fade-in zoom-in-95">
-              <div className="inline-flex items-center space-x-2 text-[11px] font-mono text-[#D49B28] uppercase">
-                <Sparkles className="w-3.5 h-3.5" />
+            <div className="space-y-4 pointer-events-auto max-w-md mx-auto bg-[#FFFDF9]/95 border border-[#DFC7A2] p-6 sm:p-7 rounded-3xl backdrop-blur-md shadow-2xl transition-all duration-300 animate-in fade-in zoom-in-95">
+              <div className="inline-flex items-center space-x-2 text-[11px] font-mono text-[#8B3214] uppercase font-bold">
+                <Sparkles className="w-3.5 h-3.5 text-[#8B3214]" />
                 <span>{isKn ? 'ಅಂತಿಮ ಹಂತ · ನಿಮ್ಮ ಅಡುಗೆ ಮನೆಗೆ' : 'TO YOUR KITCHEN · READY TO COOK'}</span>
               </div>
 
@@ -725,39 +823,39 @@ export const ScrollSpiceJourney: React.FC<ScrollSpiceJourneyProps> = ({
                 <img
                   src={(featuredProduct.images && featuredProduct.images[0]) || spicePackImg}
                   alt={featuredProduct.name_en}
-                  className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-2xl border border-stone-700 bg-stone-900 shrink-0"
+                  className="w-18 h-18 sm:w-22 sm:h-22 object-cover rounded-2xl border border-[#DFC7A2] bg-[#FAF7F2] shrink-0 shadow-sm"
                 />
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-serif text-base sm:text-lg font-bold text-white truncate">
+                  <h3 className="font-serif text-base sm:text-lg font-bold text-[#1F1610] truncate">
                     {isKn ? featuredProduct.name_kn : featuredProduct.name_en}
                   </h3>
-                  <p className="text-xs text-stone-300 line-clamp-1">
+                  <p className="text-xs text-[#5C483B] line-clamp-1 mt-0.5">
                     {isKn ? featuredProduct.description_kn : featuredProduct.description_en}
                   </p>
-                  <div className="mt-1 flex items-center space-x-2">
-                    <span className="font-mono font-bold text-sm text-[#D49B28]">
+                  <div className="mt-1.5 flex items-center space-x-2">
+                    <span className="font-mono font-bold text-base text-[#8B3214]">
                       ₹{featuredProduct.price}
                     </span>
-                    <span className="text-[11px] text-stone-400">({featuredProduct.weight})</span>
+                    <span className="text-[11px] text-[#7A6455]">({featuredProduct.weight})</span>
                   </div>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="grid grid-cols-2 gap-2.5 pt-2">
+              <div className="grid grid-cols-2 gap-3 pt-2">
                 <button
                   type="button"
                   onClick={handleAddToCart}
-                  className="flex items-center justify-center space-x-2 py-2.5 px-3 rounded-xl bg-[#D49B28] hover:bg-[#E5AA35] text-[#120D0A] font-bold text-xs transition-colors cursor-pointer"
+                  className="flex items-center justify-center space-x-2 py-3 px-4 rounded-2xl bg-[#8B3214] hover:bg-[#72270E] text-white font-bold text-xs transition-all shadow-md cursor-pointer"
                 >
                   {isAddedToCart ? (
                     <>
-                      <Check className="w-3.5 h-3.5" />
+                      <Check className="w-4 h-4" />
                       <span>{isKn ? 'ಸೇರಿಸಲಾಗಿದೆ' : 'Added!'}</span>
                     </>
                   ) : (
                     <>
-                      <ShoppingBag className="w-3.5 h-3.5" />
+                      <ShoppingBag className="w-4 h-4" />
                       <span>{isKn ? 'ಕಾರ್ಟ್‌ಗೆ ಸೇರಿಸಿ' : 'Add to Cart'}</span>
                     </>
                   )}
@@ -772,10 +870,10 @@ export const ScrollSpiceJourney: React.FC<ScrollSpiceJourneyProps> = ({
                       onExploreCatalog();
                     }
                   }}
-                  className="flex items-center justify-center space-x-1.5 py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold border border-white/20 transition-colors cursor-pointer"
+                  className="flex items-center justify-center space-x-1.5 py-3 px-4 rounded-2xl bg-[#FAF6EE] hover:bg-[#F2E8D8] text-[#1F1610] text-xs font-bold border border-[#DFC7A2] transition-colors cursor-pointer shadow-xs"
                 >
                   <span>{isKn ? 'ವಿವರಗಳು' : 'View Details'}</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
+                  <ChevronRight className="w-4 h-4 text-[#8B3214]" />
                 </button>
               </div>
             </div>
@@ -783,7 +881,11 @@ export const ScrollSpiceJourney: React.FC<ScrollSpiceJourneyProps> = ({
         </div>
 
         {/* Bottom Pinned Footer */}
-        <div className="relative z-10 pb-6 sm:pb-8 px-4 sm:px-8 max-w-7xl mx-auto w-full flex items-center justify-between text-xs text-stone-500 font-mono">
+        <div
+          className={`relative z-10 pb-6 sm:pb-8 px-4 sm:px-8 max-w-7xl mx-auto w-full flex items-center justify-between text-xs font-mono transition-colors duration-300 ${
+            isLightScene ? 'text-[#7A6455]' : 'text-stone-400'
+          }`}
+        >
           <span className="truncate">
             {isKn
               ? 'ಪ್ರಕೃತಿಯಿಂದ ನಿಮ್ಮ ಮನೆಯ ತಟ್ಟೆಯವರೆಗೆ · ಇಂದಿಮಾ'
@@ -793,7 +895,9 @@ export const ScrollSpiceJourney: React.FC<ScrollSpiceJourneyProps> = ({
           <button
             type="button"
             onClick={onExploreCatalog}
-            className="flex items-center space-x-1.5 text-stone-300 hover:text-[#D49B28] transition-colors cursor-pointer"
+            className={`flex items-center space-x-1.5 transition-colors cursor-pointer font-bold ${
+              isLightScene ? 'text-[#8B3214] hover:text-[#72270E]' : 'text-amber-400 hover:text-amber-300'
+            }`}
           >
             <span>{isKn ? 'ಎಲ್ಲಾ ಮಸಾಲೆಗಳ ಸಂಗ್ರಹ' : 'Full Catalogue'}</span>
             <ArrowDown className="w-3.5 h-3.5" />
