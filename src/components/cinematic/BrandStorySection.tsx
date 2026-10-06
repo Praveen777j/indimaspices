@@ -13,79 +13,92 @@ export const BrandStorySection: React.FC = () => {
   const isKn = language === 'kn';
 
   const sectionRef = useRef<HTMLElement>(null);
-  const cardRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const numberRef = useRef<HTMLDivElement>(null);
   const headlineRef = useRef<HTMLHeadingElement>(null);
-  const statementRef = useRef<HTMLParagraphElement>(null);
-  const decorRef = useRef<HTMLDivElement>(null);
+  const storyRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
     const section = sectionRef.current;
-    const card = cardRef.current;
-    const headline = headlineRef.current;
-    const statement = statementRef.current;
-    const decor = decorRef.current;
+    const numEl = numberRef.current;
+    const headEl = headlineRef.current;
+    const storyEl = storyRef.current;
 
-    if (!section || !card || !headline || !statement) return;
+    if (!section || !numEl || !headEl || !storyEl) return;
 
-    const isMobile = window.innerWidth < 768;
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     const ctx = gsap.context(() => {
-      gsap.set(card, { opacity: 0, y: 40, scale: 0.96 });
-      gsap.set(headline, { opacity: 0, y: 25 });
-      gsap.set(statement, { opacity: 0, y: 20 });
-      if (decor) gsap.set(decor, { opacity: 0, scale: 0.9 });
+      if (prefersReducedMotion) {
+        gsap.set([numEl, headEl, storyEl], { opacity: 1, y: 0, scale: 1 });
+        return;
+      }
 
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: section,
-          start: 'top 75%',
-          end: isMobile ? 'bottom 85%' : '+=70%',
-          scrub: 0.7,
-          pin: !isMobile, // Brief desktop pin that releases cleanly
-          anticipatePin: 1
-        }
+      const mm = gsap.matchMedia();
+
+      // Desktop: Controlled pin and typographic transformation
+      mm.add('(min-width: 768px)', () => {
+        gsap.set(numEl, { opacity: 0.25, scale: 0.95 });
+        gsap.set(headEl, { opacity: 0.3, y: 20 });
+        gsap.set(storyEl, { opacity: 0, y: 30 });
+
+        const tl = gsap.timeline({
+          scrollTrigger: {
+            trigger: section,
+            start: 'top top',
+            end: '+=75%', // Short, releases cleanly
+            scrub: 0.8,
+            pin: true,
+            anticipatePin: 1
+          }
+        });
+
+        tl.to(numEl, {
+          opacity: 1,
+          scale: 1,
+          ease: 'power2.out',
+          duration: 0.5
+        })
+          .to(
+            headEl,
+            {
+              opacity: 1,
+              y: 0,
+              ease: 'power2.out',
+              duration: 0.5
+            },
+            '-=0.3'
+          )
+          .to(
+            storyEl,
+            {
+              opacity: 1,
+              y: 0,
+              ease: 'power2.out',
+              duration: 0.6
+            },
+            '-=0.2'
+          );
       });
 
-      tl.to(card, {
-        opacity: 1,
-        y: 0,
-        scale: 1,
-        duration: 1,
-        ease: 'power2.out'
-      })
-        .to(
-          headline,
-          {
-            opacity: 1,
-            y: 0,
-            duration: 0.8,
-            ease: 'power2.out'
+      // Mobile: Staggered reveal without pinning
+      mm.add('(max-width: 767px)', () => {
+        gsap.from([numEl, headEl, storyEl], {
+          scrollTrigger: {
+            trigger: section,
+            start: 'top 80%',
+            end: 'bottom 70%',
+            toggleActions: 'play none none reverse'
           },
-          '-=0.6'
-        )
-        .to(
-          statement,
-          {
-            opacity: 1,
-            y: 0,
-            duration: 0.8,
-            ease: 'power2.out'
-          },
-          '-=0.5'
-        );
-
-      if (decor) {
-        tl.to(
-          decor,
-          {
-            opacity: 0.7,
-            scale: 1,
-            duration: 0.8,
-            ease: 'power2.out'
-          },
-          '-=0.7'
-        );
-      }
+          opacity: 0,
+          y: 20,
+          stagger: 0.15,
+          duration: 0.8,
+          ease: 'power2.out'
+        });
+      });
     }, section);
 
     return () => ctx.revert();
@@ -94,51 +107,61 @@ export const BrandStorySection: React.FC = () => {
   return (
     <section
       ref={sectionRef}
-      className="brand-story-section relative w-full min-h-[90vh] bg-[#21120B] text-[#F5EBE1] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8 overflow-hidden select-none"
+      id="brand-story"
+      className="brand-story-section relative w-full min-h-[90vh] bg-[#F7F1E5] text-[#2C1810] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8 overflow-hidden select-none"
+      style={{
+        backgroundImage:
+          'radial-gradient(circle at 50% 50%, rgba(255, 253, 249, 0.9) 0%, rgba(247, 241, 229, 0.98) 80%)'
+      }}
     >
-      {/* Background ambient lighting */}
-      <div className="absolute top-1/3 left-1/4 w-96 h-96 bg-amber-600/10 blur-[100px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-orange-700/10 blur-[100px] rounded-full pointer-events-none" />
+      {/* Background warm earthen tones */}
+      <div className="absolute top-1/3 left-1/4 w-96 h-96 bg-amber-500/5 blur-[100px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-orange-700/5 blur-[100px] rounded-full pointer-events-none" />
 
-      {/* Center Story Card */}
+      {/* Main Container */}
       <div
-        ref={cardRef}
-        className="relative max-w-4xl mx-auto w-full bg-[#2A180E]/90 border border-amber-600/25 rounded-3xl p-6 sm:p-12 md:p-16 shadow-2xl backdrop-blur-md text-center"
+        ref={containerRef}
+        className="relative z-10 max-w-4xl mx-auto w-full text-center flex flex-col items-center"
       >
-        {/* Subtle Heritage Crest */}
-        <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-amber-950/70 border border-amber-500/30 text-amber-300 text-xs font-semibold tracking-widest uppercase mb-6">
-          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-          <span>{isKn ? 'ನಮ್ಮ ಪರಂಪರೆ' : '30-Year Brand Heritage'}</span>
+        {/* Heritage Pill */}
+        <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-[#FFFDF9] border border-[#DFC7A2] text-[#8B3214] text-xs font-semibold tracking-widest uppercase mb-6 shadow-xs">
+          <Sparkles className="w-3.5 h-3.5 text-[#993300]" />
+          <span>{isKn ? 'ನಮ್ಮ ಪರಂಪರೆ' : 'Brand Heritage'}</span>
         </div>
 
-        {/* Main Headline */}
+        {/* Large "30+" Typographic Moment */}
+        <div
+          ref={numberRef}
+          className="font-serif text-6xl sm:text-8xl md:text-9xl font-bold tracking-tight text-[#993300]/90 leading-none select-none my-2"
+        >
+          30+
+        </div>
+
+        {/* Transformation Typography */}
         <h2
           ref={headlineRef}
-          className="font-serif text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-[#FAF3E8] leading-[1.15] mb-6"
+          className="font-serif text-2xl sm:text-4xl md:text-5xl font-bold tracking-tight text-[#2C1810] leading-[1.2] mt-4 max-w-2xl text-balance"
         >
           {isKn
-            ? 'ಮೂರು ದಶಕಗಳ ಸುವಾಸನೆಯ ಪಯಣ.'
-            : 'THREE DECADES OF FLAVOUR.'}
+            ? 'ಮೂರು ದಶಕಗಳ ಅಪಾರ ಅನುಭವ ಮತ್ತು ಸುವಾಸನೆಯ ಪಯಣ.'
+            : 'Three Decades of Experience in Authentic Spices.'}
         </h2>
 
-        {/* Narrative Statement */}
+        {/* Brand Belief Statement */}
         <p
-          ref={statementRef}
-          className="font-serif italic text-base sm:text-xl md:text-2xl text-amber-200/90 leading-relaxed max-w-2xl mx-auto font-normal"
+          ref={storyRef}
+          className="font-serif italic text-base sm:text-xl md:text-2xl text-[#6B4E3D] max-w-2xl mx-auto mt-6 leading-relaxed font-normal"
         >
           {isKn
             ? '“ಉತ್ತಮ ಆಹಾರವು ಉತ್ತಮ ಸಾಂಬಾರ ಪದಾರ್ಥಗಳಿಂದಲೇ ಪ್ರಾರಂಭವಾಗುತ್ತದೆ ಎಂಬ ಸರಳ ನಂಬಿಕೆ — ನಮ್ಮ ಮೂರು ದಶಕಗಳ ಅಚಲ ಬದ್ಧತೆ.”'
             : '“Built around a simple belief — good food begins with good spices.”'}
         </p>
 
-        {/* Subtle Decorative Spice Flourish */}
-        <div
-          ref={decorRef}
-          className="mt-8 pt-6 border-t border-amber-700/25 flex items-center justify-center space-x-6 text-amber-300/60 text-xs font-mono uppercase tracking-widest"
-        >
+        {/* Subtle Decorative Elements */}
+        <div className="mt-10 pt-6 border-t border-[#DFC7A2]/50 flex items-center justify-center space-x-6 text-[#8C7667] text-xs font-mono uppercase tracking-widest">
           <span>{isKn ? 'ಅಪ್ಪಟ ಕಾಳುಗಳು' : 'Whole Ingredients'}</span>
           <span>•</span>
-          <span>{isKn ? 'ನೈಜ ರುಚಿ' : 'True Flavour'}</span>
+          <span>{isKn ? 'ನೈಜ ಸುವಾಸನೆ' : 'Honest Flavour'}</span>
           <span>•</span>
           <span>{isKn ? 'ಮನೆಯ ಅಡುಗೆ' : 'Home Kitchens'}</span>
         </div>

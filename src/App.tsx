@@ -7,10 +7,10 @@ import { AdminAuthProvider, useAdminAuth } from './contexts/AdminAuthContext';
 import { Header } from './components/Header';
 import { BrandFilmHero } from './components/cinematic/BrandFilmHero';
 import { BrandStorySection } from './components/cinematic/BrandStorySection';
-import { HeritageStoryVisual } from './components/cinematic/HeritageStoryVisual';
-import { SpiceWorldIngredients } from './components/cinematic/SpiceWorldIngredients';
-import { SpiceJourneySection } from './components/cinematic/SpiceJourneySection';
-import { FinishedProductReveal } from './components/cinematic/FinishedProductReveal';
+import { SpiceWorldSection } from './components/cinematic/SpiceWorldSection';
+import { SpiceTransformationSection } from './components/cinematic/SpiceTransformationSection';
+import { ProductRevealSection } from './components/cinematic/ProductRevealSection';
+import { BrandClosingSection } from './components/cinematic/BrandClosingSection';
 import { CategoryBar } from './components/CategoryBar';
 import { ProductCard } from './components/ProductCard';
 import { ProductDetailsModal } from './components/ProductDetailsModal';
@@ -305,22 +305,17 @@ const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToA
           onExploreClick={() => scrollToSection('brand-story')}
         />
 
-        {/* SECTION 2: 30-Year Brand Story */}
-        <div id="brand-story">
-          <BrandStorySection />
-        </div>
+        {/* SECTION 02: The Story / Three Decades of Experience */}
+        <BrandStorySection />
 
-        {/* SECTION 3: 30-Year Heritage Visual Statement Rhythm */}
-        <HeritageStoryVisual />
+        {/* SECTION 03: The Spice World */}
+        <SpiceWorldSection />
 
-        {/* SECTION 4: Spice World & Macro Ingredients */}
-        <SpiceWorldIngredients />
+        {/* SECTION 04: From Whole Spice to Powder (Craft & Transformation) */}
+        <SpiceTransformationSection />
 
-        {/* SECTION 5: Cinematic Spice Processing & Grinding Journey */}
-        <SpiceJourneySection />
-
-        {/* SECTION 6: Finished Product Reveal */}
-        <FinishedProductReveal
+        {/* SECTION 05: Finished Product Reveal */}
+        <ProductRevealSection
           products={products}
           onOpenDetails={setSelectedProduct}
           onExploreCatalogue={() => scrollToSection('products-section')}
@@ -334,7 +329,7 @@ const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToA
           }}
         />
 
-        {/* SECTION 7: Existing Product Catalogue */}
+        {/* SECTION 06: Real Product Catalogue */}
         {/* Categories Bar */}
         <CategoryBar
           categories={categories || []}
@@ -458,6 +453,9 @@ const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToA
           products={products}
           onReviewAdded={handleReviewAdded}
         />
+
+        {/* SECTION 07: Trust & Brand Closing */}
+        <BrandClosingSection />
       </main>
 
       {/* Footer */}
