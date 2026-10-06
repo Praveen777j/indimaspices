@@ -5,7 +5,12 @@ import { WishlistProvider } from './contexts/WishlistContext';
 import { AdminAuthProvider, useAdminAuth } from './contexts/AdminAuthContext';
 
 import { Header } from './components/Header';
-import { HeroBanner } from './components/HeroBanner';
+import { BrandFilmHero } from './components/cinematic/BrandFilmHero';
+import { BrandStorySection } from './components/cinematic/BrandStorySection';
+import { HeritageStoryVisual } from './components/cinematic/HeritageStoryVisual';
+import { SpiceWorldIngredients } from './components/cinematic/SpiceWorldIngredients';
+import { SpiceJourneySection } from './components/cinematic/SpiceJourneySection';
+import { FinishedProductReveal } from './components/cinematic/FinishedProductReveal';
 import { CategoryBar } from './components/CategoryBar';
 import { ProductCard } from './components/ProductCard';
 import { ProductDetailsModal } from './components/ProductDetailsModal';
@@ -294,11 +299,31 @@ const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToA
 
       {/* Main Storefront Body */}
       <main className="flex-1">
-        {/* Hero Section */}
-        <HeroBanner
+        {/* SECTION 1: Brand Film Opening (Logo reveal + Welcome to Indima) */}
+        <BrandFilmHero
           banner={(banners || []).find(b => b.type === 'hero' && b.active !== false && b.enabled !== false) || (banners || []).find(b => b.active !== false && b.enabled !== false) || banners?.[0]}
-          onShopClick={() => scrollToSection('products-section')}
-          onOffersClick={() => scrollToSection('offers-section')}
+          onExploreClick={() => scrollToSection('brand-story')}
+        />
+
+        {/* SECTION 2: 30-Year Brand Story */}
+        <div id="brand-story">
+          <BrandStorySection />
+        </div>
+
+        {/* SECTION 3: 30-Year Heritage Visual Statement Rhythm */}
+        <HeritageStoryVisual />
+
+        {/* SECTION 4: Spice World & Macro Ingredients */}
+        <SpiceWorldIngredients />
+
+        {/* SECTION 5: Cinematic Spice Processing & Grinding Journey */}
+        <SpiceJourneySection />
+
+        {/* SECTION 6: Finished Product Reveal */}
+        <FinishedProductReveal
+          products={products}
+          onOpenDetails={setSelectedProduct}
+          onExploreCatalogue={() => scrollToSection('products-section')}
         />
 
         {/* Personalized Returning Customer Welcome Back & Order Tracking (Token-authorized only) */}
@@ -309,6 +334,7 @@ const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToA
           }}
         />
 
+        {/* SECTION 7: Existing Product Catalogue */}
         {/* Categories Bar */}
         <CategoryBar
           categories={categories || []}

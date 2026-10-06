@@ -322,7 +322,7 @@ export const HealthWisdomSection: React.FC = () => {
             </span>
           </div>
           <span className="text-[11px] font-bold text-[#8B3214] bg-[#FAF7F2] px-3 py-1 rounded-full border border-[#DFCFC0]">
-            FSSAI Food Grade • 0% Chemicals
+            {isKn ? 'ಸಾಂಪ್ರದಾಯಿಕ ವಿಧಾನ • ಅಪ್ಪಟ ಮಸಾಲೆಗಳು' : 'Traditional Kitchen Crafted • Whole Spices'}
           </span>
         </div>
       </div>
