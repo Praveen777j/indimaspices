@@ -436,7 +436,7 @@ export const Header: React.FC<HeaderProps> = ({
               className="hover:text-[#8B3214] transition-colors cursor-pointer text-[#2B5329] font-bold flex items-center space-x-1 bg-[#EAF2EB] px-2.5 py-0.5 rounded-full"
             >
               <Leaf className="w-3 h-3 text-[#2B5329]" />
-              <span>{isKn ? 'ಆರೋಗ್ಯ & ಸಾಂಪ್ರದಾಯಿಕ ಸತ್ವ' : 'Ayurvedic & Health Wisdom'}</span>
+              <span>{isKn ? 'ಆರೋಗ್ಯ & ರಾಸಾಯನಿಕ-ಮುಕ್ತ ಶುದ್ಧತೆ' : 'Health Benefits & 0% Chemicals'}</span>
             </button>
             <button
               onClick={() => onNavigateToSection('recipes-section')}
@@ -558,7 +558,7 @@ export const Header: React.FC<HeaderProps> = ({
                 >
                   <div className="flex items-center space-x-2.5">
                     <Leaf className="w-4 h-4 text-[#2B5329]" />
-                    <span>{isKn ? 'ಆರೋಗ್ಯ & ಸಾಂಪ್ರದಾಯಿಕ ಸತ್ವ' : 'Ayurvedic & Health Wisdom'}</span>
+                    <span>{isKn ? 'ಆರೋಗ್ಯ & ರಾಸಾಯನಿಕ-ಮುಕ್ತ ಶುದ್ಧತೆ' : 'Health Benefits & 0% Chemicals'}</span>
                   </div>
                   <ChevronRight className="w-3.5 h-3.5 text-[#2B5329]" />
                 </button>
