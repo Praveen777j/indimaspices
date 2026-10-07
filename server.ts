@@ -55,7 +55,7 @@ import {
 } from './server/security';
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 // Configure trusted reverse-proxy hops for IP resolution and rate limiting
 // - In production (Render, Cloud Run, etc.) behind a single reverse proxy, default to 1 hop.
@@ -895,9 +895,17 @@ function adminAuthMiddleware(req: Request, res: Response, next: NextFunction) {
 // PUBLIC API ROUTES
 // ----------------------------------------------------
 
+// Lightweight Root Health Endpoint for Render / Cloud Load Balancers
+// Responds immediately with HTTP 200 without requiring external services or auth
+app.get('/health', (_req: Request, res: Response) => {
+  res.status(200).json({
+    status: 'ok'
+  });
+});
+
 // Minimal Public Health Endpoint (No sensitive infrastructure or count leakage)
 app.get('/api/health', (req: Request, res: Response) => {
-  res.json({
+  res.status(200).json({
     status: 'ok'
   });
 });
@@ -4135,60 +4143,6 @@ function injectDynamicHtmlMeta(html: string, req: Request): { html: string; stat
 // ----------------------------------------------------
 
 async function startServer() {
-  // Check and run one-time database migration if explicitly requested via RUN_FIRESTORE_MIGRATION=true
-  if (process.env.RUN_FIRESTORE_MIGRATION === 'true') {
-    try {
-      console.log('[Server Startup] RUN_FIRESTORE_MIGRATION=true detected. Executing pre-flight one-time migration...');
-      await runOneTimeFirestoreMigration();
-    } catch (migErr: any) {
-      console.error('[Server Startup] Migration encountered error:', migErr.message);
-    }
-  }
-
-  // Production security audit & environment validation
-  const securityReport = validateSecurityConfiguration();
-  if (securityReport.errors.length > 0) {
-    console.error('================================================================');
-    console.error('🚨 [SECURITY CONFIGURATION ALERT] CRITICAL ISSUES DETECTED:');
-    securityReport.errors.forEach(err => console.error(`  - ${err}`));
-    console.error('================================================================');
-  }
-  if (securityReport.warnings.length > 0 && process.env.NODE_ENV === 'production') {
-    console.warn('⚠️ [SECURITY WARNINGS]:');
-    securityReport.warnings.forEach(warn => console.warn(`  - ${warn}`));
-  }
-
-  try {
-    await db.initFirestore();
-  } catch (dbErr: any) {
-    console.info('[Firebase Admin Firestore] Pre-flight initialization notice:', dbErr?.message || dbErr);
-  }
-
-  // Cloudinary media service initialization and status audit
-  const cloudStatus = getCloudinaryStatus();
-  if (cloudStatus.configured) {
-    initCloudinary();
-    console.log(`[Cloudinary Media] Connected: Cloud Name "${cloudStatus.cloudName}", Folder "${cloudStatus.folder}", Video Support: Enabled.`);
-  } else {
-    console.warn('[Cloudinary Media] Notice: Cloudinary environment variables (CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET) are not fully defined yet. Uploads will prompt for configuration.');
-  }
-
-  // Check and run media migration if explicitly requested via RUN_MEDIA_MIGRATION=true
-  if (process.env.RUN_MEDIA_MIGRATION === 'true') {
-    try {
-      console.log('[Server Startup] RUN_MEDIA_MIGRATION=true detected. Migrating local public/uploads/ media to Cloudinary...');
-      const fsDb = await db.getFirestoreInstance();
-      const migResult = await migrateLocalMediaToCloudinary(fsDb);
-      console.log(`[Server Startup] Media migration complete: ${migResult.uploadedCount} uploaded, ${migResult.updatedDocsCount} Firestore docs updated.`);
-      await db.reloadFromFirestore();
-    } catch (migErr: any) {
-      console.error('[Server Startup] Media migration encountered error:', migErr.message);
-    }
-  }
-
-  // Pre-flight check storage availability in background without blocking startup
-  isCloudStorageAvailable().catch(() => {});
-
   // ----------------------------------------------------
   // STATIC FILE & SENSITIVE PATH SECURITY GUARD
   // ----------------------------------------------------
@@ -4289,8 +4243,68 @@ async function startServer() {
     });
   }
 
+  // Bind HTTP server immediately so Render health checks pass without delay
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`[INDIMA SPICE CO.] Server running on http://0.0.0.0:${PORT}`);
+
+    // Asynchronous background initialization (non-blocking for instant HTTP availability)
+    (async () => {
+      // Production security audit & environment validation
+      const securityReport = validateSecurityConfiguration();
+      if (securityReport.errors.length > 0) {
+        console.error('================================================================');
+        console.error('🚨 [SECURITY CONFIGURATION ALERT] CRITICAL ISSUES DETECTED:');
+        securityReport.errors.forEach(err => console.error(`  - ${err}`));
+        console.error('================================================================');
+      }
+      if (securityReport.warnings.length > 0 && process.env.NODE_ENV === 'production') {
+        console.warn('⚠️ [SECURITY WARNINGS]:');
+        securityReport.warnings.forEach(warn => console.warn(`  - ${warn}`));
+      }
+
+      // Check and run one-time database migration if explicitly requested via RUN_FIRESTORE_MIGRATION=true
+      if (process.env.RUN_FIRESTORE_MIGRATION === 'true') {
+        try {
+          console.log('[Server Startup] RUN_FIRESTORE_MIGRATION=true detected. Executing background one-time migration...');
+          await runOneTimeFirestoreMigration();
+        } catch (migErr: any) {
+          console.error('[Server Startup] Migration encountered error:', migErr.message);
+        }
+      }
+
+      try {
+        await db.initFirestore();
+      } catch (dbErr: any) {
+        console.info('[Firebase Admin Firestore] Pre-flight initialization notice:', dbErr?.message || dbErr);
+      }
+
+      // Cloudinary media service initialization and status audit
+      const cloudStatus = getCloudinaryStatus();
+      if (cloudStatus.configured) {
+        initCloudinary();
+        console.log(`[Cloudinary Media] Connected: Cloud Name "${cloudStatus.cloudName}", Folder "${cloudStatus.folder}", Video Support: Enabled.`);
+      } else {
+        console.warn('[Cloudinary Media] Notice: Cloudinary environment variables (CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET) are not fully defined yet. Uploads will prompt for configuration.');
+      }
+
+      // Check and run media migration if explicitly requested via RUN_MEDIA_MIGRATION=true
+      if (process.env.RUN_MEDIA_MIGRATION === 'true') {
+        try {
+          console.log('[Server Startup] RUN_MEDIA_MIGRATION=true detected. Migrating local public/uploads/ media to Cloudinary in background...');
+          const fsDb = await db.getFirestoreInstance();
+          const migResult = await migrateLocalMediaToCloudinary(fsDb);
+          console.log(`[Server Startup] Media migration complete: ${migResult.uploadedCount} uploaded, ${migResult.updatedDocsCount} Firestore docs updated.`);
+          await db.reloadFromFirestore();
+        } catch (migErr: any) {
+          console.error('[Server Startup] Media migration encountered error:', migErr.message);
+        }
+      }
+
+      // Pre-flight check storage availability in background without blocking startup
+      isCloudStorageAvailable().catch(() => {});
+    })().catch(bgErr => {
+      console.warn('[Server Startup] Background initialization task error:', bgErr?.message || bgErr);
+    });
   });
 }
 
