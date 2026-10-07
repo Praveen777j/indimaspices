@@ -1,9 +1,10 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { Banner } from '../../types';
-import { Sparkles, ArrowDown } from 'lucide-react';
+import { normalizeBannerContent } from '../../utils/mediaUtils';
+import { Sparkles, ArrowDown, ShoppingBag, Tag } from 'lucide-react';
 
 if (typeof window !== 'undefined') {
   gsap.registerPlugin(ScrollTrigger);
@@ -18,22 +19,32 @@ export const BrandFilmHero: React.FC<BrandFilmHeroProps> = ({ banner, onExploreC
   const { language } = useLanguage();
   const isKn = language === 'kn';
 
-  const sectionRef = useRef<HTMLElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const logoWrapperRef = useRef<HTMLDivElement>(null);
-  const titleWrapperRef = useRef<HTMLDivElement>(null);
-  const backdropGlowRef = useRef<HTMLDivElement>(null);
+  const content = normalizeBannerContent(banner);
 
-  // Admin banner title override if provided
-  const adminTitle = isKn ? banner?.title_kn : banner?.title_en;
+  const [videoError, setVideoError] = useState(false);
+  const [imageError, setImageError] = useState(false);
+
+  const sectionRef = useRef<HTMLElement>(null);
+  const mediaContainerRef = useRef<HTMLDivElement>(null);
+  const logoWrapperRef = useRef<HTMLDivElement>(null);
+  const textContentRef = useRef<HTMLDivElement>(null);
+
+  // Reset error states when banner changes
+  useEffect(() => {
+    setVideoError(false);
+    setImageError(false);
+  }, [banner?.media_url, banner?.media_type]);
+
+  const showVideo = content.isVideo && !videoError;
+  const activeImageUrl = imageError ? content.fallbackUrl : content.mediaUrl;
 
   useEffect(() => {
     const section = sectionRef.current;
+    const mediaEl = mediaContainerRef.current;
     const logoEl = logoWrapperRef.current;
-    const titleEl = titleWrapperRef.current;
-    const glowEl = backdropGlowRef.current;
+    const textEl = textContentRef.current;
 
-    if (!section || !logoEl || !titleEl) return;
+    if (!section || !mediaEl || !logoEl || !textEl) return;
 
     const prefersReducedMotion =
       typeof window !== 'undefined' &&
@@ -41,30 +52,30 @@ export const BrandFilmHero: React.FC<BrandFilmHeroProps> = ({ banner, onExploreC
 
     const ctx = gsap.context(() => {
       if (prefersReducedMotion) {
-        gsap.set([logoEl, titleEl], { opacity: 1, y: 0, scale: 1 });
+        gsap.set([mediaEl, logoEl, textEl], { opacity: 1, scale: 1, y: 0 });
         return;
       }
 
       // Initial state
-      gsap.set(logoEl, { opacity: 0, scale: 0.92, y: 20 });
-      gsap.set(titleEl, { opacity: 0, y: 25 });
-      if (glowEl) gsap.set(glowEl, { opacity: 0, scale: 0.85 });
+      gsap.set(logoEl, { opacity: 0, scale: 0.9, y: 20 });
+      gsap.set(textEl, { opacity: 0, y: 25 });
+      gsap.set(mediaEl, { scale: 1.05 });
 
-      // Entrance animation on page load
+      // Entrance animation on load
       const enterTl = gsap.timeline({ defaults: { ease: 'power3.out' } });
       enterTl
-        .to(glowEl, { opacity: 1, scale: 1, duration: 1.6, ease: 'power2.out' }, 0)
-        .to(logoEl, { opacity: 1, scale: 1, y: 0, duration: 1.4 }, 0.2)
-        .to(titleEl, { opacity: 1, y: 0, duration: 1.2 }, 0.5);
+        .to(mediaEl, { scale: 1, duration: 1.8, ease: 'power2.out' }, 0)
+        .to(logoEl, { opacity: 1, scale: 1, y: 0, duration: 1.2 }, 0.2)
+        .to(textEl, { opacity: 1, y: 0, duration: 1.2 }, 0.4);
 
-      // Desktop: Controlled, smooth scroll response that cleanly releases
+      // Desktop: Scroll-driven camera movement (slow zoom 1.0 -> 1.12 + subtle parallax)
       const mm = gsap.matchMedia();
       mm.add('(min-width: 768px)', () => {
         const scrollTl = gsap.timeline({
           scrollTrigger: {
             trigger: section,
             start: 'top top',
-            end: '+=85%', // Moderate distance, releases completely
+            end: '+=85%', // Controlled distance, releases cleanly
             scrub: 0.8,
             pin: true,
             anticipatePin: 1
@@ -72,23 +83,40 @@ export const BrandFilmHero: React.FC<BrandFilmHeroProps> = ({ banner, onExploreC
         });
 
         scrollTl
-          .to(logoEl, {
-            scale: 1.05,
-            y: -15,
-            opacity: 0.9,
-            ease: 'power1.inOut'
-          }, 0)
-          .to(titleEl, {
-            y: -10,
-            opacity: 0.85,
-            ease: 'power1.inOut'
-          }, 0);
+          .to(
+            mediaEl,
+            {
+              scale: 1.12,
+              y: -25,
+              ease: 'power1.inOut'
+            },
+            0
+          )
+          .to(
+            logoEl,
+            {
+              y: -15,
+              opacity: 0.95,
+              ease: 'power1.inOut'
+            },
+            0
+          )
+          .to(
+            textEl,
+            {
+              y: -10,
+              opacity: 0.9,
+              ease: 'power1.inOut'
+            },
+            0
+          );
       });
 
       mm.add('(max-width: 767px)', () => {
-        // Mobile: Clean non-pinned fluid behavior
-        gsap.to(logoEl, {
-          y: -10,
+        // Mobile: Fluid non-pinned scroll response
+        gsap.to(mediaEl, {
+          y: -15,
+          scale: 1.06,
           scrollTrigger: {
             trigger: section,
             start: 'top top',
@@ -100,46 +128,84 @@ export const BrandFilmHero: React.FC<BrandFilmHeroProps> = ({ banner, onExploreC
     }, section);
 
     return () => ctx.revert();
-  }, [isKn]);
+  }, [content.mediaUrl, showVideo, isKn]);
+
+  const activeTitle = isKn ? content.titleKn : content.titleEn;
+  const activeSubtitle = isKn ? content.subtitleKn : content.subtitleEn;
+  const activeBadge = isKn ? content.badgeKn : content.badgeEn;
+  const activePrimaryBtn = isKn ? content.primaryBtnTextKn : content.primaryBtnTextEn;
+  const activeOffer = isKn ? content.offerTextKn : content.offerTextEn;
+
+  const handlePrimaryClick = () => {
+    if (content.primaryBtnAction?.startsWith('#')) {
+      const targetId = content.primaryBtnAction.replace('#', '');
+      const el = document.getElementById(targetId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+    }
+    onExploreClick();
+  };
 
   return (
     <section
       ref={sectionRef}
-      className="brand-film-hero relative w-full min-h-[92vh] sm:min-h-screen bg-[#FAF6EE] text-[#2C1810] flex items-center justify-center overflow-hidden select-none"
-      style={{
-        backgroundImage:
-          'radial-gradient(ellipse at 50% 40%, rgba(245, 235, 220, 0.95) 0%, rgba(250, 246, 238, 0.98) 75%)'
-      }}
+      className="brand-film-hero relative w-full min-h-[92vh] sm:min-h-screen bg-[#1F140E] text-white flex items-center justify-center overflow-hidden select-none"
     >
-      {/* Subtle organic warmth & texture behind logo */}
+      {/* FULL-BLEED ADMIN MEDIA LAYER (Video or Image with camera zoom) */}
       <div
-        ref={backdropGlowRef}
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[480px] sm:w-[680px] h-[480px] sm:h-[680px] bg-gradient-to-tr from-amber-500/10 via-orange-600/5 to-amber-700/10 blur-[100px] rounded-full pointer-events-none"
-      />
-
-      {/* Main Content Container */}
-      <div
-        ref={containerRef}
-        className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center justify-center py-16 sm:py-24"
+        ref={mediaContainerRef}
+        className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden will-change-transform"
       >
-        {/* Subtle Heritage Tag */}
-        <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-[#FAF0E1] border border-[#DFC7A2] text-[#8B3214] text-[11px] sm:text-xs font-semibold tracking-widest uppercase mb-8 shadow-xs">
-          <Sparkles className="w-3.5 h-3.5 text-[#993300]" />
-          <span>{isKn ? 'ಮೂರು ದಶಕಗಳ ಸುವಾಸನೆ' : 'Three Decades of Experience'}</span>
-          <span className="text-[#C5A059]">•</span>
+        {showVideo ? (
+          <video
+            key={content.mediaUrl}
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            poster={content.posterUrl}
+            onError={() => setVideoError(true)}
+            className="w-full h-full object-cover object-center"
+          >
+            <source src={content.mediaUrl} type="video/mp4" />
+          </video>
+        ) : (
+          <img
+            key={activeImageUrl}
+            src={activeImageUrl}
+            alt="Indima Spice Co."
+            onError={() => {
+              if (!imageError) setImageError(true);
+            }}
+            className="w-full h-full object-cover object-center"
+          />
+        )}
+
+        {/* Minimal cinematic vignette overlays for optimal contrast while keeping media vividly visible */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#1F140E]/85 via-[#1F140E]/30 to-[#1F140E]/55" />
+        <div className="absolute inset-0 bg-radial-at-c from-transparent via-[#1F140E]/20 to-[#1F140E]/60 pointer-events-none" />
+      </div>
+
+      {/* FOREGROUND CINEMATIC CONTENT LAYER */}
+      <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center justify-center py-16 sm:py-24">
+        {/* Admin Badge Pill */}
+        <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-[#1F140E]/75 border border-amber-400/40 text-amber-200 text-[11px] sm:text-xs font-semibold tracking-widest uppercase mb-6 shadow-lg backdrop-blur-md">
+          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+          <span>{activeBadge}</span>
+          <span className="text-amber-400/60">•</span>
           <span>{isKn ? 'ಕರ್ನಾಟಕ' : 'Karnataka'}</span>
         </div>
 
         {/* Official Indima Logo Reveal */}
-        <div
-          ref={logoWrapperRef}
-          className="relative mb-6 sm:mb-8"
-        >
-          <div className="relative p-4 sm:p-6 rounded-3xl bg-[#FFFDF9]/90 border border-[#E8DFD3] shadow-xl shadow-[#2C1810]/5 backdrop-blur-xs">
+        <div ref={logoWrapperRef} className="relative mb-5 sm:mb-7">
+          <div className="relative p-3.5 sm:p-5 rounded-3xl bg-[#FFFDF9]/95 border border-[#E8DFD3] shadow-2xl backdrop-blur-md">
             <img
               src="/indima-logo.svg"
               alt="Indima Spice Co."
-              className="h-24 sm:h-32 md:h-40 w-auto object-contain drop-shadow-[0_8px_20px_rgba(44,24,16,0.12)]"
+              className="h-20 sm:h-28 md:h-36 w-auto object-contain drop-shadow-[0_8px_16px_rgba(44,24,16,0.18)]"
               onError={e => {
                 const target = e.target as HTMLImageElement;
                 if (!target.src.endsWith('/indima-brand-logo.jpg')) {
@@ -150,35 +216,49 @@ export const BrandFilmHero: React.FC<BrandFilmHeroProps> = ({ banner, onExploreC
           </div>
         </div>
 
-        {/* Editorial Welcome & Statement */}
-        <div ref={titleWrapperRef} className="space-y-3 sm:space-y-4 max-w-2xl">
-          <p className="text-xs sm:text-sm font-mono uppercase tracking-[0.25em] text-[#993300] font-semibold">
+        {/* Editorial Welcome & Statement from Admin */}
+        <div ref={textContentRef} className="space-y-3 sm:space-y-4 max-w-2xl text-white">
+          <p className="text-xs sm:text-sm font-mono uppercase tracking-[0.25em] text-amber-300 font-semibold drop-shadow-md">
             {isKn ? 'ಪರಿಶುದ್ಧ ಪರಂಪರೆ' : 'Authentic Indian Spices'}
           </p>
 
-          <h1 className="font-serif text-3xl sm:text-5xl md:text-6xl font-bold tracking-tight text-[#2C1810] leading-[1.15] text-balance">
-            {isKn ? 'ಇಂದಿಮಾಗೆ ಸುಸ್ವಾಗತ' : 'Welcome to Indima'}
+          <h1 className="font-serif text-3xl sm:text-5xl md:text-6xl font-bold tracking-tight text-[#FFFDF9] leading-[1.15] text-balance drop-shadow-lg">
+            {activeTitle}
           </h1>
 
-          <p className="font-serif italic text-base sm:text-xl text-[#6B4E3D] max-w-xl mx-auto leading-relaxed pt-1 font-normal">
-            {isKn
-              ? '“ಸಾಂಪ್ರದಾಯಿಕ ಬೇರುಗಳಿಂದ ಮೂಡಿದ ಅಪ್ಪಟ ಮಸಾಲೆಗಳು. ನಮ್ಮ ಪ್ರೀತಿಯ ಅಡುಗೆಗಾಗಿ.”'
-              : '“Spices rooted in tradition. Made for the food we love.”'}
+          <p className="font-serif italic text-sm sm:text-lg md:text-xl text-amber-100/90 max-w-xl mx-auto leading-relaxed pt-1 font-normal drop-shadow-md">
+            {activeSubtitle}
           </p>
 
-          {adminTitle && adminTitle !== (isKn ? 'ಇಂದಿಮಾಗೆ ಸುಸ್ವಾಗತ' : 'Welcome to Indima') && (
-            <p className="text-xs sm:text-sm text-[#8C7667] max-w-lg mx-auto pt-2 font-normal">
-              {adminTitle}
-            </p>
+          {/* Admin Offer Tag Strip if configured */}
+          {activeOffer && (
+            <div className="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-200 text-xs font-semibold backdrop-blur-md mt-2 shadow-md">
+              <Tag className="w-3.5 h-3.5 text-amber-300" />
+              <span>{activeOffer}</span>
+            </div>
           )}
+
+          {/* Call to Action from Admin */}
+          <div className="pt-4 flex items-center justify-center space-x-3">
+            <button
+              onClick={handlePrimaryClick}
+              className="px-7 py-3 rounded-full bg-[#993300] hover:bg-[#B84005] text-white font-bold text-xs sm:text-sm tracking-wider uppercase transition-all duration-300 shadow-xl shadow-red-950/60 hover:scale-105 active:scale-95 cursor-pointer flex items-center space-x-2 border border-amber-400/30"
+            >
+              <ShoppingBag className="w-4 h-4" />
+              <span>{activePrimaryBtn}</span>
+            </button>
+          </div>
         </div>
 
-        {/* Bottom Scroll Guidance */}
-        <div className="mt-12 sm:mt-16 flex flex-col items-center text-[#8C7667] space-y-1.5 cursor-pointer" onClick={onExploreClick}>
+        {/* Bottom Scroll Prompt */}
+        <div
+          className="mt-10 sm:mt-14 flex flex-col items-center text-amber-200/80 space-y-1.5 cursor-pointer hover:text-amber-100 transition-colors"
+          onClick={onExploreClick}
+        >
           <span className="text-[10px] tracking-widest uppercase font-mono font-medium">
             {isKn ? 'ಕಥೆಯನ್ನು ತಿಳಿಯಲು ಕೆಳಗೆ ಸ್ಕ್ರಾಲ್ ಮಾಡಿ' : 'Scroll Down to Discover'}
           </span>
-          <ArrowDown className="w-4 h-4 animate-bounce text-[#993300]" />
+          <ArrowDown className="w-4 h-4 animate-bounce text-amber-300" />
         </div>
       </div>
     </section>
