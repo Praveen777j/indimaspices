@@ -66,10 +66,10 @@ export const HeritageStorySection: React.FC = () => {
                   <ShieldCheck className="w-4 h-4" />
                 </div>
                 <h3 className="font-serif text-xs font-bold text-[#1F1610]">
-                  {isKn ? '0% ಕಲಬೆರಕೆ' : 'Zero Adulteration'}
+                  {isKn ? 'ಪರಂಪರೆಯ ವಿಧಾನ' : 'Heritage Tradition'}
                 </h3>
                 <p className="text-[11px] text-[#7A6455] leading-relaxed">
-                  {isKn ? 'ಯಾವುದೇ ಕೃತಕ ಬಣ್ಣ, ಮರದ ಪುಡಿ ಅಥವಾ ರಾಸಾಯನಿಕಗಳಿಲ್ಲ' : 'No synthetic dyes, spent spice residue, or starch fillers.'}
+                  {isKn ? 'ಕರ್ನಾಟಕದ ಸಾಂಪ್ರದಾಯಿಕ ಅಡುಗೆಯ ನೈಜ ಸುವಾಸನೆ ಮತ್ತು ರುಚಿ.' : 'Time-honoured Karnataka kitchen methods preserved with care.'}
                 </p>
               </div>
 
@@ -78,10 +78,10 @@ export const HeritageStorySection: React.FC = () => {
                   <Leaf className="w-4 h-4" />
                 </div>
                 <h3 className="font-serif text-xs font-bold text-[#1F1610]">
-                  {isKn ? 'ಕಲ್ಲಿನ ಬೀಸುವಿಕೆ' : 'Cold Stone-Ground'}
+                  {isKn ? 'ಅಪ್ಪಟ ಕಾಳುಗಳು' : 'Whole Ingredients'}
                 </h3>
                 <p className="text-[11px] text-[#7A6455] leading-relaxed">
-                  {isKn ? 'ನೈಸರ್ಗಿಕ ಸುಗಂಧ ತೈಲಗಳು ಮತ್ತು ಔಷಧೀಯ ಗುಣಗಳು ಸಂರಕ್ಷಿತ' : 'Volatile aromatic oils preserved without high-heat burning.'}
+                  {isKn ? 'ಗುಣಮಟ್ಟದ ಕಾಳು ಮೆಣಸು, ಅರಿಶಿನ, ಮತ್ತು ಬ್ಯಾಡಗಿ ಮೆಣಸಿನಕಾಯಿ.' : 'Selected whole spices forming the authentic soul of every blend.'}
                 </p>
               </div>
 
@@ -90,10 +90,10 @@ export const HeritageStorySection: React.FC = () => {
                   <HeartHandshake className="w-4 h-4" />
                 </div>
                 <h3 className="font-serif text-xs font-bold text-[#1F1610]">
-                  {isKn ? 'ಅಪ್ಪಟ ನೈಜ ರುಚಿ' : '50% Less Quantity'}
+                  {isKn ? 'ಅಪ್ಪಟ ನೈಜ ರುಚಿ' : 'True Flavour'}
                 </h3>
                 <p className="text-[11px] text-[#7A6455] leading-relaxed">
-                  {isKn ? 'ಅರ್ಧ ಚಮಚದಲ್ಲೇ ಮನೆಯ ಸಾಂಬಾರ್, ರಸಂಗೆ ಅದ್ಭುತ ರುಚಿ' : 'High potency purity means just 1 small spoon gives deep aroma.'}
+                  {isKn ? 'ಪ್ರತಿ ತುತ್ತಿನಲ್ಲೂ ತಾಯಿಯ ಪ್ರೀತಿಯ ಅಡುಗೆಯ ನೆನಪು.' : 'Rich aroma that transforms everyday cooking into a feast.'}
                 </p>
               </div>
             </div>
