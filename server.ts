@@ -4221,7 +4221,8 @@ async function startServer() {
   // Explicitly serve public files (e.g. google verification files, sitemap, robots.txt)
   app.use(express.static(path.join(process.cwd(), 'public')));
 
-  const isProduction = process.env.NODE_ENV === 'production' || fs.existsSync(path.join(process.cwd(), 'dist', 'index.html'));
+  const isRunningBundled = typeof __filename === 'string' && __filename.includes('server.cjs');
+  const isProduction = process.env.NODE_ENV === 'production' || isRunningBundled;
 
   if (!isProduction) {
     const vite = await createViteServer({
@@ -4251,7 +4252,14 @@ async function startServer() {
         const { html, status } = injectDynamicHtmlMeta(template, req);
         res.status(status || 200).set({ 'Content-Type': 'text/html' }).send(html);
       } else {
-        res.sendFile(indexHtmlPath);
+        const rootIndex = path.resolve(process.cwd(), 'index.html');
+        if (fs.existsSync(rootIndex)) {
+          const template = fs.readFileSync(rootIndex, 'utf-8');
+          const { html, status } = injectDynamicHtmlMeta(template, req);
+          res.status(status || 200).set({ 'Content-Type': 'text/html' }).send(html);
+        } else {
+          res.status(404).send('Page not found');
+        }
       }
     });
   }
