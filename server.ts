@@ -57,6 +57,17 @@ import {
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
+// Immediate lightweight health endpoints for Render & Cloud Load Balancers
+// Responds immediately with HTTP 200 without requiring external services, DB, or auth.
+// Registered at the very top so health checks succeed even while heavy middlewares/routes load.
+app.get('/health', (_req: Request, res: Response) => {
+  res.status(200).json({ status: 'ok' });
+});
+
+app.get('/api/health', (_req: Request, res: Response) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 // Configure trusted reverse-proxy hops for IP resolution and rate limiting
 // - In production (Render, Cloud Run, etc.) behind a single reverse proxy, default to 1 hop.
 // - Can be configured explicitly via TRUST_PROXY_HOPS or TRUST_PROXY environment variables.
@@ -4210,7 +4221,9 @@ async function startServer() {
   // Explicitly serve public files (e.g. google verification files, sitemap, robots.txt)
   app.use(express.static(path.join(process.cwd(), 'public')));
 
-  if (process.env.NODE_ENV !== 'production') {
+  const isProduction = process.env.NODE_ENV === 'production' || fs.existsSync(path.join(process.cwd(), 'dist', 'index.html'));
+
+  if (!isProduction) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'custom'

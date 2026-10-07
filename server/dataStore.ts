@@ -598,39 +598,74 @@ const INITIAL_REVIEWS: Review[] = [
   }
 ];
 
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, operationName: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`Timeout after ${timeoutMs}ms while executing ${operationName}`));
+    }, timeoutMs);
+
+    promise
+      .then(res => {
+        clearTimeout(timer);
+        resolve(res);
+      })
+      .catch(err => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
+}
+
 class DataStore {
   private data: DatabaseSchema;
   private saveTimeout: NodeJS.Timeout | null = null;
   private firestore: AdminFirestore | null = null;
   private isFirestoreReady = false;
   private lastFirestoreError: string | null = null;
+  private initPromise: Promise<boolean> | null = null;
 
   constructor() {
+    // Synchronously load existing local data so HTTP requests can be served immediately
     this.data = this.loadDatabase();
-    this.initFirestore().catch(e => {
-      console.warn('[Firestore Admin] Async initialization notice:', e.message);
-    });
+    // CRITICAL: Do NOT initialize Firestore or make network calls inside the constructor.
+    // External services must be initialized asynchronously after the HTTP server binds.
   }
 
   public async initFirestore(): Promise<boolean> {
-    try {
-      const adminConfig = getFirebaseAdmin();
-      this.firestore = adminConfig.firestore;
-
-      console.log(`[Firestore Admin] Target database: "${adminConfig.databaseId}" in project "${adminConfig.projectId}" (Auth source: ${adminConfig.source})`);
-      await this.reloadFromFirestore();
-      this.isFirestoreReady = true;
-      this.lastFirestoreError = null;
-      console.log(
-        `[Firestore Admin] Authoritative catalog synced: ${this.data.products.length} products, ${this.data.customers.length} customers, ${this.data.orders.length} orders.`
-      );
+    if (this.isFirestoreReady && this.firestore) {
       return true;
-    } catch (err: any) {
-      this.isFirestoreReady = false;
-      this.lastFirestoreError = err.message || String(err);
-      console.info(`[Firestore Admin] Notice: Firestore is offline or not provisioned (${err.message || err}). Application running with local store.`);
-      return false;
     }
+    if (this.initPromise) {
+      return this.initPromise;
+    }
+
+    this.initPromise = (async () => {
+      try {
+        const adminConfig = getFirebaseAdmin();
+        this.firestore = adminConfig.firestore;
+
+        console.log(`[Firestore Admin] Target database: "${adminConfig.databaseId}" in project "${adminConfig.projectId}" (Auth source: ${adminConfig.source})`);
+        
+        // Timeout guard: ensure catalog reload cannot hang the process indefinitely
+        await withTimeout(this.reloadFromFirestore(), 15000, 'Firestore catalog synchronization');
+        
+        this.isFirestoreReady = true;
+        this.lastFirestoreError = null;
+        console.log(
+          `[Firestore Admin] Authoritative catalog synced: ${this.data.products.length} products, ${this.data.customers.length} customers, ${this.data.orders.length} orders.`
+        );
+        return true;
+      } catch (err: any) {
+        this.isFirestoreReady = false;
+        this.lastFirestoreError = err.message || String(err);
+        console.info(`[Firestore Admin] Notice: Firestore is offline or not provisioned (${err.message || err}). Application running with local store.`);
+        return false;
+      } finally {
+        this.initPromise = null;
+      }
+    })();
+
+    return this.initPromise;
   }
 
   public getIsFirestoreReady(): boolean {
