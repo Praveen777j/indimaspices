@@ -136,7 +136,7 @@ export const ProductRevealSection: React.FC<ProductRevealSectionProps> = ({
   return (
     <section
       ref={sectionRef}
-      className="product-reveal-section relative w-full min-h-[92vh] sm:min-h-screen bg-[#FAF6EE] text-[#2C1810] py-20 px-4 sm:px-6 lg:px-8 overflow-hidden select-none flex items-center justify-center"
+      className="product-reveal-section relative w-full min-h-[85vh] sm:min-h-screen bg-[#FAF6EE] text-[#2C1810] py-12 sm:py-20 px-4 sm:px-6 lg:px-8 overflow-hidden select-none flex items-center justify-center"
       style={{
         backgroundImage:
           'radial-gradient(ellipse at 50% 50%, rgba(255, 253, 249, 0.98) 0%, rgba(250, 246, 238, 0.98) 85%)'
@@ -148,17 +148,17 @@ export const ProductRevealSection: React.FC<ProductRevealSectionProps> = ({
       {/* Main Grid */}
       <div
         ref={containerRef}
-        className="relative z-10 max-w-5xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center"
+        className="relative z-10 max-w-5xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-14 items-center"
       >
         {/* Left Column: Live Indima Product Package Showcase */}
         <div
           ref={packageWrapperRef}
           className="lg:col-span-6 relative flex items-center justify-center"
         >
-          <div className="relative group p-4 sm:p-6 rounded-3xl bg-[#FFFDF9] border border-[#E8DFD3] shadow-xl shadow-[#2C1810]/5 max-w-sm sm:max-w-md w-full">
-            {/* Signature Heritage Tag */}
-            <div className="absolute top-4 left-4 z-10 inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-[#993300] text-white text-[11px] font-bold tracking-wider uppercase shadow-xs">
-              <Sparkles className="w-3 h-3 text-amber-300" />
+          <div className="relative group p-3.5 sm:p-6 rounded-3xl bg-[#FFFDF9] border border-[#E8DFD3] shadow-xl shadow-[#2C1810]/5 max-w-xs sm:max-w-md w-full">
+            {/* Signature Heritage Tag (Compact on mobile so it doesn't mask the product photo) */}
+            <div className="absolute top-2.5 left-2.5 sm:top-4 sm:left-4 z-10 inline-flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full bg-[#993300] text-white text-[10px] sm:text-[11px] font-bold tracking-wider uppercase shadow-xs">
+              <Sparkles className="w-2.5 sm:w-3 h-2.5 sm:h-3 text-amber-300" />
               <span>{isKn ? 'ಸಿದ್ಧ ಪರಿಶುದ್ಧ ಮಸಾಲೆ' : 'Pure Spice Blend'}</span>
             </div>
 
@@ -175,7 +175,7 @@ export const ProductRevealSection: React.FC<ProductRevealSectionProps> = ({
               <div className="absolute inset-0 bg-gradient-to-t from-[#2C1810]/40 via-transparent to-transparent pointer-events-none" />
 
               {/* Weight Pill */}
-              <div className="absolute bottom-3 right-3 px-3 py-1 rounded-full bg-[#FFFDF9]/95 border border-[#DFC7A2] text-[#2C1810] text-xs font-mono font-medium shadow-xs">
+              <div className="absolute bottom-2.5 right-2.5 sm:bottom-3 sm:right-3 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full bg-[#FFFDF9]/95 border border-[#DFC7A2] text-[#2C1810] text-[10px] sm:text-xs font-mono font-medium shadow-xs">
                 {featuredProduct.weight || '200g'}
               </div>
             </div>
@@ -183,9 +183,9 @@ export const ProductRevealSection: React.FC<ProductRevealSectionProps> = ({
         </div>
 
         {/* Right Column: Narrative & CTA Payoff */}
-        <div ref={detailsRef} className="lg:col-span-6 space-y-5">
-          <div className="space-y-2">
-            <div className="inline-flex items-center space-x-2 text-[#993300] font-mono text-xs uppercase tracking-widest font-semibold">
+        <div ref={detailsRef} className="lg:col-span-6 space-y-3.5 sm:space-y-5">
+          <div className="space-y-1.5 sm:space-y-2">
+            <div className="inline-flex items-center space-x-2 text-[#993300] font-mono text-[11px] sm:text-xs uppercase tracking-widest font-semibold">
               <span>{isKn ? 'ಸಿದ್ಧ ಉತ್ಪನ್ನ' : 'The Finished Product'}</span>
               <span>•</span>
               <span className="text-[#2B5329]">
@@ -195,7 +195,7 @@ export const ProductRevealSection: React.FC<ProductRevealSectionProps> = ({
               </span>
             </div>
 
-            <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-[#2C1810] leading-[1.2]">
+            <h2 className="font-serif text-2xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-[#2C1810] leading-[1.2]">
               {name}
             </h2>
           </div>
@@ -207,25 +207,25 @@ export const ProductRevealSection: React.FC<ProductRevealSectionProps> = ({
           </p>
 
           {/* Pricing Pod */}
-          <div className="p-4 sm:p-5 rounded-2xl bg-[#FFFDF9] border border-[#DFC7A2] shadow-xs flex items-center justify-between">
+          <div className="p-3.5 sm:p-5 rounded-2xl bg-[#FFFDF9] border border-[#DFC7A2] shadow-xs flex items-center justify-between">
             <div>
-              <div className="flex items-baseline space-x-3">
-                <span className="font-serif text-3xl sm:text-4xl font-bold text-[#993300]">
+              <div className="flex items-baseline space-x-2 sm:space-x-3">
+                <span className="font-serif text-2xl sm:text-4xl font-bold text-[#993300]">
                   ₹{featuredProduct.price}
                 </span>
                 {featuredProduct.mrp > featuredProduct.price && (
-                  <span className="text-sm sm:text-base text-[#8C7667] line-through font-normal">
+                  <span className="text-xs sm:text-base text-[#8C7667] line-through font-normal">
                     ₹{featuredProduct.mrp}
                   </span>
                 )}
               </div>
-              <p className="text-[11px] text-[#8C7667] mt-0.5 font-normal">
+              <p className="text-[10px] sm:text-[11px] text-[#8C7667] mt-0.5 font-normal">
                 {isKn ? 'ತೆರಿಗೆ ಸೇರಿದೆ • ಪ್ಯಾನ್‌-ಇಂಡಿಯಾ ವಿತರಣೆ' : 'Inclusive of all taxes • Pan-India Delivery'}
               </p>
             </div>
 
             {discount > 0 && (
-              <div className="px-3 py-1.5 rounded-xl bg-[#EAF2EB] border border-[#CDE0D0] text-[#2B5329] text-xs font-bold font-mono">
+              <div className="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-[#EAF2EB] border border-[#CDE0D0] text-[#2B5329] text-[11px] sm:text-xs font-bold font-mono">
                 {discount}% OFF
               </div>
             )}

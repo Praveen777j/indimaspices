@@ -51,28 +51,28 @@ export const FestivalOffersSection: React.FC<FestivalOffersSectionProps> = ({
           {activeOffers.map(offer => (
             <div
               key={offer.id}
-              className="relative p-5 rounded-2xl bg-[#FAF6EE] border border-[#DFC7A2] hover:border-[#993300] transition-all flex flex-col justify-between overflow-hidden shadow-2xs group"
+              className="relative p-4 sm:p-5 rounded-2xl bg-[#FAF6EE] border border-[#DFC7A2] hover:border-[#993300] transition-all flex flex-col justify-between overflow-hidden shadow-2xs group"
             >
               {/* Corner Ribbon */}
-              <div className="absolute top-3 right-3 bg-[#FAF3E0] border border-[#DFC7A2] text-[#7A1F1D] text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+              <div className="absolute top-2.5 sm:top-3 right-2.5 sm:right-3 bg-[#FAF3E0] border border-[#DFC7A2] text-[#7A1F1D] text-[9px] sm:text-[10px] font-black px-2 sm:px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                 {offer.discount_type === 'percentage'
                   ? `${offer.discount_value}% OFF`
                   : `₹${offer.discount_value} OFF`}
               </div>
 
-              <div className="space-y-2 pr-12">
-                <div className="flex items-center space-x-2 text-[#993300]">
-                  <Tag className="w-4 h-4" />
-                  <span className="font-serif font-bold text-base text-[#2C1810]">
+              <div className="space-y-1.5 sm:space-y-2 pr-14">
+                <div className="flex items-center space-x-1.5 sm:space-x-2 text-[#993300]">
+                  <Tag className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                  <span className="font-serif font-bold text-sm sm:text-base text-[#2C1810] line-clamp-1">
                     {isKn ? offer.title_kn : offer.title_en}
                   </span>
                 </div>
 
-                <p className="text-xs text-[#5C4535] leading-relaxed font-normal">
+                <p className="text-[11px] sm:text-xs text-[#5C4535] leading-relaxed font-normal">
                   {isKn ? offer.description_kn : offer.description_en}
                 </p>
 
-                <p className="text-[11px] text-[#8C6D53] font-medium">
+                <p className="text-[10px] sm:text-[11px] text-[#8C6D53] font-medium">
                   {t('minOrder')}: <span className="font-bold text-[#2C1810]">₹{offer.min_order_amount}</span>
                   {offer.max_discount_amount && (
                     <span> • Max disc: ₹{offer.max_discount_amount}</span>

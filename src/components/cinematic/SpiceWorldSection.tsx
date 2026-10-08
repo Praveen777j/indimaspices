@@ -137,11 +137,11 @@ export const SpiceWorldSection: React.FC = () => {
       />
       <div className="absolute inset-0 bg-radial-at-c from-transparent via-[#1A0E08]/70 to-[#1A0E08] pointer-events-none" />
 
-      {/* TACTILE REAL SPICE MEDIA IN FOREGROUND WITH PARALLAX */}
+      {/* TACTILE REAL SPICE MEDIA IN FOREGROUND WITH PARALLAX (Desktop only, hidden on mobile to avoid overlapping central text) */}
       {/* 1. Real Byadgi Whole Chilli (Top Right Foreground) */}
       <div
         ref={chilliCardRef}
-        className="absolute top-12 right-4 sm:right-12 md:right-20 w-44 sm:w-60 md:w-72 pointer-events-none z-10 filter drop-shadow-[0_20px_40px_rgba(0,0,0,0.65)]"
+        className="hidden md:block absolute top-12 right-4 sm:right-12 md:right-20 w-44 sm:w-60 md:w-72 pointer-events-none z-10 filter drop-shadow-[0_20px_40px_rgba(0,0,0,0.65)]"
       >
         <div className="relative rounded-3xl overflow-hidden border border-amber-500/25 bg-[#26140B]/85 backdrop-blur-md p-2.5 shadow-2xl">
           <img
@@ -163,7 +163,7 @@ export const SpiceWorldSection: React.FC = () => {
       {/* 2. Real Golden Turmeric Rhizome (Bottom Left Foreground) */}
       <div
         ref={turmericCardRef}
-        className="absolute bottom-12 left-4 sm:left-12 md:left-20 w-44 sm:w-56 md:w-68 pointer-events-none z-10 filter drop-shadow-[0_20px_40px_rgba(0,0,0,0.65)]"
+        className="hidden md:block absolute bottom-12 left-4 sm:left-12 md:left-20 w-44 sm:w-56 md:w-68 pointer-events-none z-10 filter drop-shadow-[0_20px_40px_rgba(0,0,0,0.65)]"
       >
         <div className="relative rounded-3xl overflow-hidden border border-amber-500/25 bg-[#26140B]/85 backdrop-blur-md p-2.5 shadow-2xl">
           <img
@@ -185,7 +185,7 @@ export const SpiceWorldSection: React.FC = () => {
       {/* 3. Real Black Tellicherry Pepper (Top Left Floating) */}
       <div
         ref={pepperCardRef}
-        className="absolute top-20 left-6 sm:left-16 w-36 sm:w-48 pointer-events-none z-10 filter drop-shadow-[0_15px_30px_rgba(0,0,0,0.65)]"
+        className="hidden md:block absolute top-20 left-6 sm:left-16 w-36 sm:w-48 pointer-events-none z-10 filter drop-shadow-[0_15px_30px_rgba(0,0,0,0.65)]"
       >
         <div className="relative rounded-2xl overflow-hidden border border-amber-500/20 bg-[#26140B]/90 backdrop-blur-md p-2 shadow-xl">
           <img
@@ -204,7 +204,7 @@ export const SpiceWorldSection: React.FC = () => {
       {/* 4. Real Toasted Coriander Seeds (Bottom Right Floating) */}
       <div
         ref={corianderCardRef}
-        className="absolute bottom-16 right-6 sm:right-20 w-36 sm:w-48 pointer-events-none z-10 filter drop-shadow-[0_15px_30px_rgba(0,0,0,0.65)]"
+        className="hidden md:block absolute bottom-16 right-6 sm:right-20 w-36 sm:w-48 pointer-events-none z-10 filter drop-shadow-[0_15px_30px_rgba(0,0,0,0.65)]"
       >
         <div className="relative rounded-2xl overflow-hidden border border-amber-500/20 bg-[#26140B]/90 backdrop-blur-md p-2 shadow-xl">
           <img
@@ -225,57 +225,85 @@ export const SpiceWorldSection: React.FC = () => {
         ref={containerRef}
         className="relative z-20 max-w-4xl mx-auto text-center px-4 sm:px-6"
       >
-        <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-[#26140B]/85 border border-amber-500/35 text-amber-300 text-xs font-semibold tracking-widest uppercase mb-6 shadow-lg backdrop-blur-md">
+        <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-[#26140B]/85 border border-amber-500/35 text-amber-300 text-xs font-semibold tracking-widest uppercase mb-4 sm:mb-6 shadow-lg backdrop-blur-md">
           <Sparkles className="w-3.5 h-3.5 text-amber-400" />
           <span>{isKn ? 'ಅಪ್ಪಟ ಕಾಳುಗಳ ಜಗತ್ತು' : 'The Spice World'}</span>
         </div>
 
-        <h2 className="font-serif text-3xl sm:text-5xl md:text-6xl font-bold tracking-tight text-[#FFFDF9] leading-[1.15] mb-6 text-balance drop-shadow-xl">
+        <h2 className="font-serif text-2xl sm:text-5xl md:text-6xl font-bold tracking-tight text-[#FFFDF9] leading-[1.2] mb-4 sm:mb-6 text-balance drop-shadow-xl">
           {isKn
             ? 'ಅಪ್ಪಟ ಕಾಳುಗಳ ಸುಗಂಧ ಸೌಂದರ್ಯ.'
             : 'The Soul of Indian Cooking.'}
         </h2>
 
-        <p className="font-serif italic text-base sm:text-xl md:text-2xl text-amber-100/90 leading-relaxed max-w-2xl mx-auto font-normal drop-shadow-lg">
+        <p className="font-serif italic text-sm sm:text-xl md:text-2xl text-amber-100/90 leading-relaxed max-w-2xl mx-auto font-normal drop-shadow-lg px-2">
           {isKn
             ? '“ನೈಸರ್ಗಿಕ ಕೆಂಪು ಬ್ಯಾಡಗಿ ಮೆಣಸು, ಮಲೆನಾಡಿನ ಅರಿಶಿನ, ಕೊಡಗಿನ ಕಾಳುಮೆಣಸು ಮತ್ತು ಪರಿಮಳದ ಕೊತ್ತಂಬರಿ — ನೈಜ ರುಚಿಯ ಸಂಗಮ.”'
             : '“Rich Byadgi red chillies, golden turmeric rhizomes, Tellicherry black pepper, and toasted coriander in their pristine, natural form.”'}
         </p>
 
-        {/* 4 Clean Attribute Pods */}
-        <div className="mt-12 sm:mt-16 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 max-w-3xl mx-auto">
-          <div className="p-3.5 sm:p-4 rounded-2xl bg-[#26140B]/80 border border-amber-500/20 backdrop-blur-md shadow-lg text-center">
-            <p className="text-amber-300 font-serif font-bold text-sm sm:text-base">
+        {/* 4 Clean Attribute Pods with Spice Photo Thumbnails on Mobile */}
+        <div className="mt-8 sm:mt-16 grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4 max-w-3xl mx-auto">
+          <div className="p-3 sm:p-4 rounded-2xl bg-[#26140B]/85 border border-amber-500/25 backdrop-blur-md shadow-lg text-center flex flex-col items-center">
+            <div className="md:hidden w-12 h-12 rounded-xl overflow-hidden mb-2 border border-amber-500/30">
+              <img
+                src="https://images.unsplash.com/photo-1509358271058-acd22cc93898?w=400&auto=format&fit=crop&q=80"
+                alt="Byadgi Chilli"
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <p className="text-amber-300 font-serif font-bold text-xs sm:text-base">
               {isKn ? 'ಬ್ಯಾಡಗಿ ಮೆಣಸು' : 'Byadgi Chilli'}
             </p>
-            <p className="text-[11px] text-amber-100/70 mt-1 font-normal">
+            <p className="text-[10px] sm:text-[11px] text-amber-100/70 mt-0.5 sm:mt-1 font-normal">
               {isKn ? 'ನೈಸರ್ಗಿಕ ಕೆಂಪು ಬಣ್ಣ' : 'Rich Crimson Colour'}
             </p>
           </div>
 
-          <div className="p-3.5 sm:p-4 rounded-2xl bg-[#26140B]/80 border border-amber-500/20 backdrop-blur-md shadow-lg text-center">
-            <p className="text-amber-300 font-serif font-bold text-sm sm:text-base">
+          <div className="p-3 sm:p-4 rounded-2xl bg-[#26140B]/85 border border-amber-500/25 backdrop-blur-md shadow-lg text-center flex flex-col items-center">
+            <div className="md:hidden w-12 h-12 rounded-xl overflow-hidden mb-2 border border-amber-500/30">
+              <img
+                src="https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=400&auto=format&fit=crop&q=80"
+                alt="Pure Turmeric"
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <p className="text-amber-300 font-serif font-bold text-xs sm:text-base">
               {isKn ? 'ಅಪ್ಪಟ ಅರಿಶಿನ' : 'Pure Turmeric'}
             </p>
-            <p className="text-[11px] text-amber-100/70 mt-1 font-normal">
+            <p className="text-[10px] sm:text-[11px] text-amber-100/70 mt-0.5 sm:mt-1 font-normal">
               {isKn ? 'ಮಣ್ಣಿನ ನೈಜ ಸತ್ವ' : 'Golden Earth Essence'}
             </p>
           </div>
 
-          <div className="p-3.5 sm:p-4 rounded-2xl bg-[#26140B]/80 border border-amber-500/20 backdrop-blur-md shadow-lg text-center">
-            <p className="text-amber-300 font-serif font-bold text-sm sm:text-base">
+          <div className="p-3 sm:p-4 rounded-2xl bg-[#26140B]/85 border border-amber-500/25 backdrop-blur-md shadow-lg text-center flex flex-col items-center">
+            <div className="md:hidden w-12 h-12 rounded-xl overflow-hidden mb-2 border border-amber-500/30">
+              <img
+                src="https://images.unsplash.com/photo-1599940824399-b87987ceb72a?w=400&auto=format&fit=crop&q=80"
+                alt="Black Pepper"
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <p className="text-amber-300 font-serif font-bold text-xs sm:text-base">
               {isKn ? 'ಕಾಳುಮೆಣಸು' : 'Black Pepper'}
             </p>
-            <p className="text-[11px] text-amber-100/70 mt-1 font-normal">
+            <p className="text-[10px] sm:text-[11px] text-amber-100/70 mt-0.5 sm:mt-1 font-normal">
               {isKn ? 'ತೀಕ್ಷ್ಣ ಸುವಾಸನೆ' : 'Bold Piquant Depth'}
             </p>
           </div>
 
-          <div className="p-3.5 sm:p-4 rounded-2xl bg-[#26140B]/80 border border-amber-500/20 backdrop-blur-md shadow-lg text-center">
-            <p className="text-amber-300 font-serif font-bold text-sm sm:text-base">
+          <div className="p-3 sm:p-4 rounded-2xl bg-[#26140B]/85 border border-amber-500/25 backdrop-blur-md shadow-lg text-center flex flex-col items-center">
+            <div className="md:hidden w-12 h-12 rounded-xl overflow-hidden mb-2 border border-amber-500/30">
+              <img
+                src="https://images.unsplash.com/photo-1532336414038-cf19250c5757?w=400&auto=format&fit=crop&q=80"
+                alt="Coriander"
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <p className="text-amber-300 font-serif font-bold text-xs sm:text-base">
               {isKn ? 'ಕೊತ್ತಂಬರಿ ಬೀಜ' : 'Coriander'}
             </p>
-            <p className="text-[11px] text-amber-100/70 mt-1 font-normal">
+            <p className="text-[10px] sm:text-[11px] text-amber-100/70 mt-0.5 sm:mt-1 font-normal">
               {isKn ? 'ತಾಜಾ ಸುಗಂಧ' : 'Citrus Floral Aroma'}
             </p>
           </div>

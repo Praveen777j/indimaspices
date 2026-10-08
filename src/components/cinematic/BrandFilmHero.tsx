@@ -190,22 +190,22 @@ export const BrandFilmHero: React.FC<BrandFilmHeroProps> = ({ banner, onExploreC
       </div>
 
       {/* FOREGROUND CINEMATIC CONTENT LAYER */}
-      <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center justify-center py-16 sm:py-24">
+      <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center justify-center py-10 sm:py-24">
         {/* Admin Badge Pill */}
-        <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-[#1F140E]/75 border border-amber-400/40 text-amber-200 text-[11px] sm:text-xs font-semibold tracking-widest uppercase mb-6 shadow-lg backdrop-blur-md">
-          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+        <div className="inline-flex items-center space-x-2 px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full bg-[#1F140E]/75 border border-amber-400/40 text-amber-200 text-[10px] sm:text-xs font-semibold tracking-widest uppercase mb-3.5 sm:mb-6 shadow-lg backdrop-blur-md">
+          <Sparkles className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-amber-400" />
           <span>{activeBadge}</span>
           <span className="text-amber-400/60">•</span>
           <span>{isKn ? 'ಕರ್ನಾಟಕ' : 'Karnataka'}</span>
         </div>
 
         {/* Official Indima Logo Reveal */}
-        <div ref={logoWrapperRef} className="relative mb-5 sm:mb-7">
-          <div className="relative p-3.5 sm:p-5 rounded-3xl bg-[#FFFDF9]/95 border border-[#E8DFD3] shadow-2xl backdrop-blur-md">
+        <div ref={logoWrapperRef} className="relative mb-3.5 sm:mb-7">
+          <div className="relative p-2.5 sm:p-5 rounded-3xl bg-[#FFFDF9]/95 border border-[#E8DFD3] shadow-2xl backdrop-blur-md">
             <img
               src="/indima-logo.svg"
               alt="Indima Spice Co."
-              className="h-20 sm:h-28 md:h-36 w-auto object-contain drop-shadow-[0_8px_16px_rgba(44,24,16,0.18)]"
+              className="h-16 sm:h-28 md:h-36 w-auto object-contain drop-shadow-[0_8px_16px_rgba(44,24,16,0.18)]"
               onError={e => {
                 const target = e.target as HTMLImageElement;
                 if (!target.src.endsWith('/indima-brand-logo.jpg')) {
@@ -217,32 +217,32 @@ export const BrandFilmHero: React.FC<BrandFilmHeroProps> = ({ banner, onExploreC
         </div>
 
         {/* Editorial Welcome & Statement from Admin */}
-        <div ref={textContentRef} className="space-y-3 sm:space-y-4 max-w-2xl text-white">
-          <p className="text-xs sm:text-sm font-mono uppercase tracking-[0.25em] text-amber-300 font-semibold drop-shadow-md">
+        <div ref={textContentRef} className="space-y-2.5 sm:space-y-4 max-w-2xl text-white">
+          <p className="text-[11px] sm:text-sm font-mono uppercase tracking-[0.25em] text-amber-300 font-semibold drop-shadow-md">
             {isKn ? 'ಪರಿಶುದ್ಧ ಪರಂಪರೆ' : 'Authentic Indian Spices'}
           </p>
 
-          <h1 className="font-serif text-3xl sm:text-5xl md:text-6xl font-bold tracking-tight text-[#FFFDF9] leading-[1.15] text-balance drop-shadow-lg">
+          <h1 className="font-serif text-2xl sm:text-5xl md:text-6xl font-bold tracking-tight text-[#FFFDF9] leading-[1.2] sm:leading-[1.15] text-balance drop-shadow-lg">
             {activeTitle}
           </h1>
 
-          <p className="font-serif italic text-sm sm:text-lg md:text-xl text-amber-100/90 max-w-xl mx-auto leading-relaxed pt-1 font-normal drop-shadow-md">
+          <p className="font-serif italic text-xs sm:text-lg md:text-xl text-amber-100/90 max-w-xl mx-auto leading-relaxed pt-0.5 sm:pt-1 font-normal drop-shadow-md">
             {activeSubtitle}
           </p>
 
           {/* Admin Offer Tag Strip if configured */}
           {activeOffer && (
-            <div className="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-200 text-xs font-semibold backdrop-blur-md mt-2 shadow-md">
-              <Tag className="w-3.5 h-3.5 text-amber-300" />
+            <div className="inline-flex items-center space-x-2 px-3 sm:px-4 py-1 sm:py-1.5 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-200 text-[11px] sm:text-xs font-semibold backdrop-blur-md mt-1.5 sm:mt-2 shadow-md">
+              <Tag className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-amber-300" />
               <span>{activeOffer}</span>
             </div>
           )}
 
           {/* Call to Action from Admin */}
-          <div className="pt-4 flex items-center justify-center space-x-3">
+          <div className="pt-2 sm:pt-4 flex items-center justify-center space-x-3">
             <button
               onClick={handlePrimaryClick}
-              className="px-7 py-3 rounded-full bg-[#993300] hover:bg-[#B84005] text-white font-bold text-xs sm:text-sm tracking-wider uppercase transition-all duration-300 shadow-xl shadow-red-950/60 hover:scale-105 active:scale-95 cursor-pointer flex items-center space-x-2 border border-amber-400/30"
+              className="px-6 sm:px-7 py-2.5 sm:py-3 rounded-full bg-[#993300] hover:bg-[#B84005] text-white font-bold text-xs sm:text-sm tracking-wider uppercase transition-all duration-300 shadow-xl shadow-red-950/60 hover:scale-105 active:scale-95 cursor-pointer flex items-center space-x-2 border border-amber-400/30"
             >
               <ShoppingBag className="w-4 h-4" />
               <span>{activePrimaryBtn}</span>
@@ -252,7 +252,7 @@ export const BrandFilmHero: React.FC<BrandFilmHeroProps> = ({ banner, onExploreC
 
         {/* Bottom Scroll Prompt */}
         <div
-          className="mt-10 sm:mt-14 flex flex-col items-center text-amber-200/80 space-y-1.5 cursor-pointer hover:text-amber-100 transition-colors"
+          className="mt-6 sm:mt-14 flex flex-col items-center text-amber-200/80 space-y-1.5 cursor-pointer hover:text-amber-100 transition-colors"
           onClick={onExploreClick}
         >
           <span className="text-[10px] tracking-widest uppercase font-mono font-medium">

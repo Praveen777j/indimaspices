@@ -108,7 +108,7 @@ export const BrandStorySection: React.FC = () => {
     <section
       ref={sectionRef}
       id="brand-story"
-      className="brand-story-section relative w-full min-h-[90vh] bg-[#F7F1E5] text-[#2C1810] flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8 overflow-hidden select-none"
+      className="brand-story-section relative w-full min-h-[80vh] sm:min-h-[90vh] bg-[#F7F1E5] text-[#2C1810] flex items-center justify-center py-12 sm:py-20 px-4 sm:px-6 lg:px-8 overflow-hidden select-none"
       style={{
         backgroundImage:
           'radial-gradient(circle at 50% 50%, rgba(255, 253, 249, 0.9) 0%, rgba(247, 241, 229, 0.98) 80%)'
@@ -124,7 +124,7 @@ export const BrandStorySection: React.FC = () => {
         className="relative z-10 max-w-4xl mx-auto w-full text-center flex flex-col items-center"
       >
         {/* Heritage Pill */}
-        <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-[#FFFDF9] border border-[#DFC7A2] text-[#8B3214] text-xs font-semibold tracking-widest uppercase mb-6 shadow-xs">
+        <div className="inline-flex items-center space-x-2 px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full bg-[#FFFDF9] border border-[#DFC7A2] text-[#8B3214] text-[11px] sm:text-xs font-semibold tracking-widest uppercase mb-4 sm:mb-6 shadow-xs">
           <Sparkles className="w-3.5 h-3.5 text-[#993300]" />
           <span>{isKn ? 'ನಮ್ಮ ಪರಂಪರೆ' : 'Brand Heritage'}</span>
         </div>
@@ -132,7 +132,7 @@ export const BrandStorySection: React.FC = () => {
         {/* Large "30+" Typographic Moment */}
         <div
           ref={numberRef}
-          className="font-serif text-6xl sm:text-8xl md:text-9xl font-bold tracking-tight text-[#993300]/90 leading-none select-none my-2"
+          className="font-serif text-5xl sm:text-8xl md:text-9xl font-bold tracking-tight text-[#993300]/90 leading-none select-none my-1 sm:my-2"
         >
           30+
         </div>
@@ -140,7 +140,7 @@ export const BrandStorySection: React.FC = () => {
         {/* Transformation Typography */}
         <h2
           ref={headlineRef}
-          className="font-serif text-2xl sm:text-4xl md:text-5xl font-bold tracking-tight text-[#2C1810] leading-[1.2] mt-4 max-w-2xl text-balance"
+          className="font-serif text-xl sm:text-4xl md:text-5xl font-bold tracking-tight text-[#2C1810] leading-[1.2] mt-3 sm:mt-4 max-w-2xl text-balance"
         >
           {isKn
             ? 'ಮೂರು ದಶಕಗಳ ಅಪಾರ ಅನುಭವ ಮತ್ತು ಸುವಾಸನೆಯ ಪಯಣ.'
@@ -150,7 +150,7 @@ export const BrandStorySection: React.FC = () => {
         {/* Brand Belief Statement */}
         <p
           ref={storyRef}
-          className="font-serif italic text-base sm:text-xl md:text-2xl text-[#6B4E3D] max-w-2xl mx-auto mt-6 leading-relaxed font-normal"
+          className="font-serif italic text-sm sm:text-xl md:text-2xl text-[#6B4E3D] max-w-2xl mx-auto mt-4 sm:mt-6 leading-relaxed font-normal"
         >
           {isKn
             ? '“ಉತ್ತಮ ಆಹಾರವು ಉತ್ತಮ ಸಾಂಬಾರ ಪದಾರ್ಥಗಳಿಂದಲೇ ಪ್ರಾರಂಭವಾಗುತ್ತದೆ ಎಂಬ ಸರಳ ನಂಬಿಕೆ — ನಮ್ಮ ಮೂರು ದಶಕಗಳ ಅಚಲ ಬದ್ಧತೆ.”'
@@ -158,7 +158,7 @@ export const BrandStorySection: React.FC = () => {
         </p>
 
         {/* Subtle Decorative Elements */}
-        <div className="mt-10 pt-6 border-t border-[#DFC7A2]/50 flex items-center justify-center space-x-6 text-[#8C7667] text-xs font-mono uppercase tracking-widest">
+        <div className="mt-8 sm:mt-10 pt-4 sm:pt-6 border-t border-[#DFC7A2]/50 flex items-center justify-center space-x-4 sm:space-x-6 text-[#8C7667] text-[11px] sm:text-xs font-mono uppercase tracking-widest">
           <span>{isKn ? 'ಅಪ್ಪಟ ಕಾಳುಗಳು' : 'Whole Ingredients'}</span>
           <span>•</span>
           <span>{isKn ? 'ನೈಜ ಸುವಾಸನೆ' : 'Honest Flavour'}</span>

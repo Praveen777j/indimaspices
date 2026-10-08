@@ -392,7 +392,7 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
     <section
       ref={containerRef}
       id="spice-video-experience"
-      className="relative w-full bg-[#FAF5EB] text-[#2C1810] py-14 sm:py-24 px-3.5 sm:px-6 lg:px-8 overflow-hidden select-none"
+      className="relative w-full bg-[#FAF5EB] text-[#2C1810] py-10 sm:py-24 px-3 sm:px-6 lg:px-8 overflow-hidden select-none"
       style={{
         backgroundImage:
           'radial-gradient(ellipse at 50% 30%, rgba(255, 253, 249, 0.99) 0%, rgba(250, 245, 235, 0.98) 85%)'
@@ -404,8 +404,8 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
 
       <div className="relative z-20 max-w-7xl mx-auto w-full">
         {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-14">
-          <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 bg-[#FFF2DE] border border-[#DFC7A2] rounded-full text-xs font-bold text-[#993300] mb-3 tracking-wide uppercase shadow-xs">
+        <div className="text-center max-w-3xl mx-auto mb-8 sm:mb-14">
+          <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 bg-[#FFF2DE] border border-[#DFC7A2] rounded-full text-xs font-bold text-[#993300] mb-2.5 sm:mb-3 tracking-wide uppercase shadow-xs">
             <Sparkles className="w-3.5 h-3.5 text-[#993300]" />
             <span>
               {selectedLang === 'kn'
@@ -418,7 +418,7 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
             </span>
           </div>
 
-          <h2 className="font-serif text-2xl sm:text-4xl lg:text-5xl font-extrabold text-[#2C1810] tracking-tight leading-tight">
+          <h2 className="font-serif text-xl sm:text-4xl lg:text-5xl font-extrabold text-[#2C1810] tracking-tight leading-tight">
             {selectedLang === 'kn' ? (
               <>
                 ಪ್ರಕೃತಿಯ ಸುವಾಸನೆಗೆ{' '}
@@ -442,7 +442,7 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
             )}
           </h2>
 
-          <p className="mt-3 text-sm sm:text-base text-[#6B4E3D] max-w-2xl mx-auto font-normal leading-relaxed">
+          <p className="mt-2.5 sm:mt-3 text-xs sm:text-base text-[#6B4E3D] max-w-2xl mx-auto font-normal leading-relaxed">
             {selectedLang === 'kn'
               ? 'ಗರಂ ಮಸಾಲ, ಬಂಗಾರದ ಅರಿಶಿನ, ಒಗ್ಗರಣೆ ಜೀರಿಗೆ, ದಾಲ್ಚಿನ್ನಿ ಹಾಗೂ ಏಲಕ್ಕಿ — ನಮ್ಮ ಅಪ್ಪಟ ಮಸಾಲೆ ಪಾತ್ರಗಳು ನಿಮ್ಮ ಅಡುಗೆಮನೆಗೆ ತರುವ ಸ್ವಾದದ ಝಲಕ್ ನೋಡಿ.'
               : selectedLang === 'hi'
@@ -453,7 +453,7 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
           </p>
 
           {/* Multilingual Switcher Header Bar */}
-          <div className="mt-6 inline-flex items-center bg-[#FFFDF9] border border-[#DFC7A2] rounded-full p-1 shadow-xs">
+          <div className="mt-5 sm:mt-6 inline-flex items-center bg-[#FFFDF9] border border-[#DFC7A2] rounded-full p-1 shadow-xs">
             <span className="text-[11px] font-bold text-[#8C7667] px-3 uppercase tracking-wider hidden xs:inline">
               Language:
             </span>
@@ -474,14 +474,14 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
         </div>
 
         {/* Quick Chapter Selector Pills (Synchronized with slow 6-second cadence) */}
-        <div className="flex items-center justify-start sm:justify-center space-x-2 sm:space-x-3 mb-8 overflow-x-auto pb-2 scrollbar-none px-2">
+        <div className="flex items-center justify-start sm:justify-center space-x-2 sm:space-x-3 mb-6 sm:mb-8 overflow-x-auto pb-2 scrollbar-none px-1 sm:px-2">
           {SPICE_CHAPTERS.map((chap, idx) => {
             const isActive = activeChapterIndex === idx;
             return (
               <button
                 key={chap.id}
                 onClick={() => jumpToChapter(chap, idx)}
-                className={`flex-shrink-0 flex items-center space-x-2 px-3.5 sm:px-4 py-2 rounded-full text-xs font-bold transition-all duration-500 border ${
+                className={`flex-shrink-0 flex items-center space-x-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs font-bold transition-all duration-500 border ${
                   isActive
                     ? 'bg-[#993300] text-white border-[#993300] shadow-md scale-105'
                     : 'bg-[#FFFDF9] text-[#5C4535] border-[#E8DFD3] hover:border-[#DFC7A2] hover:bg-[#FAF3E0]'
@@ -503,7 +503,7 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-center">
           {/* LEFT: 9:16 Cinematic Video Player Box (Autonomous continuous play, strictly no user pause/volume options) */}
           <div className="lg:col-span-5 flex flex-col items-center">
-            <div className="relative w-full max-w-[340px] sm:max-w-[380px] rounded-3xl overflow-hidden shadow-2xl border-4 border-[#DFC7A2] bg-[#1A0E08] group">
+            <div className="relative w-full max-w-[290px] xs:max-w-[320px] sm:max-w-[380px] rounded-3xl overflow-hidden shadow-2xl border-4 border-[#DFC7A2] bg-[#1A0E08] group aspect-[9/16] sm:aspect-auto">
               {/* HTML5 Video Element: With key={videoUrl} so uploaded videos immediately load and play smoothly */}
               <video
                 key={videoUrl}
@@ -527,46 +527,46 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
                     videoRef.current.play().catch(() => {});
                   }
                 }}
-                className="w-full h-[520px] sm:h-[580px] object-cover select-none pointer-events-none"
+                className="w-full h-full sm:h-[580px] object-cover select-none pointer-events-none"
               />
 
               {/* Top Overlay: Active spice badge */}
-              <div className="absolute top-3 left-3 z-20 pointer-events-auto">
+              <div className="absolute top-2.5 sm:top-3 left-2.5 sm:left-3 z-20 pointer-events-auto">
                 {/* Active Spice indicator pill */}
-                <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md text-white text-xs font-semibold shadow-sm border border-white/20 transition-all duration-700">
+                <div className="flex items-center space-x-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-black/60 backdrop-blur-md text-white text-[10px] sm:text-xs font-semibold shadow-sm border border-white/20 transition-all duration-700">
                   <span
-                    className="w-2 h-2 rounded-full animate-pulse"
+                    className="w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full animate-pulse"
                     style={{ backgroundColor: activeChapter.accentColor }}
                   />
-                  <span className="text-[11px] font-medium tracking-wide">
+                  <span className="text-[10px] sm:text-[11px] font-medium tracking-wide">
                     {activeChapter.name[selectedLang]}
                   </span>
                 </div>
               </div>
 
-              {/* Active Character Overlay Tag at bottom of video */}
-              <div className="absolute bottom-12 left-3 right-3 z-20 pointer-events-none">
-                <div className="bg-black/75 backdrop-blur-md border border-white/20 rounded-2xl p-3 text-white shadow-lg transition-all duration-700">
-                  <div className="flex items-center justify-between text-xs mb-1">
+              {/* Active Character Overlay Tag at bottom of video (Positioned above progress bar to eliminate overlap) */}
+              <div className="absolute bottom-9 sm:bottom-12 left-2 sm:left-3 right-2 sm:right-3 z-20 pointer-events-none">
+                <div className="bg-black/80 backdrop-blur-md border border-white/20 rounded-xl sm:rounded-2xl p-2.5 sm:p-3 text-white shadow-lg transition-all duration-700">
+                  <div className="flex items-center justify-between text-[10px] sm:text-xs mb-0.5 sm:mb-1">
                     <span className="font-bold text-amber-300 flex items-center space-x-1">
-                      <Sparkles className="w-3 h-3 inline mr-1" />
+                      <Sparkles className="w-2.5 sm:w-3 h-2.5 sm:h-3 inline mr-1" />
                       {activeChapter.tag}
                     </span>
-                    <span className="text-[10px] text-amber-200/90 font-mono">
+                    <span className="text-[9px] sm:text-[10px] text-amber-200/90 font-mono">
                       {activeChapterIndex + 1} / {SPICE_CHAPTERS.length}
                     </span>
                   </div>
-                  <h4 className="font-serif font-bold text-sm text-white truncate">
+                  <h4 className="font-serif font-bold text-xs sm:text-sm text-white truncate">
                     {activeChapter.name[selectedLang]}
                   </h4>
-                  <p className="text-[11px] text-stone-200 line-clamp-1 italic font-light">
+                  <p className="text-[10px] sm:text-[11px] text-stone-200 line-clamp-1 italic font-light">
                     {activeChapter.characterTitle[selectedLang]}
                   </p>
                 </div>
               </div>
 
               {/* Continuous Playback Multi-Spice Segment Progress Bar */}
-              <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/90 via-black/50 to-transparent z-20">
+              <div className="absolute bottom-0 inset-x-0 p-2 sm:p-3 bg-gradient-to-t from-black/90 via-black/50 to-transparent z-20">
                 <div className="flex items-center space-x-1.5 w-full">
                   {SPICE_CHAPTERS.map((chap, idx) => {
                     const isPassed = activeChapterIndex > idx;
@@ -592,10 +592,10 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
           </div>
 
           {/* RIGHT: Multilingual Editorial Spice Explanation Suite with Pictures Showcase */}
-          <div className="lg:col-span-7 flex flex-col justify-center space-y-5">
+          <div className="lg:col-span-7 flex flex-col justify-center space-y-4 sm:space-y-5">
             {/* Active Spice Hero Card (Smooth 700ms transition) */}
             <div
-              className="bg-[#FFFDF9] border-2 rounded-3xl p-5 sm:p-7 shadow-lg transition-all duration-700 ease-in-out relative overflow-hidden"
+              className="bg-[#FFFDF9] border-2 rounded-3xl p-4 sm:p-7 shadow-lg transition-all duration-700 ease-in-out relative overflow-hidden"
               style={{
                 borderColor: activeChapter.accentColor
               }}
@@ -607,23 +607,23 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
               />
 
               {/* Card Header: Badge + Kannada script watermark */}
-              <div className="relative z-10 flex items-center justify-between mb-4">
+              <div className="relative z-10 flex items-center justify-between mb-3 sm:mb-4 gap-2">
                 <span
-                  className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider text-white shadow-xs transition-colors duration-700"
+                  className="inline-flex items-center space-x-1.5 px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-bold uppercase tracking-wider text-white shadow-xs transition-colors duration-700"
                   style={{ backgroundColor: activeChapter.accentColor }}
                 >
                   <Sparkles className="w-3 h-3" />
                   <span>{activeChapter.badge[selectedLang]}</span>
                 </span>
 
-                <span className="font-serif text-lg sm:text-2xl font-bold text-[#8C7667]/40 select-none transition-all duration-700">
+                <span className="font-serif text-base sm:text-2xl font-bold text-[#8C7667]/40 select-none transition-all duration-700">
                   {activeChapter.kannadaScript}
                 </span>
               </div>
 
               {/* Active Spice Picture Showcase Gallery (Whole Spice & Stone Ground Powder) */}
-              <div className="relative z-10 grid grid-cols-2 gap-3 mb-5">
-                <div className="relative rounded-2xl overflow-hidden border border-[#E8DFD3] shadow-xs group bg-[#FAF5EB] h-28 sm:h-32">
+              <div className="relative z-10 grid grid-cols-2 gap-2.5 sm:gap-3 mb-4 sm:mb-5">
+                <div className="relative rounded-2xl overflow-hidden border border-[#E8DFD3] shadow-xs group bg-[#FAF5EB] h-32 sm:h-36">
                   <img
                     key={`whole-${activeChapter.id}`}
                     src={activeChapter.image}
@@ -633,14 +633,16 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
                       (e.currentTarget as HTMLImageElement).src = '/spice_animation_poster.jpg';
                     }}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end p-2">
-                    <span className="text-[10px] sm:text-xs font-bold text-white drop-shadow-sm">
-                      {selectedLang === 'kn' ? 'ಅಪ್ಪಟ ಕಾಳು ಮಸಾಲೆ' : 'Whole Raw Spice'}
-                    </span>
+                  <div className="absolute bottom-1.5 sm:bottom-2 left-1.5 sm:left-2 right-1.5 sm:right-2">
+                    <div className="px-2 py-1 rounded-lg bg-black/65 backdrop-blur-xs text-center border border-white/10 shadow-xs">
+                      <span className="text-[10px] sm:text-xs font-bold text-white block truncate leading-tight">
+                        {selectedLang === 'kn' ? 'ಅಪ್ಪಟ ಕಾಳು ಮಸಾಲೆ' : 'Whole Raw Spice'}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="relative rounded-2xl overflow-hidden border border-[#E8DFD3] shadow-xs group bg-[#FAF5EB] h-28 sm:h-32">
+                <div className="relative rounded-2xl overflow-hidden border border-[#E8DFD3] shadow-xs group bg-[#FAF5EB] h-32 sm:h-36">
                   <img
                     key={`powder-${activeChapter.id}`}
                     src={activeChapter.powderImage}
@@ -650,17 +652,19 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
                       (e.currentTarget as HTMLImageElement).src = '/spice_animation_poster.jpg';
                     }}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end p-2">
-                    <span className="text-[10px] sm:text-xs font-bold text-white drop-shadow-sm">
-                      {selectedLang === 'kn' ? 'ಕಲ್ಲಿನಿಂದ ಬೀಸಿದ ಪುಡಿ' : 'Stone-Ground Powder'}
-                    </span>
+                  <div className="absolute bottom-1.5 sm:bottom-2 left-1.5 sm:left-2 right-1.5 sm:right-2">
+                    <div className="px-2 py-1 rounded-lg bg-black/65 backdrop-blur-xs text-center border border-white/10 shadow-xs">
+                      <span className="text-[10px] sm:text-xs font-bold text-white block truncate leading-tight">
+                        {selectedLang === 'kn' ? 'ಕಲ್ಲಿನಿಂದ ಬೀಸಿದ ಪುಡಿ' : 'Stone-Ground Powder'}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Spice Title */}
-              <div className="relative z-10 mb-3">
-                <h3 className="font-serif text-2xl sm:text-3xl font-extrabold text-[#2C1810] tracking-tight transition-all duration-700">
+              <div className="relative z-10 mb-2.5 sm:mb-3">
+                <h3 className="font-serif text-xl sm:text-3xl font-extrabold text-[#2C1810] tracking-tight transition-all duration-700">
                   {activeChapter.name[selectedLang]}
                 </h3>
                 <p className="text-xs sm:text-sm font-serif italic text-[#8B3214] mt-0.5 transition-all duration-700">
@@ -669,22 +673,22 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
               </div>
 
               {/* Core Editorial Description */}
-              <p className="relative z-10 text-sm sm:text-base text-[#4A3223] leading-relaxed font-normal mb-5 transition-all duration-700">
+              <p className="relative z-10 text-xs sm:text-base text-[#4A3223] leading-relaxed font-normal mb-4 sm:mb-5 transition-all duration-700">
                 {activeChapter.description[selectedLang]}
               </p>
 
               {/* Dual Culinary & Health Highlights Bento */}
-              <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-[#E8DFD3]">
+              <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 pt-2 border-t border-[#E8DFD3]">
                 {/* Culinary Tradition Pod */}
-                <div className="p-3 rounded-2xl bg-[#FAF5EB] border border-[#E8DFD3] flex items-start space-x-3 transition-all duration-700">
+                <div className="p-2.5 sm:p-3 rounded-2xl bg-[#FAF5EB] border border-[#E8DFD3] flex items-start space-x-2.5 sm:space-x-3 transition-all duration-700">
                   <div
-                    className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 text-white shadow-xs mt-0.5 transition-colors duration-700"
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center shrink-0 text-white shadow-xs mt-0.5 transition-colors duration-700"
                     style={{ backgroundColor: activeChapter.accentColor }}
                   >
-                    <Flame className="w-4 h-4" />
+                    <Flame className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
-                  <div>
-                    <h5 className="text-[11px] font-bold text-[#8C7667] uppercase tracking-wider">
+                  <div className="min-w-0">
+                    <h5 className="text-[10px] sm:text-[11px] font-bold text-[#8C7667] uppercase tracking-wider">
                       {selectedLang === 'kn'
                         ? 'ಅಡುಗೆಯ ಬಳಕೆ'
                         : selectedLang === 'hi'
@@ -700,12 +704,12 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
                 </div>
 
                 {/* Health & Ayurveda Pod */}
-                <div className="p-3 rounded-2xl bg-[#FAF5EB] border border-[#E8DFD3] flex items-start space-x-3 transition-all duration-700">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-700 flex items-center justify-center flex-shrink-0 text-white shadow-xs mt-0.5">
-                    <Heart className="w-4 h-4" />
+                <div className="p-2.5 sm:p-3 rounded-2xl bg-[#FAF5EB] border border-[#E8DFD3] flex items-start space-x-2.5 sm:space-x-3 transition-all duration-700">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-emerald-700 flex items-center justify-center shrink-0 text-white shadow-xs mt-0.5">
+                    <Heart className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
-                  <div>
-                    <h5 className="text-[11px] font-bold text-[#8C7667] uppercase tracking-wider">
+                  <div className="min-w-0">
+                    <h5 className="text-[10px] sm:text-[11px] font-bold text-[#8C7667] uppercase tracking-wider">
                       {selectedLang === 'kn'
                         ? 'ಆರೋಗ್ಯ ಪ್ರಯೋಜನ'
                         : selectedLang === 'hi'
@@ -722,10 +726,10 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
               </div>
 
               {/* CTA Action: Scroll to Store Catalogue */}
-              <div className="relative z-10 mt-5 pt-4 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-[#E8DFD3]">
+              <div className="relative z-10 mt-4 sm:mt-5 pt-3 sm:pt-4 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-[#E8DFD3]">
                 <div className="flex items-center space-x-2 text-xs text-[#6B4E3D]">
-                  <ShieldCheck className="w-4 h-4 text-emerald-700" />
-                  <span>
+                  <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0" />
+                  <span className="text-[11px] sm:text-xs">
                     {selectedLang === 'kn'
                       ? '೧೦೦% ಕೃತಕ ಬಣ್ಣ ಹಾಗೂ ಪ್ರಿಸರ್ವೇಟಿವ್ ರಹಿತ'
                       : '100% Free from artificial colours & preservatives'}
@@ -751,15 +755,15 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
               </div>
             </div>
 
-            {/* Switcher Bar with photo thumbnail of all 5 spice characters */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+            {/* Switcher Bar with photo thumbnail of all 5 spice characters (smooth horizontal swipe on mobile, grid on desktop) */}
+            <div className="flex sm:grid sm:grid-cols-5 gap-2 overflow-x-auto pb-2 sm:pb-0 scrollbar-none">
               {SPICE_CHAPTERS.map((chap, idx) => {
                 const isSelected = activeChapterIndex === idx;
                 return (
                   <button
                     key={chap.id}
                     onClick={() => jumpToChapter(chap, idx)}
-                    className={`p-2 rounded-2xl text-left transition-all duration-500 border flex flex-col justify-between ${
+                    className={`p-2 rounded-2xl text-left transition-all duration-500 border flex flex-col justify-between shrink-0 min-w-[125px] sm:min-w-0 flex-1 ${
                       isSelected
                         ? 'bg-[#FFFDF9] border-2 shadow-sm scale-102'
                         : 'bg-[#FAF3E0]/70 border-[#E8DFD3] hover:bg-[#FAF3E0] hover:border-[#DFC7A2]'
