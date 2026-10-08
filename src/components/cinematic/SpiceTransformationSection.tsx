@@ -1,19 +1,13 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import {
-  VolumeX,
-  Volume2,
-  Play,
-  Pause,
-  RotateCcw,
   Sparkles,
   Link2,
   Check,
   Flame,
   ShieldCheck,
   Heart,
-  ArrowRight,
-  Maximize2
+  ArrowRight
 } from 'lucide-react';
 
 interface SpiceTransformationSectionProps {
@@ -36,6 +30,8 @@ interface SpiceChapter {
   accentBg: string;
   badge: Record<SupportedLang, string>;
   tag: string;
+  image: string;
+  powderImage: string;
 }
 
 const SPICE_CHAPTERS: SpiceChapter[] = [
@@ -73,7 +69,7 @@ const SPICE_CHAPTERS: SpiceChapter[] = [
       ta: 'செரிமானத்தை சீராக்கும் ஆரோக்கிய ஆற்றல்'
     },
     startTime: 0,
-    endTime: 5.5,
+    endTime: 6,
     accentColor: '#993300',
     accentBg: 'rgba(153, 51, 0, 0.08)',
     badge: {
@@ -82,7 +78,9 @@ const SPICE_CHAPTERS: SpiceChapter[] = [
       hi: 'पत्थर से पिसा शुद्ध मिश्रण',
       ta: 'பாரம்பரிய கைக்குத்தல் முறை'
     },
-    tag: 'Handcrafted'
+    tag: 'Handcrafted',
+    image: '/spice_animation_poster.jpg',
+    powderImage: 'https://images.unsplash.com/photo-1599940824399-b87987ceb72a?w=800&auto=format&fit=crop&q=80'
   },
   {
     id: 'turmeric',
@@ -118,7 +116,7 @@ const SPICE_CHAPTERS: SpiceChapter[] = [
       ta: 'இயற்கை கிருமி நாசினி மற்றும் நோய் எதிர்ப்பு சக்தி'
     },
     startTime: 6,
-    endTime: 11.5,
+    endTime: 12,
     accentColor: '#D48806',
     accentBg: 'rgba(212, 136, 6, 0.08)',
     badge: {
@@ -127,7 +125,9 @@ const SPICE_CHAPTERS: SpiceChapter[] = [
       hi: 'उच्च प्राकृतिक करक्यूमिन',
       ta: 'இயற்கை குர்குமின் நிறைந்தது'
     },
-    tag: 'Pure Immunity'
+    tag: 'Pure Immunity',
+    image: 'https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=800&auto=format&fit=crop&q=80',
+    powderImage: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=800&auto=format&fit=crop&q=80'
   },
   {
     id: 'cumin',
@@ -163,7 +163,7 @@ const SPICE_CHAPTERS: SpiceChapter[] = [
       ta: 'வயிற்று உபாதைகளை போக்கும் செரிமான அருமருந்து'
     },
     startTime: 12,
-    endTime: 17.5,
+    endTime: 18,
     accentColor: '#7A4A28',
     accentBg: 'rgba(122, 74, 40, 0.08)',
     badge: {
@@ -172,7 +172,9 @@ const SPICE_CHAPTERS: SpiceChapter[] = [
       hi: 'स्वादिष्ट सुनहरे बीज',
       ta: 'பாரம்பரிய நறுமண விதை'
     },
-    tag: 'Tadka Essential'
+    tag: 'Tadka Essential',
+    image: 'https://images.unsplash.com/photo-1509358271058-acd22cc93898?w=800&auto=format&fit=crop&q=80',
+    powderImage: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?w=800&auto=format&fit=crop&q=80'
   },
   {
     id: 'cinnamon',
@@ -208,7 +210,7 @@ const SPICE_CHAPTERS: SpiceChapter[] = [
       ta: 'ரத்த சர்க்கரை அளவை சமன் செய்யும் இயற்கை மூலிகை'
     },
     startTime: 18,
-    endTime: 23.5,
+    endTime: 24,
     accentColor: '#8C3D18',
     accentBg: 'rgba(140, 61, 24, 0.08)',
     badge: {
@@ -217,7 +219,9 @@ const SPICE_CHAPTERS: SpiceChapter[] = [
       hi: 'शुद्ध प्राकृतिक छाल',
       ta: 'தூய நறுமணப் பட்டை'
     },
-    tag: 'Warm Aromatic'
+    tag: 'Warm Aromatic',
+    image: 'https://images.unsplash.com/photo-1509358742462-184cf434e38e?w=800&auto=format&fit=crop&q=80',
+    powderImage: 'https://images.unsplash.com/photo-1514733670139-4d87a1941d55?w=800&auto=format&fit=crop&q=80'
   },
   {
     id: 'cardamom',
@@ -262,7 +266,9 @@ const SPICE_CHAPTERS: SpiceChapter[] = [
       hi: 'सुगंध की महारानी',
       ta: 'நறுமணங்களின் ராணி'
     },
-    tag: 'Royal Signature'
+    tag: 'Royal Signature',
+    image: 'https://images.unsplash.com/photo-1532336414038-cf19250c5757?w=800&auto=format&fit=crop&q=80',
+    powderImage: 'https://images.unsplash.com/photo-1599940824399-b87987ceb72a?w=800&auto=format&fit=crop&q=80'
   }
 ];
 
@@ -286,10 +292,8 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
   // Video state management
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLElement>(null);
+  const lastReportedTimeRef = useRef<number>(0);
 
-  // Volume must be MUTED strictly by default as requested!
-  const [isMuted, setIsMuted] = useState<boolean>(true);
-  const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [duration, setDuration] = useState<number>(31);
   const [activeChapterIndex, setActiveChapterIndex] = useState<number>(0);
@@ -309,79 +313,91 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
   const [inputUrl, setInputUrl] = useState<string>('');
   const [urlSavedMessage, setUrlSavedMessage] = useState<boolean>(false);
 
-  // Find active chapter based on video current time
+  // Active chapter always resolves to a valid spice
   const activeChapter = useMemo(() => {
-    const found = SPICE_CHAPTERS.find(
-      (c) => currentTime >= c.startTime && currentTime <= c.endTime
-    );
-    return found || SPICE_CHAPTERS[activeChapterIndex] || SPICE_CHAPTERS[0];
-  }, [currentTime, activeChapterIndex]);
+    return SPICE_CHAPTERS[activeChapterIndex] || SPICE_CHAPTERS[0];
+  }, [activeChapterIndex]);
 
-  // Update chapter index when current time moves
+  // Handle continuous video play without user pause/play/volume options
   useEffect(() => {
-    const idx = SPICE_CHAPTERS.findIndex(
-      (c) => currentTime >= c.startTime && currentTime <= c.endTime
-    );
-    if (idx !== -1 && idx !== activeChapterIndex) {
-      setActiveChapterIndex(idx);
-    }
-  }, [currentTime, activeChapterIndex]);
+    const video = videoRef.current;
+    if (!video) return;
 
-  // Video event handlers
+    // Strictly muted and autoPlay so browser policies always permit seamless playback
+    video.muted = true;
+    video.defaultMuted = true;
+    video.playsInline = true;
+
+    const playVideo = () => {
+      if (video.paused) {
+        video.play().catch(() => {});
+      }
+    };
+
+    playVideo();
+
+    // Re-verify playback on user scroll or interaction
+    const handleActivity = () => {
+      playVideo();
+    };
+
+    window.addEventListener('scroll', handleActivity, { passive: true });
+    window.addEventListener('touchstart', handleActivity, { passive: true });
+    window.addEventListener('click', handleActivity, { passive: true });
+
+    return () => {
+      window.removeEventListener('scroll', handleActivity);
+      window.removeEventListener('touchstart', handleActivity);
+      window.removeEventListener('click', handleActivity);
+    };
+  }, [videoUrl]);
+
+  // Video time update: maps smoothly across ALL 5 spices proportionally for any video duration
   const handleTimeUpdate = useCallback(() => {
     if (videoRef.current) {
-      setCurrentTime(videoRef.current.currentTime);
-      if (videoRef.current.duration && !isNaN(videoRef.current.duration)) {
-        setDuration(videoRef.current.duration);
+      const time = videoRef.current.currentTime || 0;
+      const dur = videoRef.current.duration || 31;
+      setCurrentTime(time);
+      if (dur && !isNaN(dur) && dur > 0) {
+        setDuration(dur);
+        // Map proportional progress across all 5 spices without missing timestamps
+        const fraction = (time % dur) / dur;
+        const mappedIdx = Math.min(
+          SPICE_CHAPTERS.length - 1,
+          Math.floor(fraction * SPICE_CHAPTERS.length)
+        );
+        if (mappedIdx !== activeChapterIndex) {
+          setActiveChapterIndex(mappedIdx);
+        }
       }
     }
+  }, [activeChapterIndex]);
+
+  // Fallback progression ticker:
+  // If video is buffering, stuck, or paused for any reason, spices and pictures continuously rotate every 6s!
+  useEffect(() => {
+    const ticker = setInterval(() => {
+      const video = videoRef.current;
+      const cur = video ? video.currentTime : 0;
+      // If video has not advanced significantly, cycle the spice and pictures
+      if (!video || video.paused || Math.abs(cur - lastReportedTimeRef.current) < 0.2) {
+        setActiveChapterIndex((prev) => (prev + 1) % SPICE_CHAPTERS.length);
+      }
+      lastReportedTimeRef.current = cur;
+    }, 6000);
+
+    return () => clearInterval(ticker);
   }, []);
 
-  const togglePlay = () => {
-    if (!videoRef.current) return;
-    if (videoRef.current.paused) {
-      videoRef.current.play().catch(() => {});
-      setIsPlaying(true);
-    } else {
-      videoRef.current.pause();
-      setIsPlaying(false);
-    }
-  };
-
-  const toggleMute = () => {
-    if (!videoRef.current) return;
-    const nextMuted = !videoRef.current.muted;
-    videoRef.current.muted = nextMuted;
-    setIsMuted(nextMuted);
-  };
-
-  const restartVideo = () => {
-    if (!videoRef.current) return;
-    videoRef.current.currentTime = 0;
-    videoRef.current.play().catch(() => {});
-    setIsPlaying(true);
-  };
-
+  // Jump to specific spice when user taps pills or cards
   const jumpToChapter = (chapter: SpiceChapter, index: number) => {
-    if (!videoRef.current) return;
-    videoRef.current.currentTime = chapter.startTime;
-    videoRef.current.play().catch(() => {});
-    setIsPlaying(true);
     setActiveChapterIndex(index);
-  };
-
-  const handleScrubberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newTime = parseFloat(e.target.value);
     if (videoRef.current) {
-      videoRef.current.currentTime = newTime;
-      setCurrentTime(newTime);
-    }
-  };
-
-  const handleFullscreen = () => {
-    if (!videoRef.current) return;
-    if (videoRef.current.requestFullscreen) {
-      videoRef.current.requestFullscreen();
+      const dur = videoRef.current.duration || duration || 31;
+      const targetTime = (index / SPICE_CHAPTERS.length) * dur;
+      videoRef.current.currentTime = targetTime;
+      videoRef.current.muted = true;
+      videoRef.current.play().catch(() => {});
     }
   };
 
@@ -502,7 +518,7 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
           </div>
         </div>
 
-        {/* Quick Chapter Selector Pills (Synchronized with video timestamps) */}
+        {/* Quick Chapter Selector Pills (Synchronized with video timestamps and pictures) */}
         <div className="flex items-center justify-start sm:justify-center space-x-2 sm:space-x-3 mb-8 overflow-x-auto pb-2 scrollbar-none px-2">
           {SPICE_CHAPTERS.map((chap, idx) => {
             const isActive = activeChapterIndex === idx;
@@ -523,61 +539,42 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
                   }}
                 />
                 <span>{chap.name[selectedLang]}</span>
-                <span
-                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-                    isActive ? 'bg-white/20 text-white' : 'bg-stone-100 text-[#8C7667]'
-                  }`}
-                >
-                  {Math.floor(chap.startTime)}s
-                </span>
               </button>
             );
           })}
         </div>
 
-        {/* Main Presentation Layout: Video Player + Rich Multilingual Story Card */}
+        {/* Main Presentation Layout: Video Player + Rich Multilingual Story & Pictures Showcase */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-center">
-          {/* LEFT: 9:16 Cinematic Video Player Box (Occupies 5 columns on desktop, centered) */}
+          {/* LEFT: 9:16 Cinematic Video Player Box (Autonomous continuous play, strictly no user pause/volume options) */}
           <div className="lg:col-span-5 flex flex-col items-center">
             <div className="relative w-full max-w-[340px] sm:max-w-[380px] rounded-3xl overflow-hidden shadow-2xl border-4 border-[#DFC7A2] bg-[#1A0E08] group">
-              {/* HTML5 Video Element: Muted by default strictly */}
+              {/* HTML5 Video Element: Muted by default strictly, autoplay continuously */}
               <video
                 ref={videoRef}
                 src={videoUrl}
-                poster="/spice_animation_poster.jpg"
-                muted={isMuted}
+                poster={activeChapter.image || '/spice_animation_poster.jpg'}
+                muted
                 autoPlay
                 loop
                 playsInline
+                preload="auto"
                 onTimeUpdate={handleTimeUpdate}
-                onClick={togglePlay}
-                className="w-full h-[520px] sm:h-[580px] object-cover cursor-pointer select-none"
+                className="w-full h-[520px] sm:h-[580px] object-cover select-none pointer-events-none"
               />
 
-              {/* Top Video Overlay: Muted Status Pill + Paste Video URL button */}
+              {/* Top Overlay: Active spice badge + Paste Video URL button */}
               <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-20 pointer-events-auto">
-                {/* Volume Status Badge */}
-                <button
-                  onClick={toggleMute}
-                  aria-label={isMuted ? 'Unmute video' : 'Mute video'}
-                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md text-white text-xs font-semibold hover:bg-black/80 transition shadow-sm border border-white/20"
-                >
-                  {isMuted ? (
-                    <>
-                      <VolumeX className="w-3.5 h-3.5 text-red-300" />
-                      <span className="text-[11px]">
-                        {selectedLang === 'kn' ? 'ಧ್ವನಿ ಮ್ಯೂಟ್ ಆಗಿದೆ' : 'Muted (Click to hear)'}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <Volume2 className="w-3.5 h-3.5 text-emerald-300" />
-                      <span className="text-[11px]">
-                        {selectedLang === 'kn' ? 'ಧ್ವನಿ ಚಾಲನೆಯಲ್ಲಿದೆ' : 'Audio ON'}
-                      </span>
-                    </>
-                  )}
-                </button>
+                {/* Active Spice indicator pill */}
+                <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md text-white text-xs font-semibold shadow-sm border border-white/20">
+                  <span
+                    className="w-2 h-2 rounded-full animate-pulse"
+                    style={{ backgroundColor: activeChapter.accentColor }}
+                  />
+                  <span className="text-[11px] font-medium tracking-wide">
+                    {activeChapter.name[selectedLang]}
+                  </span>
+                </div>
 
                 {/* Paste / Replace Video Link Button */}
                 <button
@@ -590,28 +587,16 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
                 </button>
               </div>
 
-              {/* Play / Pause Large Center Indicator (on pause) */}
-              {!isPlaying && (
-                <div
-                  onClick={togglePlay}
-                  className="absolute inset-0 bg-black/40 flex items-center justify-center cursor-pointer z-10"
-                >
-                  <div className="w-16 h-16 rounded-full bg-[#993300]/90 text-white flex items-center justify-center shadow-2xl transform scale-110 transition">
-                    <Play className="w-8 h-8 ml-1" />
-                  </div>
-                </div>
-              )}
-
               {/* Active Character Overlay Tag at bottom of video */}
-              <div className="absolute bottom-16 left-3 right-3 z-20 pointer-events-none">
-                <div className="bg-black/65 backdrop-blur-md border border-white/20 rounded-2xl p-3 text-white shadow-lg">
+              <div className="absolute bottom-12 left-3 right-3 z-20 pointer-events-none">
+                <div className="bg-black/75 backdrop-blur-md border border-white/20 rounded-2xl p-3 text-white shadow-lg">
                   <div className="flex items-center justify-between text-xs mb-1">
                     <span className="font-bold text-amber-300 flex items-center space-x-1">
                       <Sparkles className="w-3 h-3 inline mr-1" />
                       {activeChapter.tag}
                     </span>
-                    <span className="text-[10px] text-stone-300 font-mono">
-                      {Math.floor(currentTime)}s / {Math.floor(duration)}s
+                    <span className="text-[10px] text-amber-200/90 font-mono">
+                      {activeChapterIndex + 1} / {SPICE_CHAPTERS.length}
                     </span>
                   </div>
                   <h4 className="font-serif font-bold text-sm text-white truncate">
@@ -623,82 +608,44 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
                 </div>
               </div>
 
-              {/* Bottom Video Controls Bar */}
-              <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/90 via-black/50 to-transparent z-20 flex flex-col space-y-2">
-                {/* Timeline Progress Scrubber */}
-                <div className="relative w-full flex items-center">
-                  <input
-                    type="range"
-                    min="0"
-                    max={duration || 31}
-                    step="0.1"
-                    value={currentTime}
-                    onChange={handleScrubberChange}
-                    className="w-full h-1 bg-white/30 rounded-lg appearance-none cursor-pointer accent-[#E5A93C]"
-                  />
-                </div>
-
-                {/* Control Buttons */}
-                <div className="flex items-center justify-between text-white text-xs">
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={togglePlay}
-                      className="p-1.5 hover:text-amber-300 transition"
-                      aria-label={isPlaying ? 'Pause' : 'Play'}
-                    >
-                      {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                    </button>
-                    <button
-                      onClick={restartVideo}
-                      className="p-1.5 hover:text-amber-300 transition"
-                      aria-label="Restart"
-                    >
-                      <RotateCcw className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={toggleMute}
-                      className="p-1.5 hover:text-amber-300 transition"
-                      aria-label={isMuted ? 'Unmute' : 'Mute'}
-                    >
-                      {isMuted ? (
-                        <VolumeX className="w-4 h-4 text-red-300" />
-                      ) : (
-                        <Volume2 className="w-4 h-4 text-emerald-300" />
-                      )}
-                    </button>
-                  </div>
-
-                  <button
-                    onClick={handleFullscreen}
-                    className="p-1.5 hover:text-amber-300 transition"
-                    aria-label="Fullscreen"
-                  >
-                    <Maximize2 className="w-3.5 h-3.5" />
-                  </button>
+              {/* Continuous Playback Multi-Spice Segment Progress Bar */}
+              <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/90 via-black/50 to-transparent z-20">
+                <div className="flex items-center space-x-1.5 w-full">
+                  {SPICE_CHAPTERS.map((chap, idx) => {
+                    const isPassed = activeChapterIndex > idx;
+                    const isCurrent = activeChapterIndex === idx;
+                    return (
+                      <div
+                        key={chap.id}
+                        className="h-1.5 flex-1 rounded-full overflow-hidden bg-white/25 transition-all duration-300"
+                      >
+                        <div
+                          className="h-full rounded-full transition-all duration-300"
+                          style={{
+                            width: isPassed ? '100%' : isCurrent ? '100%' : '0%',
+                            backgroundColor: isCurrent ? chap.accentColor : '#E5A93C'
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
-
-            {/* Quick helper note under player */}
-            <p className="text-[11px] text-[#8C7667] mt-3 text-center">
-              {selectedLang === 'kn'
-                ? 'ವೀಡಿಯೊ ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಮ್ಯೂಟ್ ಆಗಿ ಚಾಲನೆಗೊಳ್ಳುತ್ತದೆ. ಧ್ವನಿ ಕೇಳಲು "Muted" ಬಟನ್ ಒತ್ತಿರಿ.'
-                : 'Video plays muted automatically. Tap the speaker icon anytime to unmute.'}
-            </p>
           </div>
 
-          {/* RIGHT: Multilingual Editorial Spice Explanation Suite (Occupies 7 columns on desktop) */}
+          {/* RIGHT: Multilingual Editorial Spice Explanation Suite with Pictures Showcase */}
           <div className="lg:col-span-7 flex flex-col justify-center space-y-5">
             {/* Active Spice Hero Card */}
             <div
-              className="bg-[#FFFDF9] border-2 rounded-3xl p-5 sm:p-8 shadow-lg transition-all duration-300 relative overflow-hidden"
+              className="bg-[#FFFDF9] border-2 rounded-3xl p-5 sm:p-7 shadow-lg transition-all duration-300 relative overflow-hidden"
               style={{
                 borderColor: activeChapter.accentColor
               }}
             >
               {/* Background Accent Gradient Tint */}
               <div
-                className="absolute top-0 right-0 w-80 h-80 rounded-full blur-[80px] pointer-events-none opacity-40"
+                className="absolute top-0 right-0 w-80 h-80 rounded-full blur-[80px] pointer-events-none opacity-30"
                 style={{ backgroundColor: activeChapter.accentColor }}
               />
 
@@ -712,14 +659,49 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
                   <span>{activeChapter.badge[selectedLang]}</span>
                 </span>
 
-                <span className="font-serif text-lg sm:text-2xl font-bold text-[#8C7667]/30 select-none">
+                <span className="font-serif text-lg sm:text-2xl font-bold text-[#8C7667]/40 select-none">
                   {activeChapter.kannadaScript}
                 </span>
               </div>
 
+              {/* Active Spice Picture Showcase Gallery (Whole Spice & Stone Ground Powder) */}
+              <div className="relative z-10 grid grid-cols-2 gap-3 mb-5">
+                <div className="relative rounded-2xl overflow-hidden border border-[#E8DFD3] shadow-xs group bg-[#FAF5EB] h-28 sm:h-32">
+                  <img
+                    src={activeChapter.image}
+                    alt={activeChapter.name[selectedLang]}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = '/spice_animation_poster.jpg';
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end p-2">
+                    <span className="text-[10px] sm:text-xs font-bold text-white drop-shadow-sm">
+                      {selectedLang === 'kn' ? 'ಅಪ್ಪಟ ಕಾಳು ಮಸಾಲೆ' : 'Whole Raw Spice'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="relative rounded-2xl overflow-hidden border border-[#E8DFD3] shadow-xs group bg-[#FAF5EB] h-28 sm:h-32">
+                  <img
+                    src={activeChapter.powderImage}
+                    alt={activeChapter.name[selectedLang]}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = '/spice_animation_poster.jpg';
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end p-2">
+                    <span className="text-[10px] sm:text-xs font-bold text-white drop-shadow-sm">
+                      {selectedLang === 'kn' ? 'ಕಲ್ಲಿನಿಂದ ಬೀಸಿದ ಪುಡಿ' : 'Stone-Ground Powder'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               {/* Spice Title */}
               <div className="relative z-10 mb-3">
-                <h3 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#2C1810] tracking-tight">
+                <h3 className="font-serif text-2xl sm:text-3xl font-extrabold text-[#2C1810] tracking-tight">
                   {activeChapter.name[selectedLang]}
                 </h3>
                 <p className="text-xs sm:text-sm font-serif italic text-[#8B3214] mt-0.5">
@@ -728,14 +710,14 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
               </div>
 
               {/* Core Editorial Description */}
-              <p className="relative z-10 text-sm sm:text-base text-[#4A3223] leading-relaxed font-normal mb-6">
+              <p className="relative z-10 text-sm sm:text-base text-[#4A3223] leading-relaxed font-normal mb-5">
                 {activeChapter.description[selectedLang]}
               </p>
 
               {/* Dual Culinary & Health Highlights Bento */}
-              <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2 border-t border-[#E8DFD3]">
+              <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-[#E8DFD3]">
                 {/* Culinary Tradition Pod */}
-                <div className="p-3.5 rounded-2xl bg-[#FAF5EB] border border-[#E8DFD3] flex items-start space-x-3">
+                <div className="p-3 rounded-2xl bg-[#FAF5EB] border border-[#E8DFD3] flex items-start space-x-3">
                   <div
                     className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 text-white shadow-xs mt-0.5"
                     style={{ backgroundColor: activeChapter.accentColor }}
@@ -759,7 +741,7 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
                 </div>
 
                 {/* Health & Ayurveda Pod */}
-                <div className="p-3.5 rounded-2xl bg-[#FAF5EB] border border-[#E8DFD3] flex items-start space-x-3">
+                <div className="p-3 rounded-2xl bg-[#FAF5EB] border border-[#E8DFD3] flex items-start space-x-3">
                   <div className="w-8 h-8 rounded-xl bg-emerald-700 flex items-center justify-center flex-shrink-0 text-white shadow-xs mt-0.5">
                     <Heart className="w-4 h-4" />
                   </div>
@@ -781,7 +763,7 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
               </div>
 
               {/* CTA Action: Scroll to Store Catalogue */}
-              <div className="relative z-10 mt-6 pt-4 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-[#E8DFD3]">
+              <div className="relative z-10 mt-5 pt-4 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-[#E8DFD3]">
                 <div className="flex items-center space-x-2 text-xs text-[#6B4E3D]">
                   <ShieldCheck className="w-4 h-4 text-emerald-700" />
                   <span>
@@ -810,7 +792,7 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
               </div>
             </div>
 
-            {/* Carousel / Switcher Bar of all 5 spice characters */}
+            {/* Switcher Bar with photo thumbnail of all 5 spice characters */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
               {SPICE_CHAPTERS.map((chap, idx) => {
                 const isSelected = activeChapterIndex === idx;
@@ -818,7 +800,7 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
                   <button
                     key={chap.id}
                     onClick={() => jumpToChapter(chap, idx)}
-                    className={`p-2.5 rounded-2xl text-left transition-all duration-200 border flex flex-col justify-between ${
+                    className={`p-2 rounded-2xl text-left transition-all duration-200 border flex flex-col justify-between ${
                       isSelected
                         ? 'bg-[#FFFDF9] border-2 shadow-sm scale-102'
                         : 'bg-[#FAF3E0]/70 border-[#E8DFD3] hover:bg-[#FAF3E0] hover:border-[#DFC7A2]'
@@ -827,14 +809,16 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
                       borderColor: isSelected ? chap.accentColor : undefined
                     }}
                   >
-                    <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center space-x-2 mb-1.5">
+                      <img
+                        src={chap.image}
+                        alt=""
+                        className="w-5 h-5 rounded-full object-cover border border-[#DFC7A2]"
+                      />
                       <span
                         className="w-2 h-2 rounded-full"
                         style={{ backgroundColor: chap.accentColor }}
                       />
-                      <span className="text-[10px] font-mono text-[#8C7667]">
-                        {Math.floor(chap.startTime)}s
-                      </span>
                     </div>
                     <span className="text-xs font-bold text-[#2C1810] line-clamp-1">
                       {chap.name[selectedLang]}
@@ -860,7 +844,7 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
             </h4>
             <p className="text-xs text-[#6B4E3D] mb-4">
               Enter any direct MP4 link (Cloudinary, AWS S3, Render, or CDN). The video will
-              replace the player immediately and stay muted by default.
+              replace the player immediately and play smoothly.
             </p>
 
             <form onSubmit={handleSaveVideoUrl} className="space-y-4">
