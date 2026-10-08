@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import {
   Sparkles,
@@ -7,7 +7,8 @@ import {
   Flame,
   ShieldCheck,
   Heart,
-  ArrowRight
+  ArrowRight,
+  Upload
 } from 'lucide-react';
 
 interface SpiceTransformationSectionProps {
@@ -200,7 +201,7 @@ const SPICE_CHAPTERS: SpiceChapter[] = [
     culinaryUse: {
       en: 'Steaming masala chai, aromatic biryani, pulao & kheer',
       kn: 'ಘಮಘಮಿಸುವ ಮಸಾಲೆ ಚಹಾ, ಬಿರಿಯಾನಿ ಮತ್ತು ಹಬ್ಬದ ಪಾಯಸ',
-      hi: 'कड़क मसाला चाय, पुलाव और मीठे शाही पकवान',
+      hi: 'ಕಡಕ್ ಮಸಾಲಾ ಚಾಯ್, ಪುಲಾವ್ ಮತ್ತು ಸಿಹಿ ಖಾದ್ಯಗಳು',
       ta: 'மசாலா டீ, பிரியாணி மற்றும் இனிப்பு வகைகள்'
     },
     healthBenefit: {
@@ -272,6 +273,9 @@ const SPICE_CHAPTERS: SpiceChapter[] = [
   }
 ];
 
+// Slow and graceful transition: exactly 6 seconds per spice (> 5 seconds as explicitly requested)
+const TRANSITION_DURATION_MS = 6000;
+
 export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProps> = ({
   customVideoUrl
 }) => {
@@ -292,13 +296,10 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
   // Video state management
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLElement>(null);
-  const lastReportedTimeRef = useRef<number>(0);
 
-  const [currentTime, setCurrentTime] = useState<number>(0);
-  const [duration, setDuration] = useState<number>(31);
   const [activeChapterIndex, setActiveChapterIndex] = useState<number>(0);
 
-  // Custom Video URL state (supports localStorage so pasted URL persists)
+  // Custom Video URL state (supports localStorage so uploaded / pasted URL persists)
   const defaultVideo = '/videos/spice-animated-story.mp4';
   const [videoUrl, setVideoUrl] = useState<string>(() => {
     if (customVideoUrl) return customVideoUrl;
@@ -318,19 +319,28 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
     return SPICE_CHAPTERS[activeChapterIndex] || SPICE_CHAPTERS[0];
   }, [activeChapterIndex]);
 
-  // Handle continuous video play without user pause/play/volume options
+  // Ensure video loads and plays continuously whenever videoUrl is set or mounted
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
-    // Strictly muted and autoPlay so browser policies always permit seamless playback
     video.muted = true;
     video.defaultMuted = true;
     video.playsInline = true;
+    video.autoplay = true;
+    video.loop = true;
+
+    // Explicitly load the media source so uploaded videos never stay fixed or stuck
+    try {
+      video.load();
+    } catch (_) {}
 
     const playVideo = () => {
       if (video.paused) {
-        video.play().catch(() => {});
+        const p = video.play();
+        if (p !== undefined) {
+          p.catch(() => {});
+        }
       }
     };
 
@@ -352,50 +362,19 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
     };
   }, [videoUrl]);
 
-  // Video time update: maps smoothly across ALL 5 spices proportionally for any video duration
-  const handleTimeUpdate = useCallback(() => {
-    if (videoRef.current) {
-      const time = videoRef.current.currentTime || 0;
-      const dur = videoRef.current.duration || 31;
-      setCurrentTime(time);
-      if (dur && !isNaN(dur) && dur > 0) {
-        setDuration(dur);
-        // Map proportional progress across all 5 spices without missing timestamps
-        const fraction = (time % dur) / dur;
-        const mappedIdx = Math.min(
-          SPICE_CHAPTERS.length - 1,
-          Math.floor(fraction * SPICE_CHAPTERS.length)
-        );
-        if (mappedIdx !== activeChapterIndex) {
-          setActiveChapterIndex(mappedIdx);
-        }
-      }
-    }
-  }, [activeChapterIndex]);
-
-  // Fallback progression ticker:
-  // If video is buffering, stuck, or paused for any reason, spices and pictures continuously rotate every 6s!
+  // Slow, relaxing transition: each spice stays for at least 6 seconds (> 5 seconds as requested)
   useEffect(() => {
-    const ticker = setInterval(() => {
-      const video = videoRef.current;
-      const cur = video ? video.currentTime : 0;
-      // If video has not advanced significantly, cycle the spice and pictures
-      if (!video || video.paused || Math.abs(cur - lastReportedTimeRef.current) < 0.2) {
-        setActiveChapterIndex((prev) => (prev + 1) % SPICE_CHAPTERS.length);
-      }
-      lastReportedTimeRef.current = cur;
-    }, 6000);
+    const timer = setInterval(() => {
+      setActiveChapterIndex((prev) => (prev + 1) % SPICE_CHAPTERS.length);
+    }, TRANSITION_DURATION_MS);
 
-    return () => clearInterval(ticker);
-  }, []);
+    return () => clearInterval(timer);
+  }, [activeChapterIndex]);
 
   // Jump to specific spice when user taps pills or cards
   const jumpToChapter = (chapter: SpiceChapter, index: number) => {
     setActiveChapterIndex(index);
     if (videoRef.current) {
-      const dur = videoRef.current.duration || duration || 31;
-      const targetTime = (index / SPICE_CHAPTERS.length) * dur;
-      videoRef.current.currentTime = targetTime;
       videoRef.current.muted = true;
       videoRef.current.play().catch(() => {});
     }
@@ -407,19 +386,40 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
     const trimmed = inputUrl.trim();
     setVideoUrl(trimmed);
     if (typeof window !== 'undefined') {
-      localStorage.setItem('indima_custom_spice_video', trimmed);
+      try {
+        localStorage.setItem('indima_custom_spice_video', trimmed);
+      } catch (_) {}
     }
     setUrlSavedMessage(true);
     setTimeout(() => {
       setUrlSavedMessage(false);
       setIsUrlModalOpen(false);
-    }, 1200);
+    }, 1000);
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const objectUrl = URL.createObjectURL(file);
+    setVideoUrl(objectUrl);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('indima_custom_spice_video', objectUrl);
+      } catch (_) {}
+    }
+    setUrlSavedMessage(true);
+    setTimeout(() => {
+      setUrlSavedMessage(false);
+      setIsUrlModalOpen(false);
+    }, 1000);
   };
 
   const handleResetVideoUrl = () => {
     setVideoUrl(defaultVideo);
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('indima_custom_spice_video');
+      try {
+        localStorage.removeItem('indima_custom_spice_video');
+      } catch (_) {}
     }
     setInputUrl('');
     setIsUrlModalOpen(false);
@@ -518,7 +518,7 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
           </div>
         </div>
 
-        {/* Quick Chapter Selector Pills (Synchronized with video timestamps and pictures) */}
+        {/* Quick Chapter Selector Pills (Synchronized with slow 6-second cadence) */}
         <div className="flex items-center justify-start sm:justify-center space-x-2 sm:space-x-3 mb-8 overflow-x-auto pb-2 scrollbar-none px-2">
           {SPICE_CHAPTERS.map((chap, idx) => {
             const isActive = activeChapterIndex === idx;
@@ -526,7 +526,7 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
               <button
                 key={chap.id}
                 onClick={() => jumpToChapter(chap, idx)}
-                className={`flex-shrink-0 flex items-center space-x-2 px-3.5 sm:px-4 py-2 rounded-full text-xs font-bold transition-all duration-300 border ${
+                className={`flex-shrink-0 flex items-center space-x-2 px-3.5 sm:px-4 py-2 rounded-full text-xs font-bold transition-all duration-500 border ${
                   isActive
                     ? 'bg-[#993300] text-white border-[#993300] shadow-md scale-105'
                     : 'bg-[#FFFDF9] text-[#5C4535] border-[#E8DFD3] hover:border-[#DFC7A2] hover:bg-[#FAF3E0]'
@@ -549,24 +549,36 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
           {/* LEFT: 9:16 Cinematic Video Player Box (Autonomous continuous play, strictly no user pause/volume options) */}
           <div className="lg:col-span-5 flex flex-col items-center">
             <div className="relative w-full max-w-[340px] sm:max-w-[380px] rounded-3xl overflow-hidden shadow-2xl border-4 border-[#DFC7A2] bg-[#1A0E08] group">
-              {/* HTML5 Video Element: Muted by default strictly, autoplay continuously */}
+              {/* HTML5 Video Element: With key={videoUrl} so uploaded videos immediately load and play smoothly */}
               <video
+                key={videoUrl}
                 ref={videoRef}
                 src={videoUrl}
-                poster={activeChapter.image || '/spice_animation_poster.jpg'}
+                poster="/spice_animation_poster.jpg"
                 muted
                 autoPlay
                 loop
                 playsInline
                 preload="auto"
-                onTimeUpdate={handleTimeUpdate}
+                onCanPlay={() => {
+                  if (videoRef.current) {
+                    videoRef.current.muted = true;
+                    videoRef.current.play().catch(() => {});
+                  }
+                }}
+                onLoadedData={() => {
+                  if (videoRef.current) {
+                    videoRef.current.muted = true;
+                    videoRef.current.play().catch(() => {});
+                  }
+                }}
                 className="w-full h-[520px] sm:h-[580px] object-cover select-none pointer-events-none"
               />
 
-              {/* Top Overlay: Active spice badge + Paste Video URL button */}
+              {/* Top Overlay: Active spice badge + Paste/Upload Video button */}
               <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-20 pointer-events-auto">
                 {/* Active Spice indicator pill */}
-                <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md text-white text-xs font-semibold shadow-sm border border-white/20">
+                <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md text-white text-xs font-semibold shadow-sm border border-white/20 transition-all duration-700">
                   <span
                     className="w-2 h-2 rounded-full animate-pulse"
                     style={{ backgroundColor: activeChapter.accentColor }}
@@ -576,12 +588,12 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
                   </span>
                 </div>
 
-                {/* Paste / Replace Video Link Button */}
+                {/* Paste / Upload Video Link Button */}
                 <button
                   onClick={() => setIsUrlModalOpen(true)}
-                  aria-label="Paste custom video link"
-                  title="Paste or change video URL"
-                  className="p-2 rounded-full bg-black/60 backdrop-blur-md text-white hover:bg-black/80 transition border border-white/20"
+                  aria-label="Upload or change video"
+                  title="Upload or change video"
+                  className="p-2 rounded-full bg-black/60 backdrop-blur-md text-white hover:bg-black/80 transition border border-white/20 cursor-pointer"
                 >
                   <Link2 className="w-3.5 h-3.5 text-amber-300" />
                 </button>
@@ -589,7 +601,7 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
 
               {/* Active Character Overlay Tag at bottom of video */}
               <div className="absolute bottom-12 left-3 right-3 z-20 pointer-events-none">
-                <div className="bg-black/75 backdrop-blur-md border border-white/20 rounded-2xl p-3 text-white shadow-lg">
+                <div className="bg-black/75 backdrop-blur-md border border-white/20 rounded-2xl p-3 text-white shadow-lg transition-all duration-700">
                   <div className="flex items-center justify-between text-xs mb-1">
                     <span className="font-bold text-amber-300 flex items-center space-x-1">
                       <Sparkles className="w-3 h-3 inline mr-1" />
@@ -617,10 +629,10 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
                     return (
                       <div
                         key={chap.id}
-                        className="h-1.5 flex-1 rounded-full overflow-hidden bg-white/25 transition-all duration-300"
+                        className="h-1.5 flex-1 rounded-full overflow-hidden bg-white/25 transition-all duration-500"
                       >
                         <div
-                          className="h-full rounded-full transition-all duration-300"
+                          className="h-full rounded-full transition-all duration-700 ease-in-out"
                           style={{
                             width: isPassed ? '100%' : isCurrent ? '100%' : '0%',
                             backgroundColor: isCurrent ? chap.accentColor : '#E5A93C'
@@ -636,30 +648,30 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
 
           {/* RIGHT: Multilingual Editorial Spice Explanation Suite with Pictures Showcase */}
           <div className="lg:col-span-7 flex flex-col justify-center space-y-5">
-            {/* Active Spice Hero Card */}
+            {/* Active Spice Hero Card (Smooth 700ms transition) */}
             <div
-              className="bg-[#FFFDF9] border-2 rounded-3xl p-5 sm:p-7 shadow-lg transition-all duration-300 relative overflow-hidden"
+              className="bg-[#FFFDF9] border-2 rounded-3xl p-5 sm:p-7 shadow-lg transition-all duration-700 ease-in-out relative overflow-hidden"
               style={{
                 borderColor: activeChapter.accentColor
               }}
             >
               {/* Background Accent Gradient Tint */}
               <div
-                className="absolute top-0 right-0 w-80 h-80 rounded-full blur-[80px] pointer-events-none opacity-30"
+                className="absolute top-0 right-0 w-80 h-80 rounded-full blur-[80px] pointer-events-none opacity-30 transition-all duration-700"
                 style={{ backgroundColor: activeChapter.accentColor }}
               />
 
               {/* Card Header: Badge + Kannada script watermark */}
               <div className="relative z-10 flex items-center justify-between mb-4">
                 <span
-                  className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider text-white shadow-xs"
+                  className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider text-white shadow-xs transition-colors duration-700"
                   style={{ backgroundColor: activeChapter.accentColor }}
                 >
                   <Sparkles className="w-3 h-3" />
                   <span>{activeChapter.badge[selectedLang]}</span>
                 </span>
 
-                <span className="font-serif text-lg sm:text-2xl font-bold text-[#8C7667]/40 select-none">
+                <span className="font-serif text-lg sm:text-2xl font-bold text-[#8C7667]/40 select-none transition-all duration-700">
                   {activeChapter.kannadaScript}
                 </span>
               </div>
@@ -668,9 +680,10 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
               <div className="relative z-10 grid grid-cols-2 gap-3 mb-5">
                 <div className="relative rounded-2xl overflow-hidden border border-[#E8DFD3] shadow-xs group bg-[#FAF5EB] h-28 sm:h-32">
                   <img
+                    key={`whole-${activeChapter.id}`}
                     src={activeChapter.image}
                     alt={activeChapter.name[selectedLang]}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    className="w-full h-full object-cover transition-all duration-700 ease-in-out group-hover:scale-105"
                     onError={(e) => {
                       (e.currentTarget as HTMLImageElement).src = '/spice_animation_poster.jpg';
                     }}
@@ -684,9 +697,10 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
 
                 <div className="relative rounded-2xl overflow-hidden border border-[#E8DFD3] shadow-xs group bg-[#FAF5EB] h-28 sm:h-32">
                   <img
+                    key={`powder-${activeChapter.id}`}
                     src={activeChapter.powderImage}
                     alt={activeChapter.name[selectedLang]}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    className="w-full h-full object-cover transition-all duration-700 ease-in-out group-hover:scale-105"
                     onError={(e) => {
                       (e.currentTarget as HTMLImageElement).src = '/spice_animation_poster.jpg';
                     }}
@@ -701,25 +715,25 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
 
               {/* Spice Title */}
               <div className="relative z-10 mb-3">
-                <h3 className="font-serif text-2xl sm:text-3xl font-extrabold text-[#2C1810] tracking-tight">
+                <h3 className="font-serif text-2xl sm:text-3xl font-extrabold text-[#2C1810] tracking-tight transition-all duration-700">
                   {activeChapter.name[selectedLang]}
                 </h3>
-                <p className="text-xs sm:text-sm font-serif italic text-[#8B3214] mt-0.5">
+                <p className="text-xs sm:text-sm font-serif italic text-[#8B3214] mt-0.5 transition-all duration-700">
                   {activeChapter.characterTitle[selectedLang]}
                 </p>
               </div>
 
               {/* Core Editorial Description */}
-              <p className="relative z-10 text-sm sm:text-base text-[#4A3223] leading-relaxed font-normal mb-5">
+              <p className="relative z-10 text-sm sm:text-base text-[#4A3223] leading-relaxed font-normal mb-5 transition-all duration-700">
                 {activeChapter.description[selectedLang]}
               </p>
 
               {/* Dual Culinary & Health Highlights Bento */}
               <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-[#E8DFD3]">
                 {/* Culinary Tradition Pod */}
-                <div className="p-3 rounded-2xl bg-[#FAF5EB] border border-[#E8DFD3] flex items-start space-x-3">
+                <div className="p-3 rounded-2xl bg-[#FAF5EB] border border-[#E8DFD3] flex items-start space-x-3 transition-all duration-700">
                   <div
-                    className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 text-white shadow-xs mt-0.5"
+                    className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 text-white shadow-xs mt-0.5 transition-colors duration-700"
                     style={{ backgroundColor: activeChapter.accentColor }}
                   >
                     <Flame className="w-4 h-4" />
@@ -741,7 +755,7 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
                 </div>
 
                 {/* Health & Ayurveda Pod */}
-                <div className="p-3 rounded-2xl bg-[#FAF5EB] border border-[#E8DFD3] flex items-start space-x-3">
+                <div className="p-3 rounded-2xl bg-[#FAF5EB] border border-[#E8DFD3] flex items-start space-x-3 transition-all duration-700">
                   <div className="w-8 h-8 rounded-xl bg-emerald-700 flex items-center justify-center flex-shrink-0 text-white shadow-xs mt-0.5">
                     <Heart className="w-4 h-4" />
                   </div>
@@ -775,7 +789,7 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
 
                 <a
                   href="#products-section"
-                  className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-5 py-2.5 rounded-full text-xs font-bold text-white transition-all duration-200 shadow-md hover:scale-103"
+                  className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-5 py-2.5 rounded-full text-xs font-bold text-white transition-all duration-300 shadow-md hover:scale-103"
                   style={{ backgroundColor: activeChapter.accentColor }}
                 >
                   <span>
@@ -800,7 +814,7 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
                   <button
                     key={chap.id}
                     onClick={() => jumpToChapter(chap, idx)}
-                    className={`p-2 rounded-2xl text-left transition-all duration-200 border flex flex-col justify-between ${
+                    className={`p-2 rounded-2xl text-left transition-all duration-500 border flex flex-col justify-between ${
                       isSelected
                         ? 'bg-[#FFFDF9] border-2 shadow-sm scale-102'
                         : 'bg-[#FAF3E0]/70 border-[#E8DFD3] hover:bg-[#FAF3E0] hover:border-[#DFC7A2]'
@@ -834,67 +848,85 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
         </div>
       </div>
 
-      {/* Paste Video URL Modal */}
+      {/* Upload Video or Paste URL Modal */}
       {isUrlModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
           <div className="bg-[#FFFDF9] border border-[#DFC7A2] rounded-3xl max-w-md w-full p-6 shadow-2xl relative text-[#2C1810]">
             <h4 className="font-serif text-xl font-bold text-[#2C1810] mb-2 flex items-center space-x-2">
               <Link2 className="w-5 h-5 text-[#993300]" />
-              <span>Paste Custom Video Link</span>
+              <span>Update or Upload Spice Video</span>
             </h4>
             <p className="text-xs text-[#6B4E3D] mb-4">
-              Enter any direct MP4 link (Cloudinary, AWS S3, Render, or CDN). The video will
-              replace the player immediately and play smoothly.
+              Select an MP4 video file from your device, or paste any video URL. It will immediately play continuously on loop.
             </p>
 
-            <form onSubmit={handleSaveVideoUrl} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-[#4A3223] uppercase tracking-wider mb-1">
-                  Video URL:
+            <div className="space-y-4">
+              {/* Direct File Upload Option */}
+              <div className="p-3.5 bg-[#FAF5EB] rounded-2xl border border-[#DFC7A2] space-y-2">
+                <label className="block text-xs font-bold text-[#4A3223] uppercase tracking-wider">
+                  Option 1: Upload Video File
                 </label>
-                <input
-                  type="url"
-                  placeholder="https://example.com/spices-video.mp4"
-                  value={inputUrl}
-                  onChange={(e) => setInputUrl(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#DFC7A2] bg-[#FAF5EB] text-sm text-[#2C1810] focus:outline-hidden focus:ring-2 focus:ring-[#993300]"
-                  required
-                />
+                <label className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl bg-[#993300] hover:bg-[#7A2800] text-white text-xs font-bold cursor-pointer transition shadow-xs">
+                  <Upload className="w-4 h-4" />
+                  <span>Choose Video File (MP4, WebM)</span>
+                  <input
+                    type="file"
+                    accept="video/mp4,video/webm,video/quicktime,video/*"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                </label>
               </div>
 
-              {urlSavedMessage && (
-                <div className="flex items-center space-x-2 text-xs font-bold text-emerald-700 bg-emerald-50 p-2.5 rounded-xl border border-emerald-200">
-                  <Check className="w-4 h-4 text-emerald-600" />
-                  <span>Video URL updated successfully!</span>
+              {/* Paste URL Option */}
+              <form onSubmit={handleSaveVideoUrl} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-[#4A3223] uppercase tracking-wider mb-1">
+                    Option 2: Paste Direct Video URL
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://example.com/spices-video.mp4"
+                    value={inputUrl}
+                    onChange={(e) => setInputUrl(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#DFC7A2] bg-[#FAF5EB] text-sm text-[#2C1810] focus:outline-hidden focus:ring-2 focus:ring-[#993300]"
+                  />
                 </div>
-              )}
 
-              <div className="flex items-center justify-between pt-2">
-                <button
-                  type="button"
-                  onClick={handleResetVideoUrl}
-                  className="text-xs text-[#8C7667] hover:text-[#993300] underline font-medium"
-                >
-                  Reset to default video
-                </button>
+                {urlSavedMessage && (
+                  <div className="flex items-center space-x-2 text-xs font-bold text-emerald-700 bg-emerald-50 p-2.5 rounded-xl border border-emerald-200">
+                    <Check className="w-4 h-4 text-emerald-600" />
+                    <span>Video updated successfully!</span>
+                  </div>
+                )}
 
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center justify-between pt-2">
                   <button
                     type="button"
-                    onClick={() => setIsUrlModalOpen(false)}
-                    className="px-4 py-2 rounded-full border border-[#DFC7A2] text-xs font-semibold text-[#6B4E3D] hover:bg-[#FAF3E0]"
+                    onClick={handleResetVideoUrl}
+                    className="text-xs text-[#8C7667] hover:text-[#993300] underline font-medium cursor-pointer"
                   >
-                    Cancel
+                    Reset to default video
                   </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2 rounded-full bg-[#993300] text-xs font-bold text-white hover:bg-[#7A2800] shadow-sm"
-                  >
-                    Apply Video
-                  </button>
+
+                  <div className="flex items-center space-x-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsUrlModalOpen(false)}
+                      className="px-4 py-2 rounded-full border border-[#DFC7A2] text-xs font-semibold text-[#6B4E3D] hover:bg-[#FAF3E0] cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-5 py-2 rounded-full bg-[#993300] text-xs font-bold text-white hover:bg-[#7A2800] shadow-sm cursor-pointer"
+                    >
+                      Apply URL
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </form>
+              </form>
+            </div>
           </div>
         </div>
       )}
