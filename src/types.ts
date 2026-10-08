@@ -258,7 +258,7 @@ export interface Recipe {
 
 export interface Banner {
   id: string;
-  type: 'hero' | 'festival' | 'campaign' | 'offer';
+  type: 'hero' | 'festival' | 'campaign' | 'offer' | 'craft_video';
   media_type: 'image' | 'video';
   media_url: string;
   fallback_image?: string;

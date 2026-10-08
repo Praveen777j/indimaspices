@@ -312,7 +312,9 @@ const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToA
         <SpiceWorldSection />
 
         {/* SECTION 04: From Whole Spice to Powder (Craft & Transformation) */}
-        <SpiceTransformationSection />
+        <SpiceTransformationSection
+          customVideoUrl={banners.find(b => b.id === 'ban-craft-video' || b.type === 'craft_video')?.media_url || (settings as any)?.craft_video_url}
+        />
 
         {/* SECTION 05: Finished Product Reveal */}
         <ProductRevealSection

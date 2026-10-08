@@ -185,6 +185,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
   const [newImageUrl, setNewImageUrl] = useState('');
   const [videoUploadError, setVideoUploadError] = useState('');
 
+  // Recipe media states
+  const [isUploadingRecipePhoto, setIsUploadingRecipePhoto] = useState(false);
+  const [isUploadingRecipeVideo, setIsUploadingRecipeVideo] = useState(false);
+  const [recipeVideoError, setRecipeVideoError] = useState('');
+
+  // Craft & Spice Transformation Video state
+  const [craftVideoUrl, setCraftVideoUrl] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('indima_custom_spice_video');
+      if (stored) return stored;
+    }
+    return '/videos/spice-animated-story.mp4';
+  });
+  const [craftVideoInputUrl, setCraftVideoInputUrl] = useState<string>('');
+  const [isUploadingCraftVideo, setIsUploadingCraftVideo] = useState<boolean>(false);
+
   // Search queries
   const [orderSearch, setOrderSearch] = useState('');
   const [orderSourceFilter, setOrderSourceFilter] = useState<'all' | 'web' | 'whatsapp'>('all');
@@ -389,6 +405,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
       }
       if (bansRes.status === 'fulfilled' && Array.isArray(bansRes.value)) {
         setBanners(bansRes.value);
+        const craftBanner = bansRes.value.find(b => b.id === 'ban-craft-video' || b.type === 'craft_video');
+        if (craftBanner && craftBanner.media_url) {
+          setCraftVideoUrl(craftBanner.media_url);
+          setCraftVideoInputUrl(craftBanner.media_url);
+        }
       }
       if (recsRes.status === 'fulfilled' && Array.isArray(recsRes.value)) {
         setRecipes(recsRes.value);
@@ -537,6 +558,151 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
       setVideoUploadError('Video upload failed: ' + (e?.message || 'Check connection.'));
     } finally {
       setIsUploadingVideo(false);
+    }
+  };
+
+  // Craft & Spice Transformation Video Handlers
+  const handleCraftVideoUpload = async (file: File | null) => {
+    if (!file || !token) return;
+    setIsUploadingCraftVideo(true);
+    try {
+      const res = await api.uploadMedia(token, file);
+      if (res && res.success && res.url) {
+        setCraftVideoUrl(res.url);
+        setCraftVideoInputUrl(res.url);
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('indima_custom_spice_video', res.url);
+          } catch (_) {}
+        }
+        const isExisting = banners.some(b => b.id === 'ban-craft-video');
+        const craftBanner: any = {
+          id: 'ban-craft-video',
+          type: 'craft_video',
+          title_en: 'Craft & Spice Transformation Video',
+          media_type: 'video',
+          media_url: res.url,
+          enabled: true
+        };
+        setBanners(prev => {
+          const idx = prev.findIndex(b => b.id === 'ban-craft-video' || b.type === 'craft_video');
+          if (idx >= 0) {
+            const updated = [...prev];
+            updated[idx] = craftBanner;
+            return updated;
+          }
+          return [craftBanner, ...prev];
+        });
+        await api.saveBanner(token, craftBanner, isExisting);
+        showSuccess('Craft video uploaded & published! It is now live for all storefront visitors.');
+      } else {
+        showError(res?.error || 'Failed to upload video');
+      }
+    } catch (e: any) {
+      console.error(e);
+      showError('Error uploading video: ' + (e?.message || 'Check connection'));
+    } finally {
+      setIsUploadingCraftVideo(false);
+    }
+  };
+
+  const handleSaveCraftVideoUrl = async () => {
+    const urlToSave = craftVideoInputUrl.trim() || craftVideoUrl;
+    if (!urlToSave) {
+      showError('Please provide a valid video URL');
+      return;
+    }
+    setCraftVideoUrl(urlToSave);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('indima_custom_spice_video', urlToSave);
+      } catch (_) {}
+    }
+    const isExisting = banners.some(b => b.id === 'ban-craft-video');
+    const craftBanner: any = {
+      id: 'ban-craft-video',
+      type: 'craft_video',
+      title_en: 'Craft & Spice Transformation Video',
+      media_type: 'video',
+      media_url: urlToSave,
+      enabled: true
+    };
+    setBanners(prev => {
+      const idx = prev.findIndex(b => b.id === 'ban-craft-video' || b.type === 'craft_video');
+      if (idx >= 0) {
+        const updated = [...prev];
+        updated[idx] = craftBanner;
+        return updated;
+      }
+      return [craftBanner, ...prev];
+    });
+    try {
+      await api.saveBanner(token, craftBanner, isExisting);
+      showSuccess('Craft video URL saved and published to all storefront visitors!');
+    } catch (e: any) {
+      console.error(e);
+      showError('Error saving video: ' + (e?.message || 'Check connection'));
+    }
+  };
+
+  const handleResetCraftVideo = async () => {
+    const defaultUrl = '/videos/spice-animated-story.mp4';
+    setCraftVideoUrl(defaultUrl);
+    setCraftVideoInputUrl('');
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('indima_custom_spice_video');
+      } catch (_) {}
+    }
+    setBanners(prev => prev.filter(b => b.id !== 'ban-craft-video' && b.type !== 'craft_video'));
+    try {
+      await api.deleteBanner(token, 'ban-craft-video');
+    } catch (_) {}
+    showSuccess('Reset to original animated spice video.');
+  };
+
+  // Recipe Photo Upload Handler
+  const handleRecipePhotoUpload = async (file: File | null) => {
+    if (!file || !token || !editingRecipe) return;
+    setIsUploadingRecipePhoto(true);
+    try {
+      const res = await api.uploadMedia(token, file);
+      if (res && res.success && res.url) {
+        setEditingRecipe(prev => prev ? { ...prev, image: res.url } : prev);
+        showSuccess('Recipe photo uploaded successfully');
+      } else {
+        showError(res?.error || 'Failed to upload recipe photo');
+      }
+    } catch (e: any) {
+      console.error(e);
+      showError('Error uploading photo: ' + (e?.message || 'Check connection'));
+    } finally {
+      setIsUploadingRecipePhoto(false);
+    }
+  };
+
+  // Recipe Video Upload Handler
+  const handleRecipeVideoUpload = async (file: File | null) => {
+    if (!file || !token || !editingRecipe) return;
+    setIsUploadingRecipeVideo(true);
+    setRecipeVideoError('');
+    try {
+      const res = await api.uploadMedia(token, file);
+      if (res && res.success && res.url) {
+        setEditingRecipe(prev => prev ? {
+          ...prev,
+          video_url: res.url,
+          video: res.url
+        } : prev);
+        showSuccess('Recipe video uploaded successfully');
+      } else {
+        setRecipeVideoError(res?.error || 'Failed to upload recipe video');
+      }
+    } catch (e: any) {
+      console.error(e);
+      setRecipeVideoError('Error uploading video: ' + (e?.message || 'Check connection'));
+    } finally {
+      setIsUploadingRecipeVideo(false);
     }
   };
 
@@ -799,7 +965,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
     e.preventDefault();
     if (!token || !editingRecipe) return;
     const isEdit = recipes.some(r => r.id === editingRecipe.id);
-    const targetRecipe = { ...editingRecipe, id: editingRecipe.id || ('rec-' + Date.now()) };
+    const videoUrl = editingRecipe.video_url || editingRecipe.video || '';
+    const targetRecipe = {
+      ...editingRecipe,
+      id: editingRecipe.id || ('rec-' + Date.now()),
+      video: videoUrl,
+      video_url: videoUrl,
+      image: editingRecipe.image || 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=800&auto=format&fit=crop&q=80',
+      ingredients_en: Array.isArray(editingRecipe.ingredients_en) ? editingRecipe.ingredients_en : [],
+      ingredients_kn: Array.isArray(editingRecipe.ingredients_kn) ? editingRecipe.ingredients_kn : [],
+      instructions_en: Array.isArray(editingRecipe.instructions_en) ? editingRecipe.instructions_en : [],
+      instructions_kn: Array.isArray(editingRecipe.instructions_kn) ? editingRecipe.instructions_kn : []
+    };
     
     if (isEdit) {
       setRecipes(prev => prev.map(r => r.id === targetRecipe.id ? targetRecipe : r));
@@ -808,7 +985,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
     }
     setIsRecipeModalOpen(false);
     setEditingRecipe(null);
-    showSuccess('Recipe saved');
+    showSuccess('Recipe saved successfully');
 
     try {
       await api.saveRecipe(token, targetRecipe, isEdit);
@@ -2112,39 +2289,149 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
 
           {/* TAB 7: BANNERS & STOREFRONT MEDIA */}
           {activeTab === 'banners' && (
-            <HeroBannerManager
-              token={token}
-              banners={banners}
-              heroBanner={banners.find(b => b.type === 'hero') || banners[0]}
-              onBannerSaved={(updatedBanner) => {
-                setBanners(prev => {
-                  const exists = prev.some(b => b.id === updatedBanner.id);
-                  if (exists) {
-                    return prev.map(b => b.id === updatedBanner.id ? updatedBanner : b);
-                  }
-                  return [updatedBanner, ...prev];
-                });
-              }}
-              onBannerUpdated={(updatedBanner) => {
-                setBanners(prev => {
-                  const exists = prev.some(b => b.id === updatedBanner.id);
-                  if (exists) {
-                    return prev.map(b => b.id === updatedBanner.id ? updatedBanner : b);
-                  }
-                  return [updatedBanner, ...prev];
-                });
-              }}
-              onShowSuccess={(msg) => showSuccess(msg)}
-            />
+            <div className="space-y-6">
+              <HeroBannerManager
+                token={token}
+                banners={banners}
+                heroBanner={banners.find(b => b.type === 'hero') || banners[0]}
+                onBannerSaved={(updatedBanner) => {
+                  setBanners(prev => {
+                    const exists = prev.some(b => b.id === updatedBanner.id);
+                    if (exists) {
+                      return prev.map(b => b.id === updatedBanner.id ? updatedBanner : b);
+                    }
+                    return [updatedBanner, ...prev];
+                  });
+                }}
+                onBannerUpdated={(updatedBanner) => {
+                  setBanners(prev => {
+                    const exists = prev.some(b => b.id === updatedBanner.id);
+                    if (exists) {
+                      return prev.map(b => b.id === updatedBanner.id ? updatedBanner : b);
+                    }
+                    return [updatedBanner, ...prev];
+                  });
+                }}
+                onShowSuccess={(msg) => showSuccess(msg)}
+              />
+
+              {/* Craft & Spice Transformation Story Video Card */}
+              <div className="bg-white rounded-3xl border border-[#DFC7A2] p-5 sm:p-7 shadow-xs space-y-5 text-neutral-900">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#F0E6D2] pb-4">
+                  <div className="flex items-center space-x-3">
+                    <span className="p-2 rounded-xl bg-amber-100 text-[#993300]">
+                      <Video className="w-5 h-5" />
+                    </span>
+                    <div>
+                      <h3 className="font-serif text-base sm:text-lg font-bold text-neutral-900">
+                        Craft & Spice Transformation Animated Video
+                      </h3>
+                      <p className="text-xs text-neutral-600">
+                        Section: "From Whole Spice to Powder / Living Spice World" on the storefront
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-semibold px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    Live On Storefront
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+                  {/* Left: Video Preview */}
+                  <div className="lg:col-span-5 space-y-2">
+                    <div className="relative rounded-2xl overflow-hidden bg-black border border-[#D9C4A2] aspect-video flex items-center justify-center shadow-inner">
+                      <video
+                        key={craftVideoUrl}
+                        src={craftVideoUrl}
+                        controls
+                        muted
+                        autoPlay
+                        loop
+                        playsInline
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <p className="text-[11px] text-neutral-500 text-center italic">
+                      Live Preview • Plays continuously & seamlessly for customers
+                    </p>
+                  </div>
+
+                  {/* Right: Controls & Upload */}
+                  <div className="lg:col-span-7 space-y-4">
+                    <div className="p-4 bg-[#FAF6EE] rounded-2xl border border-[#D9C4A2] space-y-3">
+                      <label className="block text-xs font-bold text-neutral-800 uppercase tracking-wider">
+                        Upload Video File (MP4, WebM)
+                      </label>
+                      <p className="text-xs text-neutral-600 leading-relaxed">
+                        Upload an animated or craft video from your computer or phone. It will be stored in your media library and instantly displayed to all customers visiting the storefront.
+                      </p>
+                      <label className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-5 py-2.5 rounded-xl bg-[#993300] hover:bg-[#802B00] text-white text-xs font-bold cursor-pointer transition shadow-xs">
+                        <Upload className="w-4 h-4" />
+                        <span>{isUploadingCraftVideo ? 'Uploading Video File...' : 'Choose & Upload Video File'}</span>
+                        <input
+                          type="file"
+                          accept="video/mp4,video/webm,video/quicktime,video/*"
+                          disabled={isUploadingCraftVideo}
+                          onChange={e => {
+                            if (e.target.files?.[0]) {
+                              handleCraftVideoUpload(e.target.files[0]);
+                            }
+                            e.target.value = '';
+                          }}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+
+                    <div className="p-4 bg-[#FAF6EE] rounded-2xl border border-[#D9C4A2] space-y-3">
+                      <label className="block text-xs font-bold text-neutral-800 uppercase tracking-wider">
+                        Or Paste Direct Video URL
+                      </label>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <input
+                          type="url"
+                          placeholder="https://example.com/video.mp4 or /videos/..."
+                          value={craftVideoInputUrl}
+                          onChange={e => setCraftVideoInputUrl(e.target.value)}
+                          className="flex-1 px-3.5 py-2 bg-white border border-[#D9C4A2] rounded-xl text-xs text-neutral-900"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleSaveCraftVideoUrl}
+                          className="px-4 py-2 bg-neutral-900 hover:bg-black text-amber-300 text-xs font-bold rounded-xl cursor-pointer shadow-xs shrink-0"
+                        >
+                          Save & Publish
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1">
+                      <button
+                        type="button"
+                        onClick={handleResetCraftVideo}
+                        className="text-xs text-neutral-600 hover:text-[#993300] underline font-medium cursor-pointer"
+                      >
+                        Reset to original animated video
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
 
           {/* TAB 8: RECIPES */}
           {activeTab === 'recipes' && (
             <div className="space-y-4">
               <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-[#EADBCA] shadow-2xs">
-                <h3 className="font-serif text-sm font-bold text-neutral-900 uppercase tracking-wider">
-                  Karnataka Traditional Recipes
-                </h3>
+                <div>
+                  <h3 className="font-serif text-sm font-bold text-neutral-900 uppercase tracking-wider">
+                    Karnataka Traditional Recipes
+                  </h3>
+                  <p className="text-xs text-neutral-500">
+                    Manage kitchen recipes with photos, video showcases, ingredients, and steps.
+                  </p>
+                </div>
                 <button
                   onClick={() => {
                     setEditingRecipe({
@@ -2154,16 +2441,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
                       description_en: '',
                       description_kn: '',
                       prep_time: '25 Mins',
+                      cook_time: '20 Mins',
+                      servings: '4 Servings',
                       image: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=800&auto=format&fit=crop&q=80',
-                      ingredients_en: ['Indima Sambar Powder', 'Toor Dal', 'Vegetables'],
-                      ingredients_kn: ['ಇಂದಿಮಾ ಸಾಂಬಾರ್ ಪುಡಿ', 'ತೊಗರಿ ಬೇಳೆ', 'ತರಕಾರಿಗಳು'],
-                      instructions_en: ['Boil dal', 'Add spices', 'Simmer and serve'],
-                      instructions_kn: ['ಬೇಳೆ ಬೇಯಿಸಿ', 'ಮಸಾಲೆ ಪುಡಿ ಸೇರಿಸಿ', 'ಕುದಿಸಿ ಬಡಿಸಿ'],
+                      video_url: '',
+                      video: '',
+                      ingredients_en: ['Indima Sambar Powder', 'Toor Dal', 'Vegetables', 'Tamarind pulp'],
+                      ingredients_kn: ['ಇಂದಿಮಾ ಸಾಂಬಾರ್ ಪುಡಿ', 'ತೊಗರಿ ಬೇಳೆ', 'ತರಕಾರಿಗಳು', 'ಹುಣಸೆ ಹಣ್ಣಿನ ರಸ'],
+                      instructions_en: ['Pressure cook dal and vegetables until soft.', 'Add Indima Sambar Powder and tamarind extract.', 'Simmer for 8 minutes and temper with mustard and curry leaves.'],
+                      instructions_kn: ['ಬೇಳೆ ಮತ್ತು ತರಕಾರಿಗಳನ್ನು ಮೃದುವಾಗಿ ಬೇಯಿಸಿ.', 'ಇಂದಿಮಾ ಸಾಂಬಾರ್ ಪುಡಿ ಮತ್ತು ಹುಣಸೆ ರಸ ಸೇರಿಸಿ.', '೮ ನಿಮಿಷ ಕುದಿಸಿ, ಸಾಸಿವೆ ಒಗ್ಗರಣೆ ಹಾಕಿ ಬಡಿಸಿ.'],
                       related_product_ids: [products[0]?.id || '']
                     });
                     setIsRecipeModalOpen(true);
                   }}
-                  className="px-4 py-2 bg-[#993300] hover:bg-[#802B00] text-white text-xs font-bold rounded-xl flex items-center space-x-1.5 cursor-pointer"
+                  className="px-4 py-2 bg-[#993300] hover:bg-[#802B00] text-white text-xs font-bold rounded-xl flex items-center space-x-1.5 cursor-pointer shadow-xs transition"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Add Recipe</span>
@@ -2173,28 +2464,52 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {(recipes || []).map(rec => (
                   <div key={rec.id} className="p-4 bg-white rounded-2xl border border-[#EADBCA] shadow-2xs flex space-x-4">
-                    <img src={rec.image} alt={rec.title_en} className="w-24 h-24 rounded-xl object-cover border" />
+                    <div className="relative w-24 h-24 sm:w-28 sm:h-28 shrink-0">
+                      <img
+                        src={rec.image || 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=800&auto=format&fit=crop&q=80'}
+                        alt={rec.title_en}
+                        className="w-full h-full rounded-xl object-cover border border-[#EADBCA]"
+                      />
+                      {(rec.video_url || rec.video) && (
+                        <span className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-black/80 text-amber-300 rounded text-[9px] font-bold flex items-center space-x-1 shadow-xs">
+                          <Video className="w-2.5 h-2.5" />
+                          <span>Video</span>
+                        </span>
+                      )}
+                    </div>
                     <div className="flex-1 flex flex-col justify-between">
                       <div>
-                        <h4 className="font-bold text-sm text-neutral-900">{rec.title_en}</h4>
-                        <p className="text-xs text-neutral-500 font-serif">{rec.title_kn}</p>
-                        <p className="text-[11px] text-neutral-400 mt-1">Prep: {rec.prep_time}</p>
+                        <h4 className="font-bold text-sm text-neutral-900 line-clamp-1">{rec.title_en}</h4>
+                        <p className="text-xs text-neutral-500 font-serif line-clamp-1">{rec.title_kn}</p>
+                        <div className="flex flex-wrap gap-1.5 mt-1.5">
+                          <span className="text-[10px] text-neutral-600 bg-[#FAF6EE] px-2 py-0.5 rounded border border-[#EADBCA]">
+                            Prep: {rec.prep_time}
+                          </span>
+                          {(rec.video_url || rec.video) && (
+                            <span className="text-[10px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 font-semibold flex items-center space-x-1">
+                              <Video className="w-2.5 h-2.5" />
+                              <span>Has Video</span>
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex space-x-2 pt-2">
+                      <div className="flex items-center space-x-2 pt-2 border-t border-neutral-100 mt-2">
                         <button
                           onClick={() => {
                             setEditingRecipe(rec);
                             setIsRecipeModalOpen(true);
                           }}
-                          className="p-1.5 bg-[#FAF6EE] text-[#993300] rounded-lg text-xs font-bold border border-[#D9C4A2] cursor-pointer"
+                          className="px-2.5 py-1.5 bg-[#FAF6EE] hover:bg-[#F2ECE1] text-[#993300] rounded-lg text-xs font-bold border border-[#D9C4A2] flex items-center space-x-1 cursor-pointer transition"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
+                          <span>Edit</span>
                         </button>
                         <button
                           onClick={() => handleDeleteRecipe(rec.id, rec.title_en)}
-                          className="p-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-bold cursor-pointer"
+                          className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-bold border border-rose-200 flex items-center space-x-1 cursor-pointer transition"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                          <span>Delete</span>
                         </button>
                       </div>
                     </div>
@@ -3281,54 +3596,368 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
       {/* MODAL 3: RECIPE MODAL */}
       {isRecipeModalOpen && editingRecipe && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-[#FFFDF9] rounded-2xl max-w-lg w-full p-4 sm:p-6 space-y-4 border border-[#DFC7A2] max-h-[90vh] overflow-y-auto text-xs text-neutral-900 shadow-2xl">
-            <h3 className="font-serif text-base sm:text-lg font-bold text-neutral-900">
-              {editingRecipe.title_en ? `Edit Recipe: ${editingRecipe.title_en}` : 'Add Recipe'}
-            </h3>
-            <form onSubmit={handleSaveRecipe} className="space-y-3">
-              <div>
-                <label className="block font-bold text-neutral-900 mb-1">Title (English)</label>
-                <input
-                  type="text"
-                  required
-                  value={editingRecipe.title_en}
-                  onChange={e => setEditingRecipe({ ...editingRecipe, title_en: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-[#D9C4A2] rounded-lg text-neutral-900"
-                />
+          <div className="bg-[#FFFDF9] rounded-3xl max-w-2xl w-full p-4 sm:p-6 space-y-5 border border-[#DFC7A2] max-h-[92vh] overflow-y-auto text-xs text-neutral-900 shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-[#F0E6D2] pb-3">
+              <div className="flex items-center space-x-2.5">
+                <span className="p-2 rounded-xl bg-amber-100 text-[#993300]">
+                  <ChefHat className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 className="font-serif text-base sm:text-lg font-bold text-neutral-900">
+                    {recipes.some(r => r.id === editingRecipe.id)
+                      ? `Edit Recipe: ${editingRecipe.title_en || 'Karnataka Dish'}`
+                      : 'Add New Karnataka Recipe'}
+                  </h3>
+                  <p className="text-[11px] text-neutral-500">
+                    Upload photos, video demo, ingredients, and traditional preparation steps.
+                  </p>
+                </div>
               </div>
-              <div>
-                <label className="block font-bold text-neutral-900 mb-1">Title (Kannada)</label>
-                <input
-                  type="text"
-                  required
-                  value={editingRecipe.title_kn}
-                  onChange={e => setEditingRecipe({ ...editingRecipe, title_kn: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-[#D9C4A2] rounded-lg font-serif text-neutral-900"
-                />
+              <button
+                type="button"
+                onClick={() => setIsRecipeModalOpen(false)}
+                className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveRecipe} className="space-y-4">
+              {/* Row 1: Titles */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-neutral-900 mb-1">
+                    Title (English) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Traditional Mysore Rasam"
+                    value={editingRecipe.title_en}
+                    onChange={e => setEditingRecipe({ ...editingRecipe, title_en: e.target.value })}
+                    className="w-full px-3.5 py-2 bg-white border border-[#D9C4A2] rounded-xl text-neutral-900 text-xs focus:ring-2 focus:ring-[#993300] focus:outline-hidden"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-neutral-900 mb-1">
+                    Title (Kannada) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="ಉದಾ: ಸಾಂಪ್ರದಾಯಿಕ ಮೈಸೂರು ರಸಂ"
+                    value={editingRecipe.title_kn}
+                    onChange={e => setEditingRecipe({ ...editingRecipe, title_kn: e.target.value })}
+                    className="w-full px-3.5 py-2 bg-white border border-[#D9C4A2] rounded-xl font-serif text-neutral-900 text-xs focus:ring-2 focus:ring-[#993300] focus:outline-hidden"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block font-bold text-neutral-900 mb-1">Prep Time</label>
-                <input
-                  type="text"
-                  value={editingRecipe.prep_time}
-                  onChange={e => setEditingRecipe({ ...editingRecipe, prep_time: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-[#D9C4A2] rounded-lg text-neutral-900"
-                />
+
+              {/* PHOTO UPLOAD & SHOWCASE */}
+              <div className="p-4 bg-white rounded-2xl border border-[#EADBCA] space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <ImageIcon className="w-4 h-4 text-[#993300]" />
+                    <h4 className="font-serif text-xs font-bold text-neutral-900 uppercase tracking-wider">
+                      Recipe Photo Upload
+                    </h4>
+                  </div>
+                  <span className="text-[11px] text-neutral-500">
+                    High quality dish presentation photo
+                  </span>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3 items-center">
+                  <div className="relative w-full sm:w-36 h-28 shrink-0 rounded-xl overflow-hidden bg-neutral-100 border border-[#D9C4A2]">
+                    <img
+                      src={editingRecipe.image || 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=800&auto=format&fit=crop&q=80'}
+                      alt="Recipe Preview"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="flex-1 w-full space-y-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <label className="px-3.5 py-2 bg-[#993300] hover:bg-[#802B00] text-white font-bold rounded-xl cursor-pointer flex items-center justify-center space-x-1.5 text-xs transition-colors shrink-0 shadow-xs">
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>{isUploadingRecipePhoto ? 'Uploading Photo...' : 'Upload Dish Photo'}</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          disabled={isUploadingRecipePhoto}
+                          onChange={e => {
+                            if (e.target.files?.[0]) {
+                              handleRecipePhotoUpload(e.target.files[0]);
+                            }
+                            e.target.value = '';
+                          }}
+                          className="hidden"
+                        />
+                      </label>
+                      <input
+                        type="url"
+                        placeholder="Or paste image URL (https://...)"
+                        value={editingRecipe.image}
+                        onChange={e => setEditingRecipe({ ...editingRecipe, image: e.target.value })}
+                        className="flex-1 px-3 py-2 bg-[#FAF6EE] border border-[#D9C4A2] rounded-xl text-xs text-neutral-900"
+                      />
+                    </div>
+                    <p className="text-[11px] text-neutral-500">
+                      Supports JPG, PNG, WebP image formats. Displays on the recipe card and detail modal.
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div className="flex justify-end space-x-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsRecipeModalOpen(false)}
-                  className="px-4 py-2 border border-[#D9C4A2] bg-white hover:bg-neutral-100 text-neutral-800 font-bold rounded-lg cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-[#993300] hover:bg-[#802B00] text-white font-bold rounded-lg cursor-pointer shadow-xs"
-                >
-                  Save
-                </button>
+
+              {/* VIDEO UPLOAD & SHOWCASE */}
+              <div className="p-4 bg-white rounded-2xl border border-[#EADBCA] space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Video className="w-4 h-4 text-[#993300]" />
+                    <h4 className="font-serif text-xs font-bold text-neutral-900 uppercase tracking-wider">
+                      Recipe Video Showcase (Optional)
+                    </h4>
+                  </div>
+                  <span className="text-[11px] text-neutral-500">
+                    MP4 / WebM cooking demonstration
+                  </span>
+                </div>
+
+                {(editingRecipe.video_url || editingRecipe.video) && (
+                  <div className="relative rounded-xl overflow-hidden bg-black border border-[#D9C4A2] max-w-sm aspect-video">
+                    <video
+                      src={editingRecipe.video_url || editingRecipe.video}
+                      controls
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setEditingRecipe({ ...editingRecipe, video: '', video_url: '' })}
+                      className="absolute top-2 right-2 px-2 py-1 bg-black/75 hover:bg-black text-rose-300 rounded-lg text-[10px] font-bold flex items-center space-x-1 cursor-pointer"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Remove</span>
+                    </button>
+                  </div>
+                )}
+
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <label className="px-3.5 py-2 bg-neutral-900 hover:bg-black text-amber-300 font-bold rounded-xl cursor-pointer flex items-center justify-center space-x-1.5 text-xs transition-colors shrink-0 shadow-xs">
+                    <Film className="w-3.5 h-3.5" />
+                    <span>{isUploadingRecipeVideo ? 'Uploading Video...' : 'Upload Video File'}</span>
+                    <input
+                      type="file"
+                      accept="video/mp4,video/webm,video/quicktime,video/*"
+                      disabled={isUploadingRecipeVideo}
+                      onChange={e => {
+                        if (e.target.files?.[0]) {
+                          handleRecipeVideoUpload(e.target.files[0]);
+                        }
+                        e.target.value = '';
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="Or paste direct video URL (e.g. https://.../recipe-video.mp4)"
+                    value={editingRecipe.video_url || editingRecipe.video || ''}
+                    onChange={e => setEditingRecipe({
+                      ...editingRecipe,
+                      video_url: e.target.value,
+                      video: e.target.value
+                    })}
+                    className="flex-1 px-3 py-2 bg-[#FAF6EE] border border-[#D9C4A2] rounded-xl text-xs text-neutral-900"
+                  />
+                </div>
+
+                {recipeVideoError && (
+                  <p className="text-xs text-red-600 font-medium">{recipeVideoError}</p>
+                )}
+              </div>
+
+              {/* Row: Timings, Servings & Featured Spice */}
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <div>
+                  <label className="block font-bold text-neutral-900 mb-1">Prep Time</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 20 Mins"
+                    value={editingRecipe.prep_time}
+                    onChange={e => setEditingRecipe({ ...editingRecipe, prep_time: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-[#D9C4A2] rounded-xl text-neutral-900 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-neutral-900 mb-1">Cook Time</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 25 Mins"
+                    value={editingRecipe.cook_time || ''}
+                    onChange={e => setEditingRecipe({ ...editingRecipe, cook_time: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-[#D9C4A2] rounded-xl text-neutral-900 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-neutral-900 mb-1">Servings</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 4 Servings"
+                    value={editingRecipe.servings || ''}
+                    onChange={e => setEditingRecipe({ ...editingRecipe, servings: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-[#D9C4A2] rounded-xl text-neutral-900 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-neutral-900 mb-1">Featured Spice</label>
+                  <select
+                    value={editingRecipe.related_product_ids?.[0] || products[0]?.id || ''}
+                    onChange={e => {
+                      const selId = e.target.value;
+                      setEditingRecipe({
+                        ...editingRecipe,
+                        related_product_ids: [selId],
+                        featured_spice_ids: [selId]
+                      });
+                    }}
+                    className="w-full px-3 py-2 bg-white border border-[#D9C4A2] rounded-xl text-neutral-900 text-xs"
+                  >
+                    {products.map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name_en}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Descriptions */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-neutral-900 mb-1">Description (English)</label>
+                  <textarea
+                    rows={2}
+                    placeholder="Brief recipe overview and culinary heritage..."
+                    value={editingRecipe.description_en}
+                    onChange={e => setEditingRecipe({ ...editingRecipe, description_en: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-[#D9C4A2] rounded-xl text-neutral-900 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-neutral-900 mb-1">Description (Kannada)</label>
+                  <textarea
+                    rows={2}
+                    placeholder="ಪಾಕವಿಧಾನದ ಪರಿಚಯ ಮತ್ತು ರುಚಿಯ ವಿವರ..."
+                    value={editingRecipe.description_kn}
+                    onChange={e => setEditingRecipe({ ...editingRecipe, description_kn: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-[#D9C4A2] rounded-xl font-serif text-neutral-900 text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Ingredients */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-neutral-900 mb-1">
+                    Ingredients (English • one per line)
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="Indima Sambar Powder&#10;Toor Dal - 1 Cup&#10;Drumsticks & Tomatoes"
+                    value={Array.isArray(editingRecipe.ingredients_en) ? editingRecipe.ingredients_en.join('\n') : ''}
+                    onChange={e => setEditingRecipe({
+                      ...editingRecipe,
+                      ingredients_en: e.target.value.split('\n').filter(Boolean)
+                    })}
+                    className="w-full px-3 py-2 bg-white border border-[#D9C4A2] rounded-xl text-neutral-900 text-xs font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-neutral-900 mb-1">
+                    Ingredients (Kannada • one per line)
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="ಇಂದಿಮಾ ಸಾಂಬಾರ್ ಪುಡಿ&#10;ತೊಗರಿ ಬೇಳೆ - ೧ ಕಪ್&#10;ನುಗ್ಗೆಕಾಯಿ & ಟೊಮೆಟೊ"
+                    value={Array.isArray(editingRecipe.ingredients_kn) ? editingRecipe.ingredients_kn.join('\n') : ''}
+                    onChange={e => setEditingRecipe({
+                      ...editingRecipe,
+                      ingredients_kn: e.target.value.split('\n').filter(Boolean)
+                    })}
+                    className="w-full px-3 py-2 bg-white border border-[#D9C4A2] rounded-xl font-serif text-neutral-900 text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Instructions */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-neutral-900 mb-1">
+                    Preparation Steps (English • one step per line)
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="1. Boil dal with turmeric until tender.&#10;2. Add vegetables and Indima Spice blend.&#10;3. Simmer and temper with curry leaves."
+                    value={Array.isArray(editingRecipe.instructions_en) ? editingRecipe.instructions_en.join('\n') : ''}
+                    onChange={e => setEditingRecipe({
+                      ...editingRecipe,
+                      instructions_en: e.target.value.split('\n').filter(Boolean)
+                    })}
+                    className="w-full px-3 py-2 bg-white border border-[#D9C4A2] rounded-xl text-neutral-900 text-xs font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-neutral-900 mb-1">
+                    Preparation Steps (Kannada • one step per line)
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="೧. ಬೇಳೆ ಮತ್ತು ತರಕಾರಿಗಳನ್ನು ಮೃದುವಾಗಿ ಬೇಯಿಸಿ.&#10;೨. ಇಂದಿಮಾ ಮಸಾಲೆ ಪುಡಿ ಸೇರಿಸಿ ಕುದಿಸಿ.&#10;೩. ತುಪ್ಪದಲ್ಲಿ ಸಾಸಿವೆ ಒಗ್ಗರಣೆ ಹಾಕಿ."
+                    value={Array.isArray(editingRecipe.instructions_kn) ? editingRecipe.instructions_kn.join('\n') : ''}
+                    onChange={e => setEditingRecipe({
+                      ...editingRecipe,
+                      instructions_kn: e.target.value.split('\n').filter(Boolean)
+                    })}
+                    className="w-full px-3 py-2 bg-white border border-[#D9C4A2] rounded-xl font-serif text-neutral-900 text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Modal Footer with Delete, Cancel, Save */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-[#F0E6D2]">
+                {recipes.some(r => r.id === editingRecipe.id) ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const id = editingRecipe.id;
+                      const title = editingRecipe.title_en || 'Recipe';
+                      setIsRecipeModalOpen(false);
+                      handleDeleteRecipe(id, title);
+                    }}
+                    className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl border border-rose-200 flex items-center space-x-1.5 cursor-pointer transition shadow-2xs"
+                  >
+                    <Trash2 className="w-4 h-4 text-rose-600" />
+                    <span>Delete Recipe</span>
+                  </button>
+                ) : (
+                  <div />
+                )}
+
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsRecipeModalOpen(false)}
+                    className="px-4 py-2 border border-[#D9C4A2] bg-white hover:bg-neutral-100 text-neutral-800 font-bold rounded-xl cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 bg-[#993300] hover:bg-[#802B00] text-white font-bold rounded-xl cursor-pointer shadow-xs transition"
+                  >
+                    Save Recipe
+                  </button>
+                </div>
               </div>
             </form>
           </div>

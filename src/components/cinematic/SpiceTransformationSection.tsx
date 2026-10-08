@@ -2,13 +2,10 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import {
   Sparkles,
-  Link2,
-  Check,
   Flame,
   ShieldCheck,
   Heart,
-  ArrowRight,
-  Upload
+  ArrowRight
 } from 'lucide-react';
 
 interface SpiceTransformationSectionProps {
@@ -299,7 +296,7 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
 
   const [activeChapterIndex, setActiveChapterIndex] = useState<number>(0);
 
-  // Custom Video URL state (supports localStorage so uploaded / pasted URL persists)
+  // Custom Video URL state (supports admin uploaded video or stored URL)
   const defaultVideo = '/videos/spice-animated-story.mp4';
   const [videoUrl, setVideoUrl] = useState<string>(() => {
     if (customVideoUrl) return customVideoUrl;
@@ -310,9 +307,12 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
     return defaultVideo;
   });
 
-  const [isUrlModalOpen, setIsUrlModalOpen] = useState<boolean>(false);
-  const [inputUrl, setInputUrl] = useState<string>('');
-  const [urlSavedMessage, setUrlSavedMessage] = useState<boolean>(false);
+  // Sync when customVideoUrl from props/admin updates
+  useEffect(() => {
+    if (customVideoUrl) {
+      setVideoUrl(customVideoUrl);
+    }
+  }, [customVideoUrl]);
 
   // Active chapter always resolves to a valid spice
   const activeChapter = useMemo(() => {
@@ -378,51 +378,6 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
       videoRef.current.muted = true;
       videoRef.current.play().catch(() => {});
     }
-  };
-
-  const handleSaveVideoUrl = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputUrl.trim()) return;
-    const trimmed = inputUrl.trim();
-    setVideoUrl(trimmed);
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('indima_custom_spice_video', trimmed);
-      } catch (_) {}
-    }
-    setUrlSavedMessage(true);
-    setTimeout(() => {
-      setUrlSavedMessage(false);
-      setIsUrlModalOpen(false);
-    }, 1000);
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const objectUrl = URL.createObjectURL(file);
-    setVideoUrl(objectUrl);
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('indima_custom_spice_video', objectUrl);
-      } catch (_) {}
-    }
-    setUrlSavedMessage(true);
-    setTimeout(() => {
-      setUrlSavedMessage(false);
-      setIsUrlModalOpen(false);
-    }, 1000);
-  };
-
-  const handleResetVideoUrl = () => {
-    setVideoUrl(defaultVideo);
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.removeItem('indima_custom_spice_video');
-      } catch (_) {}
-    }
-    setInputUrl('');
-    setIsUrlModalOpen(false);
   };
 
   // Language display labels
@@ -575,8 +530,8 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
                 className="w-full h-[520px] sm:h-[580px] object-cover select-none pointer-events-none"
               />
 
-              {/* Top Overlay: Active spice badge + Paste/Upload Video button */}
-              <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-20 pointer-events-auto">
+              {/* Top Overlay: Active spice badge */}
+              <div className="absolute top-3 left-3 z-20 pointer-events-auto">
                 {/* Active Spice indicator pill */}
                 <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md text-white text-xs font-semibold shadow-sm border border-white/20 transition-all duration-700">
                   <span
@@ -587,16 +542,6 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
                     {activeChapter.name[selectedLang]}
                   </span>
                 </div>
-
-                {/* Paste / Upload Video Link Button */}
-                <button
-                  onClick={() => setIsUrlModalOpen(true)}
-                  aria-label="Upload or change video"
-                  title="Upload or change video"
-                  className="p-2 rounded-full bg-black/60 backdrop-blur-md text-white hover:bg-black/80 transition border border-white/20 cursor-pointer"
-                >
-                  <Link2 className="w-3.5 h-3.5 text-amber-300" />
-                </button>
               </div>
 
               {/* Active Character Overlay Tag at bottom of video */}
@@ -847,89 +792,6 @@ export const SpiceTransformationSection: React.FC<SpiceTransformationSectionProp
           </div>
         </div>
       </div>
-
-      {/* Upload Video or Paste URL Modal */}
-      {isUrlModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-[#FFFDF9] border border-[#DFC7A2] rounded-3xl max-w-md w-full p-6 shadow-2xl relative text-[#2C1810]">
-            <h4 className="font-serif text-xl font-bold text-[#2C1810] mb-2 flex items-center space-x-2">
-              <Link2 className="w-5 h-5 text-[#993300]" />
-              <span>Update or Upload Spice Video</span>
-            </h4>
-            <p className="text-xs text-[#6B4E3D] mb-4">
-              Select an MP4 video file from your device, or paste any video URL. It will immediately play continuously on loop.
-            </p>
-
-            <div className="space-y-4">
-              {/* Direct File Upload Option */}
-              <div className="p-3.5 bg-[#FAF5EB] rounded-2xl border border-[#DFC7A2] space-y-2">
-                <label className="block text-xs font-bold text-[#4A3223] uppercase tracking-wider">
-                  Option 1: Upload Video File
-                </label>
-                <label className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl bg-[#993300] hover:bg-[#7A2800] text-white text-xs font-bold cursor-pointer transition shadow-xs">
-                  <Upload className="w-4 h-4" />
-                  <span>Choose Video File (MP4, WebM)</span>
-                  <input
-                    type="file"
-                    accept="video/mp4,video/webm,video/quicktime,video/*"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
-                </label>
-              </div>
-
-              {/* Paste URL Option */}
-              <form onSubmit={handleSaveVideoUrl} className="space-y-3">
-                <div>
-                  <label className="block text-xs font-bold text-[#4A3223] uppercase tracking-wider mb-1">
-                    Option 2: Paste Direct Video URL
-                  </label>
-                  <input
-                    type="url"
-                    placeholder="https://example.com/spices-video.mp4"
-                    value={inputUrl}
-                    onChange={(e) => setInputUrl(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#DFC7A2] bg-[#FAF5EB] text-sm text-[#2C1810] focus:outline-hidden focus:ring-2 focus:ring-[#993300]"
-                  />
-                </div>
-
-                {urlSavedMessage && (
-                  <div className="flex items-center space-x-2 text-xs font-bold text-emerald-700 bg-emerald-50 p-2.5 rounded-xl border border-emerald-200">
-                    <Check className="w-4 h-4 text-emerald-600" />
-                    <span>Video updated successfully!</span>
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between pt-2">
-                  <button
-                    type="button"
-                    onClick={handleResetVideoUrl}
-                    className="text-xs text-[#8C7667] hover:text-[#993300] underline font-medium cursor-pointer"
-                  >
-                    Reset to default video
-                  </button>
-
-                  <div className="flex items-center space-x-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsUrlModalOpen(false)}
-                      className="px-4 py-2 rounded-full border border-[#DFC7A2] text-xs font-semibold text-[#6B4E3D] hover:bg-[#FAF3E0] cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-5 py-2 rounded-full bg-[#993300] text-xs font-bold text-white hover:bg-[#7A2800] shadow-sm cursor-pointer"
-                    >
-                      Apply URL
-                    </button>
-                  </div>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
     </section>
   );
 };
