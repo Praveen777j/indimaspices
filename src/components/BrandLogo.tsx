@@ -36,7 +36,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
       {!imgError ? (
         <img
           src={logoSrc}
-          alt="Indima Spice Co. - Pure as mother's love"
+          alt="Indima Spice Co. Authentic Homemade Spices Logo"
           className={`${sizeClasses[size]} object-contain rounded-xl p-1 ${containerBg} border transition-transform duration-200 hover:scale-105`}
           onError={() => setImgError(true)}
         />

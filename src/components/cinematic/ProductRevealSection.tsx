@@ -166,7 +166,7 @@ export const ProductRevealSection: React.FC<ProductRevealSectionProps> = ({
             <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-[#FAF6EE] border border-[#E8DFD3]/80">
               <img
                 src={imgUrl}
-                alt={name}
+                alt={`Indima Spice Co. authentic ${name}`}
                 className="w-full h-full object-cover object-center transform transition-transform duration-700 group-hover:scale-105"
                 onError={e => {
                   (e.target as HTMLImageElement).src = '/indima-logo.svg';

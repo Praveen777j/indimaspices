@@ -10,9 +10,7 @@ Allow: /contact
 Allow: /assets/
 Allow: /uploads/
 
-# Disallow private, administrative, and user-session routes
-Disallow: /admin
-Disallow: /admin/
+# Disallow internal API and user-session routes
 Disallow: /api/
 Disallow: /checkout
 Disallow: /checkout/

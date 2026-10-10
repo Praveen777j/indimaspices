@@ -146,7 +146,7 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <img
             src={(p.images && p.images[0]) || '/indima-logo.svg'}
-            alt={p.name_en}
+            alt={`Indima Spice Co. ${p.name_en}`}
             className="w-10 h-10 rounded-xl object-cover border border-[#E8DFD3] shrink-0"
           />
           <div className="flex-1 min-w-0">
@@ -203,15 +203,6 @@ export const Header: React.FC<HeaderProps> = ({
               <Package className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
               <span>{isKn ? 'ಆರ್ಡರ್ ಟ್ರ್ಯಾಕ್' : 'Track Order'}</span>
             </button>
-            {onNavigateToAdmin && (
-              <button
-                onClick={onNavigateToAdmin}
-                className="hidden sm:inline-flex items-center text-amber-200 hover:text-white text-[10px] sm:text-[11px] font-medium transition-colors cursor-pointer bg-[#6E240D] px-2 py-0.5 rounded-full border border-amber-300/20"
-              >
-                <UserCheck className="w-3 h-3 inline mr-1" />
-                <span>Admin</span>
-              </button>
-            )}
           </div>
         </div>
       </div>
@@ -661,22 +652,6 @@ export const Header: React.FC<HeaderProps> = ({
                     {language === 'en' ? 'ಕನ್ನಡ' : 'EN'}
                   </span>
                 </button>
-
-                {onNavigateToAdmin && (
-                  <button
-                    onClick={() => {
-                      onNavigateToAdmin();
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="w-full flex items-center justify-between p-3 rounded-xl bg-[#FAF7F2] border border-[#E8DFD3] text-[#7A6455] hover:text-[#1F1610] font-medium text-xs cursor-pointer"
-                  >
-                    <div className="flex items-center space-x-2.5">
-                      <UserCheck className="w-4 h-4 text-[#7A6455]" />
-                      <span>Admin Panel</span>
-                    </div>
-                    <ChevronRight className="w-3.5 h-3.5 text-neutral-400" />
-                  </button>
-                )}
               </div>
             </div>
 

@@ -13,9 +13,10 @@ if (typeof window !== 'undefined') {
 interface BrandFilmHeroProps {
   banner?: Banner;
   onExploreClick: () => void;
+  logoUrl?: string;
 }
 
-export const BrandFilmHero: React.FC<BrandFilmHeroProps> = ({ banner, onExploreClick }) => {
+export const BrandFilmHero: React.FC<BrandFilmHeroProps> = ({ banner, onExploreClick, logoUrl }) => {
   const { language } = useLanguage();
   const isKn = language === 'kn';
 
@@ -203,8 +204,8 @@ export const BrandFilmHero: React.FC<BrandFilmHeroProps> = ({ banner, onExploreC
         <div ref={logoWrapperRef} className="relative mb-3.5 sm:mb-7">
           <div className="relative p-2.5 sm:p-5 rounded-3xl bg-[#FFFDF9]/95 border border-[#E8DFD3] shadow-2xl backdrop-blur-md">
             <img
-              src="/indima-logo.svg"
-              alt="Indima Spice Co."
+              src={logoUrl || '/indima-logo.svg'}
+              alt="Indima Spice Co. Authentic Homemade Spices Logo"
               className="h-16 sm:h-28 md:h-36 w-auto object-contain drop-shadow-[0_8px_16px_rgba(44,24,16,0.18)]"
               onError={e => {
                 const target = e.target as HTMLImageElement;

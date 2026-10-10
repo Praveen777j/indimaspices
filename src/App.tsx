@@ -303,6 +303,7 @@ const Storefront: React.FC<{ onNavigateToAdmin: () => void }> = ({ onNavigateToA
         <BrandFilmHero
           banner={(banners || []).find(b => b.type === 'hero' && b.active !== false && b.enabled !== false) || (banners || []).find(b => b.active !== false && b.enabled !== false) || banners?.[0]}
           onExploreClick={() => scrollToSection('brand-story')}
+          logoUrl={fallbackSettings.logo_url}
         />
 
         {/* SECTION 02: The Story / Three Decades of Experience */}

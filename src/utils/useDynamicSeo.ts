@@ -8,8 +8,6 @@ export const DEFAULT_SEO = {
   title: 'Indima Spice Co. | Authentic Homemade Spices & Masalas',
   description:
     'Indima Spice Co. brings authentic homemade Indian spices and masalas crafted with traditional flavours, quality ingredients and the rich heritage of Karnataka.',
-  keywords:
-    'Indima Spice Co, authentic homemade spices, Karnataka spices, stone ground masalas, traditional Indian spices, pure turmeric, sambar powder, rasam powder, Byadagi chilli, Bengaluru spices',
   image: `${CANONICAL_BASE}/indima-brand-logo.jpg`,
   url: `${CANONICAL_BASE}/`
 };
@@ -29,7 +27,7 @@ export interface DynamicMetadata {
   title: string;
   description: string;
   canonicalUrl: string;
-  keywords: string;
+  keywords?: string;
   author: string;
   robots: string;
   og: {
@@ -113,15 +111,6 @@ export function generateDynamicMetadata(options: UseDynamicSeoProps): DynamicMet
     }
     if (p.weight) {
       productSchema.weight = p.weight;
-    }
-    if (typeof p.rating === 'number' && p.rating > 0 && typeof p.review_count === 'number' && p.review_count > 0) {
-      productSchema.aggregateRating = {
-        '@type': 'AggregateRating',
-        ratingValue: p.rating,
-        reviewCount: p.review_count,
-        bestRating: '5',
-        worstRating: '1'
-      };
     }
 
     const breadcrumbSchema = {
@@ -426,15 +415,11 @@ export function generateDynamicMetadata(options: UseDynamicSeoProps): DynamicMet
   }
 
   const settings = options.settings;
-  const phone = settings?.phone || '+919663852435';
-  const email = settings?.email || 'care@indimaspice.com';
-  const street = settings?.address_line1 || '#42, Traditional Kitchen Heritage Lane, Bull Temple Road, Basavanagudi';
-  const city = settings?.city || 'Bengaluru';
-  const state = settings?.state || 'Karnataka';
-  const pincode = settings?.pincode || '560004';
-  const sameAs = [settings?.instagram_url, settings?.facebook_url, settings?.youtube_url, settings?.twitter_url].filter(Boolean);
+  const phone = settings?.phone || '+91 98862 74484';
+  const email = settings?.email || undefined;
+  const sameAs = [settings?.instagram_url || 'https://www.instagram.com/indimaspicesco.in'];
 
-  const orgSchema = {
+  const orgSchema: Record<string, any> = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
     '@id': `${CANONICAL_BASE}/#organization`,
@@ -444,16 +429,14 @@ export function generateDynamicMetadata(options: UseDynamicSeoProps): DynamicMet
     slogan: "Pure as mother's love",
     description: DEFAULT_SEO.description,
     telephone: phone,
-    email: email,
+    ...(email ? { email } : {}),
     address: {
       '@type': 'PostalAddress',
-      streetAddress: street,
-      addressLocality: city,
-      addressRegion: state,
-      postalCode: pincode,
+      addressLocality: 'Bengaluru',
+      addressRegion: 'Karnataka',
       addressCountry: 'IN'
     },
-    sameAs: sameAs.length > 0 ? sameAs : undefined
+    sameAs
   };
 
   const websiteSchema = {
@@ -476,7 +459,6 @@ export function generateDynamicMetadata(options: UseDynamicSeoProps): DynamicMet
     title,
     description,
     canonicalUrl,
-    keywords: DEFAULT_SEO.keywords,
     author: 'Indima Spice Co.',
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     og: {
@@ -558,7 +540,8 @@ export function applyMetadataToDocument(metadata: DynamicMetadata) {
 
   // Populate Primary Meta Tags
   setMetaTag('name', 'description', metadata.description);
-  setMetaTag('name', 'keywords', metadata.keywords);
+  const existingKeywords = document.querySelector('meta[name="keywords"]');
+  if (existingKeywords) existingKeywords.remove();
   setMetaTag('name', 'author', metadata.author);
   setMetaTag('name', 'robots', metadata.robots);
   setLinkTag('canonical', metadata.canonicalUrl);

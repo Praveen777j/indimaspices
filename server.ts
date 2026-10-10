@@ -3584,9 +3584,7 @@ Allow: /contact
 Allow: /assets/
 Allow: /uploads/
 
-# Disallow private, administrative, and user-session routes
-Disallow: /admin
-Disallow: /admin/
+# Disallow internal API and user-session routes
 Disallow: /api/
 Disallow: /checkout
 Disallow: /checkout/
@@ -3734,6 +3732,125 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 // DYNAMIC SEO & SOCIAL SHARING PREVIEW META INJECTOR
 // ----------------------------------------------------
 
+function escapeHtmlAttr(str: string | number | undefined | null): string {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function escapeHtmlText(str: string | number | undefined | null): string {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function applyHtmlMetaTags(
+  html: string,
+  meta: {
+    title: string;
+    description: string;
+    canonicalUrl: string;
+    ogTitle?: string;
+    ogDescription?: string;
+    ogImage?: string;
+    ogUrl?: string;
+    ogType?: string;
+    extraHeadHtml?: string;
+  }
+): string {
+  let res = html;
+  const safeTitle = escapeHtmlText(meta.title);
+  const safeDesc = escapeHtmlAttr(meta.description);
+  const safeCanonical = escapeHtmlAttr(meta.canonicalUrl);
+  const safeOgTitle = escapeHtmlAttr(meta.ogTitle || meta.title);
+  const safeOgDesc = escapeHtmlAttr(meta.ogDescription || meta.description);
+  const safeOgImage = escapeHtmlAttr(meta.ogImage || `${CANONICAL_ORIGIN}/indima-brand-logo.jpg`);
+  const safeOgUrl = escapeHtmlAttr(meta.ogUrl || meta.canonicalUrl);
+  const ogType = meta.ogType || 'website';
+
+  // 1. <title>
+  if (/<title>.*?<\/title>/i.test(res)) {
+    res = res.replace(/<title>.*?<\/title>/i, `<title>${safeTitle}</title>`);
+  } else {
+    res = res.replace('</head>', `  <title>${safeTitle}</title>\n</head>`);
+  }
+
+  // 2. <meta name="description">
+  if (/<meta\s+name=["']description["'][^>]*>/i.test(res)) {
+    res = res.replace(/<meta\s+name=["']description["'][^>]*>/i, `<meta name="description" content="${safeDesc}" />`);
+  } else {
+    res = res.replace('</head>', `  <meta name="description" content="${safeDesc}" />\n</head>`);
+  }
+
+  // 3. <link rel="canonical">
+  if (/<link\s+rel=["']canonical["'][^>]*>/i.test(res)) {
+    res = res.replace(/<link\s+rel=["']canonical["'][^>]*>/i, `<link rel="canonical" href="${safeCanonical}" />`);
+  } else {
+    res = res.replace('</head>', `  <link rel="canonical" href="${safeCanonical}" />\n</head>`);
+  }
+
+  // 4. <meta property="og:title">
+  if (/<meta\s+property=["']og:title["'][^>]*>/i.test(res)) {
+    res = res.replace(/<meta\s+property=["']og:title["'][^>]*>/i, `<meta property="og:title" content="${safeOgTitle}" />`);
+  } else {
+    res = res.replace('</head>', `  <meta property="og:title" content="${safeOgTitle}" />\n</head>`);
+  }
+
+  // 5. <meta property="og:description">
+  if (/<meta\s+property=["']og:description["'][^>]*>/i.test(res)) {
+    res = res.replace(/<meta\s+property=["']og:description["'][^>]*>/i, `<meta property="og:description" content="${safeOgDesc}" />`);
+  } else {
+    res = res.replace('</head>', `  <meta property="og:description" content="${safeOgDesc}" />\n</head>`);
+  }
+
+  // 6. <meta property="og:image">
+  if (/<meta\s+property=["']og:image["'][^>]*>/i.test(res)) {
+    res = res.replace(/<meta\s+property=["']og:image["'][^>]*>/i, `<meta property="og:image" content="${safeOgImage}" />`);
+  } else {
+    res = res.replace('</head>', `  <meta property="og:image" content="${safeOgImage}" />\n</head>`);
+  }
+
+  // 7. <meta property="og:url">
+  if (/<meta\s+property=["']og:url["'][^>]*>/i.test(res)) {
+    res = res.replace(/<meta\s+property=["']og:url["'][^>]*>/i, `<meta property="og:url" content="${safeOgUrl}" />`);
+  } else {
+    res = res.replace('</head>', `  <meta property="og:url" content="${safeOgUrl}" />\n</head>`);
+  }
+
+  // 8. <meta property="og:type">
+  if (/<meta\s+property=["']og:type["'][^>]*>/i.test(res)) {
+    res = res.replace(/<meta\s+property=["']og:type["'][^>]*>/i, `<meta property="og:type" content="${ogType}" />`);
+  } else {
+    res = res.replace('</head>', `  <meta property="og:type" content="${ogType}" />\n</head>`);
+  }
+
+  // 9. <meta name="twitter:title">
+  if (/<meta\s+name=["']twitter:title["'][^>]*>/i.test(res)) {
+    res = res.replace(/<meta\s+name=["']twitter:title["'][^>]*>/i, `<meta name="twitter:title" content="${safeOgTitle}" />`);
+  }
+
+  // 10. <meta name="twitter:description">
+  if (/<meta\s+name=["']twitter:description["'][^>]*>/i.test(res)) {
+    res = res.replace(/<meta\s+name=["']twitter:description["'][^>]*>/i, `<meta name="twitter:description" content="${safeOgDesc}" />`);
+  }
+
+  // 11. <meta name="twitter:image">
+  if (/<meta\s+name=["']twitter:image["'][^>]*>/i.test(res)) {
+    res = res.replace(/<meta\s+name=["']twitter:image["'][^>]*>/i, `<meta name="twitter:image" content="${safeOgImage}" />`);
+  }
+
+  // Extra head HTML (e.g. JSON-LD scripts)
+  if (meta.extraHeadHtml) {
+    res = res.replace('</head>', `${meta.extraHeadHtml}\n  </head>`);
+  }
+
+  return res;
+}
+
 function injectDynamicHtmlMeta(html: string, req: Request): { html: string; status: number } {
   try {
     const rawPath = req.path || '/';
@@ -3764,8 +3881,8 @@ function injectDynamicHtmlMeta(html: string, req: Request): { html: string; stat
       if (product) {
         const slug = getProductSlug(product);
         const name = isKn && product.name_kn ? product.name_kn : product.name_en;
-        const rawDesc = ((isKn && product.description_kn ? product.description_kn : product.description_en) || '').replace(/"/g, '&quot;');
-        const cleanDesc = rawDesc.replace(/\s+/g, ' ').trim();
+        const cleanRawDesc = (isKn && product.description_kn ? product.description_kn : product.description_en) || '';
+        const cleanDesc = cleanRawDesc.replace(/\s+/g, ' ').trim();
         const shortDesc = cleanDesc.length > 150 ? cleanDesc.substring(0, 147) + '...' : cleanDesc;
 
         const title = `${name} (₹${product.price} / ${product.weight}) | Indima Spice Co.`;
@@ -3775,7 +3892,7 @@ function injectDynamicHtmlMeta(html: string, req: Request): { html: string; stat
         if (image.startsWith('/')) image = `${CANONICAL_ORIGIN}${image}`;
         const canonicalUrl = `${CANONICAL_ORIGIN}/products/${slug}`;
 
-        // Schema.org Product JSON-LD (using REAL data only, no invented ratings)
+        // Schema.org Product JSON-LD (Strictly real data only, NO invented ratings or reviews)
         const productJsonLd: any = {
           "@context": "https://schema.org",
           "@type": "Product",
@@ -3796,7 +3913,7 @@ function injectDynamicHtmlMeta(html: string, req: Request): { html: string; stat
             "price": product.price,
             "priceValidUntil": "2027-12-31",
             "itemCondition": "https://schema.org/NewCondition",
-            "availability": (product.stock && product.stock > 0) ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+            "availability": (product.stock === undefined || product.stock > 0) ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
             "seller": {
               "@type": "Organization",
               "name": "Indima Spice Co.",
@@ -3810,16 +3927,6 @@ function injectDynamicHtmlMeta(html: string, req: Request): { html: string; stat
         }
         if (product.weight) {
           productJsonLd.weight = product.weight;
-        }
-
-        if (typeof product.rating === 'number' && product.rating > 0 && typeof product.review_count === 'number' && product.review_count > 0) {
-          productJsonLd.aggregateRating = {
-            "@type": "AggregateRating",
-            "ratingValue": product.rating,
-            "reviewCount": product.review_count,
-            "bestRating": "5",
-            "worstRating": "1"
-          };
         }
 
         // Schema.org BreadcrumbList JSON-LD
@@ -3848,25 +3955,19 @@ function injectDynamicHtmlMeta(html: string, req: Request): { html: string; stat
           ]
         };
 
-        let modifiedHtml = html;
-        modifiedHtml = modifiedHtml.replace(/<title>.*?<\/title>/i, `<title>${title}</title>`);
-        modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']description["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="description" content="${description}" />`);
-        modifiedHtml = modifiedHtml.replace(/<link\s+rel=["']canonical["']\s+href=["'].*?["']\s*\/?>/i, `<link rel="canonical" href="${canonicalUrl}" />`);
+        const extraHeadHtml = `  <script type="application/ld+json" id="ssr-product-jsonld">${JSON.stringify(productJsonLd)}</script>\n  <script type="application/ld+json" id="ssr-breadcrumb-jsonld">${JSON.stringify(breadcrumbJsonLd)}</script>`;
 
-        modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:title["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:title" content="${title}" />`);
-        modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:description["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:description" content="${description}" />`);
-        modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:image["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:image" content="${image}" />`);
-        modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:url["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:url" content="${canonicalUrl}" />`);
-        modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:type["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:type" content="product" />`);
-
-        modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']twitter:title["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="twitter:title" content="${title}" />`);
-        modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']twitter:description["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="twitter:description" content="${description}" />`);
-        modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']twitter:image["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="twitter:image" content="${image}" />`);
-
-        modifiedHtml = modifiedHtml.replace(
-          '</head>',
-          `  <script type="application/ld+json" id="ssr-product-jsonld">${JSON.stringify(productJsonLd)}</script>\n  <script type="application/ld+json" id="ssr-breadcrumb-jsonld">${JSON.stringify(breadcrumbJsonLd)}</script>\n  </head>`
-        );
+        const modifiedHtml = applyHtmlMetaTags(html, {
+          title,
+          description,
+          canonicalUrl,
+          ogTitle: title,
+          ogDescription: description,
+          ogImage: image,
+          ogUrl: canonicalUrl,
+          ogType: 'product',
+          extraHeadHtml
+        });
 
         return { html: modifiedHtml, status: 200 };
       }
@@ -3897,9 +3998,9 @@ function injectDynamicHtmlMeta(html: string, req: Request): { html: string; stat
       if (cat) {
         const slug = getCategorySlug(cat);
         const name = isKn && cat.name_kn ? cat.name_kn : cat.name_en;
-        const desc = ((isKn && cat.description_kn ? cat.description_kn : cat.description_en) || '').replace(/"/g, '&quot;');
+        const cleanDesc = ((isKn && cat.description_kn ? cat.description_kn : cat.description_en) || '').replace(/\s+/g, ' ').trim();
         const title = `${name} Spice Range | Authentic Homemade Spices | Indima Spice Co.`;
-        const description = `Explore authentic homemade ${name} collection from Indima Spice Co. ${desc} Handcrafted in Karnataka with traditional flavours.`;
+        const description = `Explore authentic homemade ${name} collection from Indima Spice Co. ${cleanDesc} Handcrafted in Karnataka with traditional flavours.`;
         let image = cat.image || '/indima-brand-logo.jpg';
         if (image.startsWith('/')) image = `${CANONICAL_ORIGIN}${image}`;
         const canonicalUrl = `${CANONICAL_ORIGIN}/categories/${slug}`;
@@ -3923,22 +4024,19 @@ function injectDynamicHtmlMeta(html: string, req: Request): { html: string; stat
           ]
         };
 
-        let modifiedHtml = html;
-        modifiedHtml = modifiedHtml.replace(/<title>.*?<\/title>/i, `<title>${title}</title>`);
-        modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']description["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="description" content="${description}" />`);
-        modifiedHtml = modifiedHtml.replace(/<link\s+rel=["']canonical["']\s+href=["'].*?["']\s*\/?>/i, `<link rel="canonical" href="${canonicalUrl}" />`);
-        modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:title["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:title" content="${title}" />`);
-        modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:description["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:description" content="${description}" />`);
-        modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:image["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:image" content="${image}" />`);
-        modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:url["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:url" content="${canonicalUrl}" />`);
-        modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']twitter:title["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="twitter:title" content="${title}" />`);
-        modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']twitter:description["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="twitter:description" content="${description}" />`);
-        modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']twitter:image["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="twitter:image" content="${image}" />`);
+        const extraHeadHtml = `  <script type="application/ld+json" id="ssr-breadcrumb-jsonld">${JSON.stringify(breadcrumbJsonLd)}</script>`;
 
-        modifiedHtml = modifiedHtml.replace(
-          '</head>',
-          `  <script type="application/ld+json" id="ssr-breadcrumb-jsonld">${JSON.stringify(breadcrumbJsonLd)}</script>\n  </head>`
-        );
+        const modifiedHtml = applyHtmlMetaTags(html, {
+          title,
+          description,
+          canonicalUrl,
+          ogTitle: title,
+          ogDescription: description,
+          ogImage: image,
+          ogUrl: canonicalUrl,
+          ogType: 'website',
+          extraHeadHtml
+        });
 
         return { html: modifiedHtml, status: 200 };
       }
@@ -3969,8 +4067,7 @@ function injectDynamicHtmlMeta(html: string, req: Request): { html: string; stat
       if (rec) {
         const slug = getRecipeSlug(rec);
         const titleName = isKn && rec.title_kn ? rec.title_kn : rec.title_en;
-        const rawDesc = (((isKn && rec.description_kn ? rec.description_kn : rec.description_en) || '') as string).replace(/"/g, '&quot;');
-        const cleanDesc = rawDesc.replace(/\s+/g, ' ').trim();
+        const cleanDesc = (((isKn && rec.description_kn ? rec.description_kn : rec.description_en) || '') as string).replace(/\s+/g, ' ').trim();
         const shortDesc = cleanDesc.length > 150 ? cleanDesc.substring(0, 147) + '...' : cleanDesc;
 
         const title = `${titleName} Recipe | Karnataka Heritage | Indima Spice Co.`;
@@ -4070,78 +4167,105 @@ function injectDynamicHtmlMeta(html: string, req: Request): { html: string; stat
           ]
         };
 
-        let modifiedHtml = html;
-        modifiedHtml = modifiedHtml.replace(/<title>.*?<\/title>/i, `<title>${title}</title>`);
-        modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']description["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="description" content="${description}" />`);
-        modifiedHtml = modifiedHtml.replace(/<link\s+rel=["']canonical["']\s+href=["'].*?["']\s*\/?>/i, `<link rel="canonical" href="${canonicalUrl}" />`);
-        modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:title["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:title" content="${title}" />`);
-        modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:description["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:description" content="${description}" />`);
-        modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:image["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:image" content="${image}" />`);
-        modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:url["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:url" content="${canonicalUrl}" />`);
-        modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:type["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:type" content="article" />`);
-        modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']twitter:title["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="twitter:title" content="${title}" />`);
-        modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']twitter:description["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="twitter:description" content="${description}" />`);
-        modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']twitter:image["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="twitter:image" content="${image}" />`);
+        const extraHeadHtml = `  <script type="application/ld+json" id="ssr-recipe-jsonld">${JSON.stringify(recipeJsonLd)}</script>\n  <script type="application/ld+json" id="ssr-breadcrumb-jsonld">${JSON.stringify(breadcrumbJsonLd)}</script>`;
 
-        modifiedHtml = modifiedHtml.replace(
-          '</head>',
-          `  <script type="application/ld+json" id="ssr-recipe-jsonld">${JSON.stringify(recipeJsonLd)}</script>\n  <script type="application/ld+json" id="ssr-breadcrumb-jsonld">${JSON.stringify(breadcrumbJsonLd)}</script>\n  </head>`
-        );
+        const modifiedHtml = applyHtmlMetaTags(html, {
+          title,
+          description,
+          canonicalUrl,
+          ogTitle: title,
+          ogDescription: description,
+          ogImage: image,
+          ogUrl: canonicalUrl,
+          ogType: 'article',
+          extraHeadHtml
+        });
 
         return { html: modifiedHtml, status: 200 };
       }
     }
 
-    // 3. RECIPES PAGE
+    // 4. RECIPES PAGE
     if (rawPath === '/recipes') {
       const title = 'Authentic Traditional Karnataka Spice Recipes | Indima Spice Co.';
       const description =
         'Explore authentic traditional Karnataka recipes with Indima Spice Co. Stone-ground spices for Mysore Bisi Bele Bath, Udupi Sambar, Maniyara Rasam, and more.';
       const canonicalUrl = `${CANONICAL_ORIGIN}/recipes`;
 
-      let modifiedHtml = html;
-      modifiedHtml = modifiedHtml.replace(/<title>.*?<\/title>/i, `<title>${title}</title>`);
-      modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']description["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="description" content="${description}" />`);
-      modifiedHtml = modifiedHtml.replace(/<link\s+rel=["']canonical["']\s+href=["'].*?["']\s*\/?>/i, `<link rel="canonical" href="${canonicalUrl}" />`);
-      modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:title["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:title" content="${title}" />`);
-      modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:description["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:description" content="${description}" />`);
-      modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:url["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:url" content="${canonicalUrl}" />`);
+      const modifiedHtml = applyHtmlMetaTags(html, {
+        title,
+        description,
+        canonicalUrl,
+        ogTitle: title,
+        ogDescription: description,
+        ogImage: `${CANONICAL_ORIGIN}/indima-brand-logo.jpg`,
+        ogUrl: canonicalUrl,
+        ogType: 'website'
+      });
+
       return { html: modifiedHtml, status: 200 };
     }
 
-    // 4. ABOUT PAGE
+    // 5. ABOUT PAGE
     if (rawPath === '/about') {
       const title = 'Our Heritage & Tradition | 100% Pure Stone-Ground Spices | Indima Spice Co.';
       const description =
         'Learn about the heritage of Indima Spice Co. Bringing traditional Karnataka culinary culture to homes with 100% natural, stone-ground authentic spices.';
       const canonicalUrl = `${CANONICAL_ORIGIN}/about`;
 
-      let modifiedHtml = html;
-      modifiedHtml = modifiedHtml.replace(/<title>.*?<\/title>/i, `<title>${title}</title>`);
-      modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']description["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="description" content="${description}" />`);
-      modifiedHtml = modifiedHtml.replace(/<link\s+rel=["']canonical["']\s+href=["'].*?["']\s*\/?>/i, `<link rel="canonical" href="${canonicalUrl}" />`);
-      modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:title["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:title" content="${title}" />`);
-      modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:description["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:description" content="${description}" />`);
-      modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:url["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:url" content="${canonicalUrl}" />`);
+      const modifiedHtml = applyHtmlMetaTags(html, {
+        title,
+        description,
+        canonicalUrl,
+        ogTitle: title,
+        ogDescription: description,
+        ogImage: `${CANONICAL_ORIGIN}/indima-brand-logo.jpg`,
+        ogUrl: canonicalUrl,
+        ogType: 'website'
+      });
+
       return { html: modifiedHtml, status: 200 };
     }
 
-    // 5. CONTACT PAGE
+    // 6. CONTACT PAGE
     if (rawPath === '/contact') {
       const title = 'Contact Us | Customer Care & Support | Indima Spice Co.';
       const description =
         'Get in touch with Indima Spice Co. in Basavanagudi, Bengaluru. Contact us for authentic spice inquiries, wholesale orders, and pan-India shipping support.';
       const canonicalUrl = `${CANONICAL_ORIGIN}/contact`;
 
-      let modifiedHtml = html;
-      modifiedHtml = modifiedHtml.replace(/<title>.*?<\/title>/i, `<title>${title}</title>`);
-      modifiedHtml = modifiedHtml.replace(/<meta\s+name=["']description["']\s+content=["'].*?["']\s*\/?>/i, `<meta name="description" content="${description}" />`);
-      modifiedHtml = modifiedHtml.replace(/<link\s+rel=["']canonical["']\s+href=["'].*?["']\s*\/?>/i, `<link rel="canonical" href="${canonicalUrl}" />`);
-      modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:title["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:title" content="${title}" />`);
-      modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:description["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:description" content="${description}" />`);
-      modifiedHtml = modifiedHtml.replace(/<meta\s+property=["']og:url["']\s+content=["'].*?["']\s*\/?>/i, `<meta property="og:url" content="${canonicalUrl}" />`);
+      const modifiedHtml = applyHtmlMetaTags(html, {
+        title,
+        description,
+        canonicalUrl,
+        ogTitle: title,
+        ogDescription: description,
+        ogImage: `${CANONICAL_ORIGIN}/indima-brand-logo.jpg`,
+        ogUrl: canonicalUrl,
+        ogType: 'website'
+      });
+
       return { html: modifiedHtml, status: 200 };
     }
+
+    // 7. HOMEPAGE & ALL OTHER PAGES (Ensure page-specific canonical and og:url are always injected)
+    const isHome = rawPath === '/' || rawPath === '';
+    const pageCanonicalUrl = isHome ? `${CANONICAL_ORIGIN}/` : `${CANONICAL_ORIGIN}${rawPath}`;
+    const pageTitle = DEFAULT_SEO_TITLE;
+    const pageDesc = DEFAULT_SEO_DESC;
+
+    const modifiedHtml = applyHtmlMetaTags(html, {
+      title: pageTitle,
+      description: pageDesc,
+      canonicalUrl: pageCanonicalUrl,
+      ogTitle: pageTitle,
+      ogDescription: pageDesc,
+      ogImage: `${CANONICAL_ORIGIN}/indima-brand-logo.jpg`,
+      ogUrl: pageCanonicalUrl,
+      ogType: 'website'
+    });
+
+    return { html: modifiedHtml, status: 200 };
   } catch (err: any) {
     console.warn('[SEO Meta Injector] Notice:', err?.message);
   }
